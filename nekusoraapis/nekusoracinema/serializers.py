@@ -5,16 +5,23 @@ from django.core.exceptions import ValidationError
 from nekusoracinema.models import *
 
 
-
-class ItemSerializer(serializers.ModelSerializer):
+class ImageURLMixin:
+    image_fields = ['image']
     def to_representation(self, instance):
         data = super().to_representation(instance)
-        if instance.image:
-            data['image'] = instance.image.url
+        for field in getattr(self, 'image_fields', []):
+            image_attr = getattr(instance, field, None)
+            if image_attr and hasattr(image_attr, 'url'):
+                try:
+                    data[field] = image_attr.url
+                except ValueError:
+                    data[field] = None
         return data
 
 
-class SimpleUserSerializer(serializers.ModelSerializer):
+class SimpleUserSerializer(ImageURLMixin, serializers.ModelSerializer):
+    image_fields = ['avatar']
+
     class Meta:
         model = User
         fields = ['email', 'role', 'gender', 'loyalty_points', 'date_of_birth', 'phone_number', 'avatar', 'first_name', 'last_name']
@@ -23,12 +30,6 @@ class SimpleUserSerializer(serializers.ModelSerializer):
                 'read_only': True,
             }
         }
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        if instance.avatar:
-            data['avatar'] = instance.avatar.url
-        return data
 
 
 class UserSerializer(SimpleUserSerializer):
@@ -50,10 +51,15 @@ class UserSerializer(SimpleUserSerializer):
 
     def create(self, validated_data):
         user = User(**validated_data)
-
         user.username = user.email
         user.set_password(user.password)
         user.save()
-
         return user
 
+
+class UserUpdateSerializer(ImageURLMixin, serializers.ModelSerializer):
+    image_fields = ['avatar']
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'gender', 'date_of_birth', 'phone_number', 'avatar']

@@ -389,7 +389,6 @@ function RegisterForm({ onRegister, onSwitch, serverError }) {
                 <label className="label"><span className="label-text text-sm">Ngày sinh</span></label>
                 <input
                     type="date"
-                    lang="vi-VN"
                     className={`input w-full ${errors.date_of_birth ? "input-error" : ""}`}
                     value={form.date_of_birth || ""}
                     onChange={(e) => setField("date_of_birth", e.target.value)}

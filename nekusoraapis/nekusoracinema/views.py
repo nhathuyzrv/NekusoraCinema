@@ -16,7 +16,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
     def current_user(self, request):
         user = request.user
         if request.method.__eq__('PATCH'):
-            serializer = serializers.SimpleUserSerializer(user, data=request.data, partial=True)
+            serializer = serializers.UserUpdateSerializer(user, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             user = serializer.save()
 

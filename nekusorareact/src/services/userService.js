@@ -5,13 +5,11 @@ const userService = {
         authApis.get(endpoints.userInfo)
             .then((res) => res.data),
     register: (formData) =>
-        Apis.post(endpoints.users, { ...formData })
+        Apis.post(endpoints.users, formData)
             .then((res) => res.data),
     updateUser: (formData) =>
-        authApis.patch(endpoints.userInfo,
-            { ...formData },
-            { headers: { "Content-Type": "multipart/form-data" } }
-        )
+        authApis.patch(endpoints.userInfo, formData)
+            .then((res) => res.data),
 };
 
 export default userService;
