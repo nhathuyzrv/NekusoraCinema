@@ -4,6 +4,7 @@ from nekusoracinema import views
 
 r = DefaultRouter()
 r.register(r'users', views.UserViewSet, 'user')
+r.register(r'movies', views.MovieViewSet, 'movie')
 
 urlpatterns = [
     path('', include(r.urls)),

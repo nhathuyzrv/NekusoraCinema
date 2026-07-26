@@ -7,7 +7,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Q, UniqueConstraint
 from django.utils import timezone
-from django.utils.text import slugify
+from slugify import slugify
 from django_enum import EnumField
 
 
@@ -218,7 +218,7 @@ class Genre(BaseModel):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            slug = slugify(self.name)
+            slug = slugify(self.name, allow_unicode=False)
             self.slug = slug
         super().save(*args, **kwargs)
 
@@ -240,7 +240,7 @@ class Movie(BaseModel):
     director = models.CharField(max_length=150)
     description = RichTextField()
     poster_image = CloudinaryField(null=True, blank=True)
-    trailer_url = models.URLField()
+    trailer_url = models.URLField(null=True, blank=True)
     status = EnumField(MovieStatus, default=MovieStatus.COMING_SOON)
     genres = models.ManyToManyField(Genre, related_name="movies")
     actors = models.ManyToManyField(Actor, through="MovieActor", related_name="movies")
@@ -254,17 +254,12 @@ class Movie(BaseModel):
 
     def save(self, *args, **kwargs):
         if not self.slug:
-            base = slugify(self.title)
+            base = slugify(self.title, allow_unicode=False)
             slug = base
             if Movie.objects.filter(slug=slug).exclude(pk=self.pk).exists():
                 slug = f"{base}-{self.release_date.strftime('%Y-%m-%d')}"
             self.slug = slug
         super().save(*args, **kwargs)
-
-    @property
-    def average_rating(self):
-        agg = self.ratings.aggregate(models.Avg("score"))
-        return round(agg["score__avg"], 1) if agg["score__avg"] else None
 
 
 class MovieActor(BaseModel):

@@ -63,3 +63,51 @@ class UserUpdateSerializer(ImageURLMixin, serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'gender', 'date_of_birth', 'phone_number', 'avatar']
+
+
+class GenreSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Genre
+        fields = ['id', 'name', 'slug']
+
+
+class ActorSerializer(ImageURLMixin, serializers.ModelSerializer):
+    image_fields = ['photo']
+
+    class Meta:
+        model = Actor
+        fields = ['id', 'name', 'photo']
+
+
+class SimpleMovieSerializer(ImageURLMixin, serializers.ModelSerializer):
+    image_fields = ['poster_image']
+
+    class Meta:
+        model = Movie
+        fields = ['id', 'title', 'age_rating' ,'poster_image', 'trailer_url', 'status', 'slug']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        avg_rating = getattr(instance, 'avg_rating')
+        rating_count = getattr(instance, 'rating_count')
+
+        data['avg_rating'] = round(avg_rating, 1) if avg_rating else None
+        data['rating_count'] = rating_count if rating_count else None
+        return data
+
+
+class MovieDetailsSerializer(SimpleMovieSerializer):
+    genres = GenreSerializer(many=True, read_only=True)
+    actors = ActorSerializer(many=True, read_only=True)
+    class Meta:
+        model = SimpleMovieSerializer.Meta.model
+        fields = SimpleMovieSerializer.Meta.fields + ['duration_minutes', 'release_date', 'country', 'director', 'description', 'genres', 'actors', 'ratings']
+
+
+class RatingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Rating
+        fields = ['id', 'user', 'movie', 'rating']
+
+
+
