@@ -9,8 +9,15 @@ export const endpoints = {
     userInfo: "/users/current-user/",
 
     // Phim
-    movies: "/movies/",
-    movieDetail: (slug) => `/movies/${slug}/`,
+    movies: ({ page = 1, search = "", genres = [], status = "" }) => {
+        const params = new URLSearchParams();
+        params.append("page", page);
+        if (search) params.append("title", search);
+        if (status) params.append("status", status);
+        genres.forEach((g) => params.append("genre", g));
+        return `/movies/?${params.toString()}`;
+    },
+    movieDetail: (id) => `/movies/${id}/`,
 
     // Suất chiếu
     showtimes: "/showtimes/",

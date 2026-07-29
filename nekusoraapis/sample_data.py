@@ -491,7 +491,7 @@ for md in MOVIES:
     movie, created = Movie.objects.get_or_create(
         title=md["title"],
         defaults=dict(
-            director=md["director"], duration_minutes=md["duration"],
+            director=md["director"], duration=md["duration"],
             release_date=md["release_date"], country=md["country"],
             description=md["desc"], trailer_url=trailer_url_for(md["title"]),
             age_rating=md["age_rating"], status=compute_status(md["release_date"]),
@@ -700,8 +700,8 @@ def build_showtimes_for_movie(movie, day_range):
             times_today = random.sample(SHOW_TIME_SLOTS, k=min(SHOWTIMES_PER_ROOM_PER_DAY, len(SHOW_TIME_SLOTS)))
             for start_t in times_today:
                 fmt = random.choice(screening_formats)
-                base_price = FORMAT_BASE_PRICE.get(fmt.code, 75000) + random.choice([-5000, 0, 0, 5000, 10000])
-                end_minutes = start_t.hour * 60 + start_t.minute + movie.duration_minutes + 15
+                price = FORMAT_BASE_PRICE.get(fmt.code, 75000) + random.choice([-5000, 0, 0, 5000, 10000])
+                end_minutes = start_t.hour * 60 + start_t.minute + movie.duration + 15
                 end_t = time((end_minutes // 60) % 24, end_minutes % 60)
                 if show_date < TODAY:
                     status = ShowtimeStatus.COMPLETED
@@ -711,7 +711,7 @@ def build_showtimes_for_movie(movie, day_range):
                     room=room, show_date=show_date, start_time=start_t,
                     defaults=dict(
                         movie=movie, screening_format=fmt, end_time=end_t,
-                        base_price=Decimal(base_price), status=status,
+                        price=Decimal(price), status=status,
                         created_by=random.choice(creator_users),
                     ),
                 )
@@ -792,7 +792,7 @@ for st in all_showtimes_qs:
             break
 
         customer = random.choice(customers)
-        seat_amount = st.base_price * len(chosen_seats)
+        seat_amount = st.price * len(chosen_seats)
 
         # Sản phẩm bắp nước: 55% booking có mua thêm
         chosen_products = []
@@ -863,7 +863,7 @@ for st in all_showtimes_qs:
         )
         for seat in chosen_seats:
             Ticket.objects.create(
-                booking=booking, showtime=st, seat=seat, price=st.base_price,
+                booking=booking, showtime=st, seat=seat, price=st.price,
                 status=ticket_status, created_at=created_at, updated_at=created_at,
             )
         # ghế đã bị hủy có thể coi như trả lại pool (đơn giản hoá: không trả lại để tránh trùng)

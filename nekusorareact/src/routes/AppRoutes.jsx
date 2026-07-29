@@ -2,8 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Layout from "../layout/Layout";
 import ProtectedRoutes from "./ProtectedRoutes";
 
-import Home from "../pages/Home";
-// import Movies from "../pages/Movies";
+import Movies from "../pages/Movies";
 // import MovieDetail from "../pages/MovieDetail";
 // import Booking from "../pages/Booking";
 import Profile from "../pages/Profile";
@@ -20,8 +19,7 @@ export default function AppRoutes() {
     return (
         <Routes>
             <Route element={<Layout />}>
-                <Route index element={<Home />} />
-                {/* <Route path="movies" element={<Movies />} /> */}
+                <Route path="movies" element={<Movies />} />
                 {/* <Route path="movies/:slug" element={<MovieDetail />} /> */}
 
                 <Route element={<ProtectedRoutes roles={["CUSTOMER"]} />}>

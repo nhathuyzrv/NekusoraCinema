@@ -234,12 +234,12 @@ class Actor(BaseModel):
 class Movie(BaseModel):
     title = models.CharField(max_length=255)
     age_rating = EnumField(MovieAgeRating)
-    duration_minutes = models.PositiveSmallIntegerField()
+    duration = models.PositiveSmallIntegerField()
     release_date = models.DateField()
     country = models.CharField(max_length=100)
     director = models.CharField(max_length=150)
     description = RichTextField()
-    poster_image = CloudinaryField(null=True, blank=True)
+    poster = CloudinaryField(null=True, blank=True)
     trailer_url = models.URLField(null=True, blank=True)
     status = EnumField(MovieStatus, default=MovieStatus.COMING_SOON)
     genres = models.ManyToManyField(Genre, related_name="movies")
@@ -280,7 +280,7 @@ class Showtime(BaseModel):
     show_date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()
-    base_price = models.DecimalField(max_digits=10, decimal_places=0)
+    price = models.DecimalField(max_digits=10, decimal_places=0)
     status = EnumField(ShowtimeStatus, default=ShowtimeStatus.SCHEDULED)
     created_by = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,

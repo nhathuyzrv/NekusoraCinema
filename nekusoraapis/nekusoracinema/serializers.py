@@ -80,11 +80,11 @@ class ActorSerializer(ImageURLMixin, serializers.ModelSerializer):
 
 
 class SimpleMovieSerializer(ImageURLMixin, serializers.ModelSerializer):
-    image_fields = ['poster_image']
+    image_fields = ['poster']
 
     class Meta:
         model = Movie
-        fields = ['id', 'title', 'age_rating' ,'poster_image', 'trailer_url', 'status', 'slug']
+        fields = ['id', 'title', 'age_rating' ,'poster', 'trailer_url', 'status', 'slug']
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -101,13 +101,13 @@ class MovieDetailsSerializer(SimpleMovieSerializer):
     actors = ActorSerializer(many=True, read_only=True)
     class Meta:
         model = SimpleMovieSerializer.Meta.model
-        fields = SimpleMovieSerializer.Meta.fields + ['duration_minutes', 'release_date', 'country', 'director', 'description', 'genres', 'actors', 'ratings']
+        fields = SimpleMovieSerializer.Meta.fields + ['duration', 'release_date', 'country', 'director', 'description', 'genres', 'actors', 'ratings']
 
 
 class RatingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rating
-        fields = ['id', 'user', 'movie', 'rating']
+        fields = ['id', 'user', 'movie', 'verified_booking', 'score', 'comment', 'created_at']
 
 
 
