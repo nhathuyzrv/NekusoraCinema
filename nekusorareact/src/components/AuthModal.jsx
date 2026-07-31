@@ -53,12 +53,14 @@ const AuthModal = ({ onLogin, onRegister }) => {
         setOpen(false);
         clearError();
         resetPwHook.reset();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [clearError, resetPwHook.reset]);
 
     const switchMode = useCallback((next) => {
         setMode(next);
         clearError();
         resetPwHook.reset();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [clearError, resetPwHook.reset]);
 
     useEffect(() => {
@@ -72,6 +74,7 @@ const AuthModal = ({ onLogin, onRegister }) => {
             setOpen(true);
         };
         modal.close = close;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [close, clearError]);
 
     useEffect(() => {
