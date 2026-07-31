@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 
-export default function ProtectedRoutes({ roles = [] }) {
+const ProtectedRoutes = ({ roles = [] }) => {
     const { isAuthenticated, appLoading, hasRole } = useAuth();
     const location = useLocation();
 
@@ -23,3 +23,5 @@ export default function ProtectedRoutes({ roles = [] }) {
 
     return <Outlet />;
 }
+
+export default ProtectedRoutes;

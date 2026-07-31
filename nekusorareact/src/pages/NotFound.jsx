@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { Film } from "lucide-react";
 
-export default function NotFound() {
+const NotFound = () => {
     return (
         <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-4 py-16 bg-base-200">
             <div className="w-full max-w-md">
@@ -45,3 +45,5 @@ export default function NotFound() {
         </div>
     );
 }
+
+export default NotFound;

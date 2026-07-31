@@ -49,6 +49,8 @@ INSTALLED_APPS = [
     'drf_yasg',
     'oauth2_provider',
     'corsheaders',
+    'ckeditor',
+    'ckeditor_uploader',
     'django_password_validators',
 ]
 
@@ -59,6 +61,14 @@ PAYOS_API_KEY = config('PAYOS_API_KEY')
 PAYOS_CHECKSUM_KEY = config('PAYOS_CHECKSUM_KEY')
 PAYOS_RETURN_URL = config('PAYOS_RETURN_URL')
 PAYOS_CANCEL_URL = config('PAYOS_CANCEL_URL')
+
+EMAIL_BACKEND='django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST='smtp.gmail.com'
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD=config('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL=config('DEFAULT_FROM_EMAIL')
 
 AUTH_USER_MODEL = 'nekusoracinema.User'
 

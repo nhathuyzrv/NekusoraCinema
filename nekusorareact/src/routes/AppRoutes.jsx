@@ -3,7 +3,7 @@ import Layout from "../layout/Layout";
 import ProtectedRoutes from "./ProtectedRoutes";
 
 import Movies from "../pages/Movies";
-// import MovieDetail from "../pages/MovieDetail";
+import MovieDetails from "../pages/MovieDetails";
 // import Booking from "../pages/Booking";
 import Profile from "../pages/Profile";
 // import History from "../pages/History";
@@ -15,12 +15,12 @@ import Forbidden from "../pages/Forbidden";
 // import ManageShowtime from "../pages/admin/ManageShowtime";
 // import CheckIn from "../pages/staff/CheckIn";
 
-export default function AppRoutes() {
+const AppRoutes = () => {
     return (
         <Routes>
             <Route element={<Layout />}>
                 <Route path="movies" element={<Movies />} />
-                {/* <Route path="movies/:slug" element={<MovieDetail />} /> */}
+                <Route path="movies/:slug" element={<MovieDetails />} />
 
                 <Route element={<ProtectedRoutes roles={["CUSTOMER"]} />}>
                     {/* <Route path="booking" element={<Booking />} /> */}
@@ -44,3 +44,5 @@ export default function AppRoutes() {
         </Routes>
     );
 }
+
+export default AppRoutes;

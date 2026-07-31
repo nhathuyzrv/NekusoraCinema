@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { registerAlertHandler } from "../configs/MyAlert";
 
-export default function GlobalAlert() {
+const GlobalAlert = () => {
     const ref = useRef(null);
     const resolveRef = useRef(null);
 
@@ -89,3 +89,5 @@ export default function GlobalAlert() {
         </dialog>
     );
 }
+
+export default GlobalAlert;

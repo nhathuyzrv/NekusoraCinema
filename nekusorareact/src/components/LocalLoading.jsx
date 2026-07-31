@@ -1,4 +1,4 @@
-export default function LocalLoading({ show, children }) {
+const LocalLoading = ({ show, children }) => {
     return (
         <div className="relative">
             {children}
@@ -10,3 +10,5 @@ export default function LocalLoading({ show, children }) {
         </div>
     );
 }
+
+export default LocalLoading;

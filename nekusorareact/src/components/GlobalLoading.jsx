@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export default function GlobalLoading({ message = "Chờ xíu..." }) {
+const GlobalLoading = ({ message = "Chờ xíu..." }) => {
     const ref = useRef(null);
 
     useEffect(() => {
@@ -30,3 +30,5 @@ export default function GlobalLoading({ message = "Chờ xíu..." }) {
         </dialog>
     );
 }
+
+export default GlobalLoading;

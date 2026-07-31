@@ -6,7 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import GlobalLoading from "../components/GlobalLoading";
 import GlobalAlert from "../components/GlobalAlert";
 
-export default function Layout() {
+const Layout = () => {
     const { isAuthenticated, register, login, appLoading } = useAuth();
 
     return (
@@ -22,3 +22,5 @@ export default function Layout() {
         </div>
     );
 }
+
+export default Layout;

@@ -62,7 +62,7 @@ function InfoRow({ icon, label, value }) {
     );
 }
 
-export default function Profile() {
+const Profile = () => {
     const { user } = useAuth();
     const [avatarFile, setAvatarFile] = useState(null);
     const [avatarPreview, setAvatarPreview] = useState(null);
@@ -343,3 +343,5 @@ export default function Profile() {
         </div>
     );
 }
+
+export default Profile;

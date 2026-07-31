@@ -2,10 +2,10 @@ import Apis, { authApis, endpoints } from "../configs/Apis";
 
 const movieService = {
     getByPage: (page) =>
-        Apis.get(endpoints.movies(page))
+        Apis.get(endpoints.moviesPagination(page))
             .then(res => res.data),
-    getDetail: (id) =>
-        authApis.get(endpoints.movieDetail(id))
+    getDetails: (id) =>
+        authApis.get(endpoints.movieDetails(id))
             .then(res => res.data),
 };
 

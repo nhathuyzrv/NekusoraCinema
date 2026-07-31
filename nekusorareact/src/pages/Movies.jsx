@@ -1,49 +1,83 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Star, ChevronLeft, ChevronRight } from "lucide-react";
-import { useMoviesPagination } from "../hooks/useMoviesPagination";
+import { Search, Star, ChevronLeft, ChevronRight, Play, X } from "lucide-react";
+import { useMoviesPagination } from "../hooks/useMovies";
+import { useGenres } from "../hooks/useGenres";
+import { getYtbEmbedUrl } from "../utils/EmbededUrl";
 
 const PAGE_SIZE = 8;
 
-const GENRE_OPTIONS = [
-    { id: 1, name: "Hành động" },
-    { id: 2, name: "Kinh dị" },
-    { id: 3, name: "Hài" },
-    { id: 4, name: "Tâm lý" },
-    { id: 5, name: "Hoạt hình" },
-    { id: 6, name: "Phiêu lưu" },
-    { id: 7, name: "Khoa học viễn tưởng" },
-    { id: 8, name: "Tình cảm" },
-    { id: 9, name: "Trinh thám" },
-    { id: 10, name: "Chính kịch" },
-    { id: 11, name: "Nhạc kịch" },
-    { id: 12, name: "Thần thoại" },
-    { id: 13, name: "Gia đình" },
-    { id: 14, name: "Siêu anh hùng" },
-    { id: 15, name: "Cổ trang" },
-    { id: 16, name: "Bí ẩn" },
-];
+function TrailerModal({ movie, onClose }) {
+    const embedUrl = getYtbEmbedUrl(movie.trailer_url);
+    const overlayRef = useRef(null);
 
-const AGE_RATING_STYLE = {
-    P: "badge-success",
-    K: "badge-info",
-    T13: "badge-warning",
-    T16: "badge-warning",
-    T18: "badge-error",
+    useEffect(() => {
+        const handleKey = (e) => { if (e.key === "Escape") onClose(); };
+        document.addEventListener("keydown", handleKey);
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.removeEventListener("keydown", handleKey);
+            document.body.style.overflow = "";
+        };
+    }, [onClose]);
+
+    return (
+        <div
+            ref={overlayRef}
+            className="fixed inset-0 z-999 bg-black/80 flex flex-col items-center justify-center p-4"
+            onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
+        >
+            <div className="w-full max-w-4xl flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                    <span className="text-white font-semibold text-lg line-clamp-1">{movie.title}</span>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="btn btn-circle btn-sm btn-ghost text-white hover:bg-white/20"
+                    >
+                        <X size={18} />
+                    </button>
+                </div>
+                <div className="w-full aspect-video bg-black rounded-xl overflow-hidden">
+                    {embedUrl ? (
+                        <iframe
+                            src={embedUrl}
+                            title={`Trailer - ${movie.title}`}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                        />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white/50 text-sm">
+                            Không thể tải trailer.
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+const AGE_BADGE = {
+    P: { label: "P", cls: "badge-success" },
+    K: { label: "K", cls: "badge-info" },
+    T13: { label: "T13", cls: "badge-warning" },
+    T16: { label: "T16", cls: "badge-orange" },
+    T18: { label: "T18", cls: "badge-error" },
 };
 
 function AgeRatingBadge({ rating }) {
-    if (!rating) return null;
+    const b = AGE_BADGE[rating] ?? { label: rating, cls: "badge-neutral" };
     return (
-        <span className={`badge badge-sm w-8 h-8 font-bold ${AGE_RATING_STYLE[rating] ?? "badge-neutral"}`}>
-            {rating}
+        <span className={`badge badge-sm w-8 h-8 font-bold ${b.cls}`}>
+            {b.label}
         </span>
     );
 }
 
-function MoviePoster({ movie }) {
+function MoviePoster({ movie, onTrailerClick }) {
     return (
-        <figure className="relative w-full aspect-2/3 bg-base-300 overflow-hidden">
+        <figure className="relative w-full aspect-2/3 bg-base-300 overflow-hidden group">
             {movie.poster ? (
                 <img
                     src={movie.poster}
@@ -56,6 +90,19 @@ function MoviePoster({ movie }) {
                     <span className="text-base-content/50 text-sm font-medium line-clamp-4">
                         {movie.title}
                     </span>
+                </div>
+            )}
+
+            {movie.trailer_url && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onTrailerClick(); }}
+                        className="btn btn-sm btn-white gap-1.5 shadow-lg"
+                    >
+                        <Play size={14} className="fill-current" />
+                        Trailer
+                    </button>
                 </div>
             )}
 
@@ -74,21 +121,31 @@ function MoviePoster({ movie }) {
 
 function MovieCard({ movie }) {
     const navigate = useNavigate();
+    const [showTrailer, setShowTrailer] = useState(false);
+
     return (
-        <button
-            type="button"
-            onClick={() => navigate(`/movies/${movie.slug}`)}
-            className="card bg-base-100 shadow-sm hover:shadow-lg transition-shadow text-left"
-        >
-            <MoviePoster movie={movie} />
-            <div className="card-body p-3">
-                <h3 className="text-sm font-semibold line-clamp-2 leading-snug">{movie.title}</h3>
-            </div>
-        </button>
+        <>
+            <button
+                type="button"
+                onClick={() => navigate(`/movies/${movie.slug}`,
+                    { state: { movieId: movie.id } }
+                )}
+                className="card bg-base-100 shadow-sm hover:shadow-lg transition-shadow text-left"
+            >
+                <MoviePoster movie={movie} onTrailerClick={() => setShowTrailer(true)} />
+                <div className="card-body p-3">
+                    <h3 className="text-sm font-semibold line-clamp-2 leading-snug">{movie.title}</h3>
+                </div>
+            </button>
+
+            {showTrailer && (
+                <TrailerModal movie={movie} onClose={() => setShowTrailer(false)} />
+            )}
+        </>
     );
 }
 
-export default function Movies() {
+const Movies = () => {
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
     const [searchInput, setSearchInput] = useState("");
@@ -103,15 +160,17 @@ export default function Movies() {
         return () => clearTimeout(timer);
     }, [searchInput]);
 
-    const { data, isPending, isPlaceholderData } = useMoviesPagination({
+    const { data: movieData, isPending: movieIsPending, isPlaceholderData } = useMoviesPagination({
         page,
         search,
         genres,
         status,
     });
 
-    const movies = data?.results ?? [];
-    const totalCount = data?.count ?? 0;
+    const { data: genreData, isPending: genreIsPending } = useGenres();
+
+    const movies = movieData?.results ?? [];
+    const totalCount = movieData?.count ?? 0;
     const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
     const toggleGenre = (id) => {
@@ -146,6 +205,7 @@ export default function Movies() {
                     <span className="text-sm font-medium text-base-content shrink-0 w-20">Trạng thái</span>
                     <div className="flex flex-wrap gap-2">
                         <button
+                            role="tab"
                             type="button"
                             className={`btn btn-sm ${status === "NOW_SHOWING" ? "btn-primary" : "btn-outline"}`}
                             onClick={() => handleStatusChange("NOW_SHOWING")}
@@ -153,6 +213,7 @@ export default function Movies() {
                             Đang chiếu
                         </button>
                         <button
+                            role="tab"
                             type="button"
                             className={`btn btn-sm ${status === "COMING_SOON" ? "btn-primary" : "btn-outline"}`}
                             onClick={() => handleStatusChange("COMING_SOON")}
@@ -172,24 +233,33 @@ export default function Movies() {
                         >
                             Tất cả
                         </button>
-                        {GENRE_OPTIONS.map((g) => (
-                            <button
-                                key={g.id}
-                                type="button"
-                                onClick={() => toggleGenre(g.id)}
-                                className={`btn btn-sm ${genres.includes(g.id) ? "btn-primary" : "btn-outline"}`}
-                            >
-                                {g.name}
-                            </button>
-                        ))}
+                        {genreIsPending
+                            ? Array.from({ length: 6 }).map((_, i) => (
+                                <div key={i} className="skeleton h-8 w-20 rounded-lg" />
+                            ))
+                            : (genreData ?? []).map((g) => (
+                                <button
+                                    key={g.id}
+                                    type="button"
+                                    onClick={() => toggleGenre(g.id)}
+                                    className={`btn btn-sm ${genres.includes(g.id) ? "btn-primary" : "btn-outline"}`}
+                                >
+                                    {g.name}
+                                </button>
+                            ))
+                        }
                     </div>
                 </div>
             </div>
 
-            {isPending ? (
+            {movieIsPending ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                     {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-                        <div key={i} className="w-full aspect-2/3 bg-base-300 rounded-box animate-pulse" />
+                        <div key={i} className="flex flex-col gap-2">
+                            <div className="skeleton w-full aspect-2/3 rounded-box" />
+                            <div className="skeleton h-4 w-3/4 rounded" />
+                            <div className="skeleton h-4 w-1/2 rounded" />
+                        </div>
                     ))}
                 </div>
             ) : movies.length === 0 ? (
@@ -222,7 +292,7 @@ export default function Movies() {
                     <button
                         type="button"
                         className="btn btn-circle btn-sm btn-ghost"
-                        disabled={!data?.next}
+                        disabled={!movieData?.next}
                         onClick={() => setPage((p) => p + 1)}
                     >
                         <ChevronRight size={18} />
@@ -232,3 +302,5 @@ export default function Movies() {
         </div>
     );
 }
+
+export default Movies;

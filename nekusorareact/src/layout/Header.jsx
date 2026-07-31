@@ -20,7 +20,7 @@ const DefaultAvatar = ({ name = "U" }) => (
     </div>
 );
 
-export default function Header() {
+const Header = () => {
     const { user, isAuthenticated, logout, hasRole } = useAuth();
     const navigate = useNavigate();
 
@@ -210,3 +210,5 @@ export default function Header() {
         </header>
     );
 }
+
+export default Header;

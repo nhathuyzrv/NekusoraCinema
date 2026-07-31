@@ -7,9 +7,16 @@ export const endpoints = {
     logout: "/o/revoke_token/",
     users: "/users/",
     userInfo: "/users/current-user/",
+    forgotPW: "/auth/forgot-password/",
+    verifyOTP: "/auth/verify-otp/",
+    resetPW: "/auth/reset-password/",
+
+    // Thể loại phim
+    genres: "/genres/",
 
     // Phim
-    movies: ({ page = 1, search = "", genres = [], status = "" }) => {
+    movies: "/movies/",
+    moviesPagination: ({ page = 1, search = "", genres = [], status = "" }) => {
         const params = new URLSearchParams();
         params.append("page", page);
         if (search) params.append("title", search);
@@ -17,7 +24,9 @@ export const endpoints = {
         genres.forEach((g) => params.append("genre", g));
         return `/movies/?${params.toString()}`;
     },
-    movieDetail: (id) => `/movies/${id}/`,
+    movieDetails: (id) => `/movies/${id}/`,
+    movieRatings: (id) => `/movies/${id}/ratings/`,
+    movieRatingsPagination: (id, page = 1) => `/movies/${id}/ratings/?page=${page}`,
 
     // Suất chiếu
     showtimes: "/showtimes/",
@@ -42,6 +51,7 @@ export const endpoints = {
 
     // Rating
     ratings: "/ratings/",
+    ratingDetails: (id) => `/ratings/${id}/`,
 };
 
 const BASE_URL = 'http://127.0.0.1:8000/';

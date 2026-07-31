@@ -4,8 +4,14 @@ from nekusoracinema import views
 
 r = DefaultRouter()
 r.register(r'users', views.UserViewSet, 'user')
+r.register(r'auth', views.AuthViewSet, 'auth')
+r.register(r'genres', views.GenreViewSet, 'genre')
 r.register(r'movies', views.MovieViewSet, 'movie')
-r.register(r'movies/(?P<id>[^/.]+)/ratings', views.MovieRatingViewSet, 'movie-ratings')
+r.register(r'ratings', views.RatingViewSet, 'rating')
+r.register(r'locations', views.LocationViewSet, 'location')
+r.register(r'branches', views.BranchViewSet, 'branch')
+r.register(r'screenings', views.ScreeningFormatViewSet, 'screening')
+r.register(r'rooms', views.CinemaRoomViewSet, 'cinema_room')
 
 urlpatterns = [
     path('', include(r.urls)),

@@ -26,5 +26,13 @@ export function useMoviesPagination({ page, search, genres, status }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hasNextPage, page, search, JSON.stringify(genres), status]);
 
-    return query
+    return query;
+}
+
+export function useMovieDetails({ movieId }) {
+    return useQuery({
+        queryKey: ["movie", movieId],
+        queryFn: () => movieService.getDetails(movieId),
+        staleTime: 1000 * 60,
+    })
 }

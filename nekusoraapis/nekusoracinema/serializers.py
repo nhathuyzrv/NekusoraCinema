@@ -19,12 +19,18 @@ class ImageURLMixin:
         return data
 
 
-class SimpleUserSerializer(ImageURLMixin, serializers.ModelSerializer):
+class UserLiteSerializer(ImageURLMixin, serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['avatar', 'first_name', 'last_name']
+
+
+class SimpleUserSerializer(UserLiteSerializer):
     image_fields = ['avatar']
 
     class Meta:
-        model = User
-        fields = ['email', 'role', 'gender', 'loyalty_points', 'date_of_birth', 'phone_number', 'avatar', 'first_name', 'last_name']
+        model = UserLiteSerializer.Meta.model
+        fields = UserLiteSerializer.Meta.fields + ['email', 'role', 'gender', 'loyalty_points', 'date_of_birth', 'phone_number']
         extra_kwargs = {
             'role': {
                 'read_only': True,
@@ -101,13 +107,52 @@ class MovieDetailsSerializer(SimpleMovieSerializer):
     actors = ActorSerializer(many=True, read_only=True)
     class Meta:
         model = SimpleMovieSerializer.Meta.model
-        fields = SimpleMovieSerializer.Meta.fields + ['duration', 'release_date', 'country', 'director', 'description', 'genres', 'actors', 'ratings']
+        fields = SimpleMovieSerializer.Meta.fields + ['duration', 'release_date', 'country', 'director', 'description', 'genres', 'actors']
 
 
 class RatingSerializer(serializers.ModelSerializer):
+    user = UserLiteSerializer(read_only=True)
+
     class Meta:
         model = Rating
         fields = ['id', 'user', 'movie', 'verified_booking', 'score', 'comment', 'created_at']
 
 
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = ['id', 'name']
 
+
+class BranchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Branch
+        fields = ['id', 'name', 'location', 'address', 'phone_number', 'opening_time', 'closing_time']
+
+
+class ScreeningFormatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScreeningFormat
+        fields = ['id', 'code', 'name']
+
+
+class CinemaRoomSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CinemaRoom
+        fields = ['id', 'name', 'branch', 'total_rows', 'seats_per_row']
+
+
+class SeatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Seat
+        fields = ['id', 'room', 'row_label', 'seat_number', 'seat_code']
+
+
+class ShowtimeSerializer(serializers.ModelSerializer):
+    branch = BranchSerializer(source='room.branch', read_only=True)
+    location = LocationSerializer(source='room.branch.location', read_only=True)
+    screening_format = ScreeningFormatSerializer(read_only=True)
+
+    class Meta:
+        model = Showtime
+        fields = ['id', 'show_date', 'start_time', 'end_time', 'price', 'status', 'movie', 'room', 'branch', 'location', 'screening_format']

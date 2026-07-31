@@ -5,4 +5,4 @@ class MovieItemPaginator(pagination.PageNumberPagination):
     page_size = 8
 
 class RatingItemPaginator(pagination.PageNumberPagination):
-    page_size = 5
+    page_size = 8
