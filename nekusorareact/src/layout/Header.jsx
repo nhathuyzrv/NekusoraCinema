@@ -27,9 +27,13 @@ const Header = () => {
     const handleLogout = async () => {
         await MyAlert.alert('Thông báo', 'Bạn có chắc chắn muốn đăng xuất?', [
             { text: 'Hủy', style: 'ghost' },
-            { text: 'Đăng xuất', style: 'primary', onPress: async () => await logout() }
+            {
+                text: 'Đăng xuất', style: 'primary', onClick: async () => {
+                    await logout();
+                    navigate("/");
+                }
+            }
         ])
-        navigate("/");
     };
 
     const openAuthModal = (tab = "login") => {

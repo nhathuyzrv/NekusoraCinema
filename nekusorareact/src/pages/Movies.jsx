@@ -60,9 +60,9 @@ function TrailerModal({ movie, onClose }) {
 
 const AGE_BADGE = {
     P: { label: "P", cls: "badge-success" },
-    K: { label: "K", cls: "badge-info" },
-    T13: { label: "T13", cls: "badge-warning" },
-    T16: { label: "T16", cls: "badge-orange" },
+    K: { label: "K", cls: "badge-accent" },
+    T13: { label: "T13", cls: "badge-info" },
+    T16: { label: "T16", cls: "badge-warning" },
     T18: { label: "T18", cls: "badge-error" },
 };
 

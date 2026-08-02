@@ -7,9 +7,9 @@ export const endpoints = {
     logout: "/o/revoke_token/",
     users: "/users/",
     userInfo: "/users/current-user/",
-    forgotPW: "/auth/forgot-password/",
+    sendOTP: "/auth/send-otp/",
     verifyOTP: "/auth/verify-otp/",
-    resetPW: "/auth/reset-password/",
+    authComplete: "/auth/complete/",
 
     // Thể loại phim
     genres: "/genres/",
@@ -27,6 +27,7 @@ export const endpoints = {
     movieDetails: (id) => `/movies/${id}/`,
     movieRatings: (id) => `/movies/${id}/ratings/`,
     movieRatingsPagination: (id, page = 1) => `/movies/${id}/ratings/?page=${page}`,
+    movieShowtimes: (id) => `/movies/${id}/showtimes/`,
 
     // Suất chiếu
     showtimes: "/showtimes/",

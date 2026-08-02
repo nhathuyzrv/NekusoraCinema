@@ -1,6 +1,5 @@
 import random
 import string
-from datetime import date
 from django.core.cache import cache
 from django.db.models import Prefetch
 from django.db.models.aggregates import Avg, Count
@@ -8,9 +7,9 @@ from rest_framework import viewsets, generics, parsers, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from nekusoracinema import serializers, paginators, perms, utils
+from nekusoracinema import serializers, paginators, perms, utils, tasks
 from nekusoracinema.models import *
-from nekusoracinema.tasks import send_otp_email
+from nekusoracinema.decorators import OTP_MODE
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -33,76 +32,67 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 def generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
 
+
 class AuthViewSet(viewsets.ViewSet):
-    @action(methods=['post'], url_path='forgot-password', detail=False)
-    def forgot_password(self, request):
-        email = request.data.get('email', None)
-        if not email:
-            return Response({'message': 'Vui lòng cung cấp địa chỉ email'}, status=status.HTTP_400_BAD_REQUEST)
-        email = email.strip().lower()
 
-        try:
-            User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response({'message': 'Email không tồn tại'}, status=status.HTTP_400_BAD_REQUEST)
+    def _get_mode(self, request):
+        key = request.data.get('mode', '').strip()
+        mode = OTP_MODE.get(key)
+        if not mode:
+            return None, Response({'message': 'mode không hợp lệ'}, status=status.HTTP_400_BAD_REQUEST)
+        return mode, None
 
-        send_otp_email(email)
+    @action(methods=['post'], url_path='send-otp', detail=False)
+    def auth_send_otp(self, request):
+        mode, err = self._get_mode(request)
+        if err:
+            return err
+
+        email, error_msg = mode.validate_request(request.data)
+        if error_msg:
+            return Response({'message': error_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+        tasks.send_otp_email.delay(email, mode.mode_key)
         return Response({'message': 'Mã xác nhận đã được gửi'}, status=status.HTTP_200_OK)
 
     @action(methods=['post'], url_path='verify-otp', detail=False)
-    def verify_otp(self, request):
-        email = request.data.get('email', None)
-        if not email:
-            return Response({'message': 'Vui lòng cung cấp địa chỉ email'}, status=status.HTTP_400_BAD_REQUEST)
-        email = email.strip().lower()
+    def auth_verify_otp(self, request):
+        mode, err = self._get_mode(request)
+        if err:
+            return err
 
-        otp_input = request.data.get('otp', None)
-        if not otp_input:
-            return Response({'message': 'Vui lòng cung cấp OTP'}, status=status.HTTP_400_BAD_REQUEST)
-        otp_input = otp_input.strip()
+        email = request.data.get('email', '').strip().lower()
+        otp_input = request.data.get('otp', '').strip()
+        print(email, otp_input)
+        if not email or not otp_input:
+            return Response({'message': 'Vui lòng cung cấp đầy đủ thông tin'}, status=status.HTTP_400_BAD_REQUEST)
 
-        cache_key = f"password_reset_otp:{email}"
-        cached_otp = cache.get(cache_key)
-
+        cached_otp = cache.get(f"otp:{mode.mode_key}:{email}")
         if not cached_otp or cached_otp != otp_input:
             return Response({'message': 'OTP không hợp lệ hoặc đã hết hạn'}, status=status.HTTP_400_BAD_REQUEST)
 
-        cache.delete(cache_key)
+        cache.delete(f"otp:{mode.mode_key}:{email}")
+        token = generate_otp(32)
+        cache.set(f"verified:{mode.mode_key}:{email}", token, timeout=600)
+        return Response({'token': token}, status=status.HTTP_200_OK)
 
-        reset_token = generate_otp(32)
-        cache.set(f"password_reset_verified:{email}", reset_token, timeout=600)
+    @action(methods=['post'], url_path='complete', detail=False)
+    def auth_complete(self, request):
+        mode, err = self._get_mode(request)
+        if err:
+            return err
 
-        return Response({'reset_token': reset_token}, status=status.HTTP_200_OK)
+        email = request.data.get('email', '').strip().lower()
+        token = request.data.get('token', '').strip()
+        if not email or not token:
+            return Response({'message': 'Vui lòng cung cấp đầy đủ thông tin'}, status=status.HTTP_400_BAD_REQUEST)
 
-    @action(methods=['post'], url_path='reset-password', detail=False)
-    def reset_password(self, request):
-        email = request.data.get('email', None)
-        if not email:
-            return Response({'message': 'Vui lòng cung cấp địa chỉ email'}, status=status.HTTP_400_BAD_REQUEST)
-        email = email.strip().lower()
-
-        new_password = request.data.get('new_password', None)
-        if not new_password:
-            return Response({'message': 'Vui lòng cung cấp mật khẩu mới'}, status=status.HTTP_400_BAD_REQUEST)
-
-        cache_key = f"password_reset_verified:{email}"
-
-        reset_token = request.data.get('reset_token', None)
-        stored_token = cache.get(cache_key)
-        if not reset_token or not stored_token or stored_token != reset_token:
+        stored_token = cache.get(f"verified:{mode.mode_key}:{email}")
+        if not stored_token or stored_token != token:
             return Response({'message': 'Token không hợp lệ hoặc đã hết hạn'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            user = User.objects.get(email=email)
-        except User.DoesNotExist:
-            return Response({'message': 'Email không tồn tại'}, status=status.HTTP_400_BAD_REQUEST)
-
-        user.set_password(new_password)
-        user.save()
-
-        cache.delete(cache_key)
-
-        return Response({'message': 'Đặt lại mật khẩu thành công. Vui lòng đăng nhập để tiếp tục.'}, status=status.HTTP_200_OK)
+        cache.delete(f"verified:{mode.mode_key}:{email}")
+        return mode.complete(email, request.data)
 
 
 class GenreViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -147,7 +137,7 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
         return query
 
     @action(methods=['get', 'post'], url_path='ratings', detail=True)
-    def ratings(self, request, pk):
+    def movie_ratings(self, request, pk):
         movie = self.get_object()
 
         if request.method in ['POST']:
@@ -168,7 +158,7 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
         return paginator.get_paginated_response(serializers.RatingSerializer(page, many=True).data)
 
     @action(methods=['get'], url_path='ratings/my', detail=True)
-    def my_rating(self, request, pk):
+    def movie_my_rating(self, request, pk):
         movie = self.get_object()
         user = request.user
         rating = Rating.objects.filter(movie=movie, user=user).first()
@@ -177,12 +167,14 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
         return Response(serializers.RatingSerializer(rating).data, status=status.HTTP_200_OK)
 
     @action(methods=['get'], url_path='showtimes', detail=True)
-    def showtimes(self, request, pk):
+    def movie_showtimes(self, request, pk):
         movie = self.get_object()
-        today = date.today()
-        today_p_5 = utils.get_date_calc(today, 5)
-        showtimes = (movie.showtimes.filter(active=True, show_date__range=[today, today_p_5]).order_by('start_time')
+        showtimes = (movie.showtimes.filter(active=True, status__in=[ShowtimeStatus.SCHEDULED, ShowtimeStatus.COMPLETED]).order_by('start_time')
                      .select_related('screening_format', 'room__branch__location'))
+
+        q_date = request.query_params.get('date')
+        if q_date:
+            showtimes = showtimes.filter(show_date=q_date)
 
         return Response(serializers.ShowtimeSerializer(showtimes, many=True).data, status=status.HTTP_200_OK)
 
@@ -198,7 +190,7 @@ class LocationViewSet(viewsets.ViewSet, generics.ListAPIView):
     serializer_class = serializers.LocationSerializer
 
     @action(methods=['get'], url_path='branches', detail=True)
-    def branches(self, request, pk):
+    def location_branches(self, request, pk):
         location = self.get_object()
         branches = location.branches.filter(active=True).order_by('name')
 
@@ -211,7 +203,7 @@ class BranchViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPI
     serializer_class = serializers.BranchSerializer
 
     @action(methods=['get'], url_path='rooms', detail=True)
-    def rooms(self, request, pk):
+    def branch_rooms(self, request, pk):
         branch = self.get_object()
         rooms = branch.rooms.filter(active=True).order_by('name')
 
@@ -228,7 +220,7 @@ class CinemaRoomViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retriev
     serializer_class = serializers.CinemaRoomSerializer
 
     @action(methods=['get'], url_path='seats', detail=True)
-    def seats(self, request, pk):
+    def room_seats(self, request, pk):
         room = self.get_object()
         seats = room.seats.filter(active=True).order_by('seat_code')
 

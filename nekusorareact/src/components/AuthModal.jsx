@@ -6,6 +6,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useResetPassword } from "../hooks/useResetPassword";
 import GlobalLoading from "./GlobalLoading";
 import MyAlert from "../configs/MyAlert";
+import { useRegister } from "../hooks/useRegister";
 
 const emptyFieldError = "Trường này không được để trống";
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -43,25 +44,28 @@ function ServerError({ msg }) {
     );
 }
 
-const AuthModal = ({ onLogin, onRegister }) => {
+const AuthModal = ({ onLogin }) => {
     const [open, setOpen] = useState(false);
     const [mode, setMode] = useState("login");
     const { error, clearError } = useAuth();
     const resetPwHook = useResetPassword();
+    const registerHook = useRegister();
 
     const close = useCallback(() => {
         setOpen(false);
         clearError();
         resetPwHook.reset();
+        registerHook.reset();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [clearError, resetPwHook.reset]);
+    }, [clearError, resetPwHook.reset, registerHook.reset]);
 
     const switchMode = useCallback((next) => {
         setMode(next);
         clearError();
         resetPwHook.reset();
+        registerHook.reset();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [clearError, resetPwHook.reset]);
+    }, [clearError, resetPwHook.reset, registerHook.reset]);
 
     useEffect(() => {
         const modal = document.getElementById("auth_modal");
@@ -71,6 +75,7 @@ const AuthModal = ({ onLogin, onRegister }) => {
             setMode(tab);
             clearError();
             resetPwHook.reset();
+            registerHook.reset();
             setOpen(true);
         };
         modal.close = close;
@@ -96,7 +101,7 @@ const AuthModal = ({ onLogin, onRegister }) => {
 
     const getTitle = () => {
         if (mode === "login") return "Đăng Nhập Tài Khoản";
-        if (mode === "register") return "Đăng Ký Tài Khoản";
+        if (mode === "register") return registerHook.step === 2 ? "Xác Nhận Email" : "Đăng Ký Tài Khoản";
         return ({ 1: "Quên Mật Khẩu", 2: "Nhập Mã OTP", 3: "Đặt Mật Khẩu Mới" })[resetPwHook.step] ?? "Quên Mật Khẩu";
     };
 
@@ -117,6 +122,11 @@ const AuthModal = ({ onLogin, onRegister }) => {
                                 <ArrowLeft size={16} />
                             </button>
                         )}
+                        {mode === "register" && registerHook.step === 2 && (
+                            <button className="btn btn-sm btn-circle btn-ghost absolute left-2 top-2 z-10" onClick={registerHook.reset} aria-label="Quay lại">
+                                <ArrowLeft size={16} />
+                            </button>
+                        )}
 
                         <div className="p-6">
                             <h3 className="text-xl font-bold text-center mb-6">{getTitle()}</h3>
@@ -126,8 +136,8 @@ const AuthModal = ({ onLogin, onRegister }) => {
                                     onForgot={() => switchMode("forgot")} onClose={close} serverError={error} />
                             )}
                             {mode === "register" && (
-                                <RegisterForm onRegister={onRegister} onSwitch={() => switchMode("login")}
-                                    onClose={close} serverError={error} />
+                                <RegisterFlow hook={registerHook} onSwitch={() => switchMode("login")}
+                                    onClose={(next) => next ? switchMode(next) : close()} />
                             )}
                             {mode === "forgot" && (
                                 <ForgotPasswordFlow hook={resetPwHook} onBackToLogin={() => switchMode("login")} />
@@ -215,7 +225,13 @@ function LoginForm({ onLogin, onSwitch, onForgot, onClose, serverError }) {
     );
 }
 
-function RegisterForm({ onRegister, onSwitch, onClose, serverError }) {
+function RegisterFlow({ hook, onSwitch, onClose }) {
+    if (hook.step === 1) return <RegisterForm hook={hook} onSwitch={onSwitch} />;
+    if (hook.step === 2) return <StepOtp hook={hook} onClose={onClose} />;
+    return null;
+}
+
+function RegisterForm({ hook, onSwitch }) {
     const [form, setForm] = useState({
         first_name: "",
         last_name: "",
@@ -228,8 +244,6 @@ function RegisterForm({ onRegister, onSwitch, onClose, serverError }) {
     });
     const [agree, setAgree] = useState(false);
     const [errors, setErrors] = useState({});
-    const [submitting, setSubmitting] = useState(false);
-    const toast = useToast();
 
     const setField = (name, value) => {
         setForm(p => ({ ...p, [name]: value }));
@@ -257,22 +271,17 @@ function RegisterForm({ onRegister, onSwitch, onClose, serverError }) {
     const submit = async (e) => {
         e.preventDefault();
         if (!validate()) return;
-        setSubmitting(true);
         try {
-            await onRegister?.(form);
-            toast.success("Đăng ký thành công", "Chào mừng bạn đến với NekusoraCinema!");
-            onClose?.();
+            await hook.sendOtp(form);
         } catch {
             //
-        } finally {
-            setSubmitting(false);
         }
     };
 
     return (
         <form onSubmit={submit} className="space-y-3">
-            {submitting && <GlobalLoading message="Đang xử lý..." />}
-            <ServerError msg={serverError} />
+            {hook.loading && <GlobalLoading message="Đang xử lý..." />}
+            <ServerError msg={hook.error} />
 
             {[
                 { label: "Họ", name: "last_name", placeholder: "Nhập họ" },
@@ -283,7 +292,7 @@ function RegisterForm({ onRegister, onSwitch, onClose, serverError }) {
                 <div className="form-control" key={name}>
                     <label className="label"><span className="label-text text-sm">{label}</span></label>
                     <input placeholder={placeholder} className={`input w-full ${errors[name] ? "input-error" : ""}`}
-                        value={form[name]} onChange={e => setField(name, e.target.value)} disabled={submitting} />
+                        value={form[name]} onChange={e => setField(name, e.target.value)} disabled={hook.loading} />
                     {errors[name] && <span className="text-error text-xs mt-1">{errors[name]}</span>}
                 </div>
             ))}
@@ -294,7 +303,7 @@ function RegisterForm({ onRegister, onSwitch, onClose, serverError }) {
                     {[{ value: "MALE", label: "Nam" }, { value: "FEMALE", label: "Nữ" }, { value: "OTHER", label: "Khác" }].map(({ value, label }) => (
                         <label key={value} className="flex items-center gap-2 cursor-pointer">
                             <input type="radio" name="gender" className="radio radio-primary radio-sm"
-                                checked={form.gender === value} onChange={() => setField("gender", value)} disabled={submitting} />
+                                checked={form.gender === value} onChange={() => setField("gender", value)} disabled={hook.loading} />
                             <span className="text-sm">{label}</span>
                         </label>
                     ))}
@@ -306,7 +315,7 @@ function RegisterForm({ onRegister, onSwitch, onClose, serverError }) {
                 <label className="label"><span className="label-text text-sm">Ngày sinh</span></label>
                 <input type="date" className={`input w-full ${errors.date_of_birth ? "input-error" : ""}`}
                     value={form.date_of_birth} onChange={e => setField("date_of_birth", e.target.value)}
-                    disabled={submitting} max={new Date().toISOString().split("T")[0]} />
+                    disabled={hook.loading} max={new Date().toISOString().split("T")[0]} />
                 {errors.date_of_birth && <span className="text-error text-xs mt-1">{errors.date_of_birth}</span>}
             </div>
 
@@ -317,7 +326,7 @@ function RegisterForm({ onRegister, onSwitch, onClose, serverError }) {
                 <div className="form-control" key={name}>
                     <label className="label"><span className="label-text text-sm">{label}</span></label>
                     <PasswordInput value={form[name]} onChange={e => setField(name, e.target.value)}
-                        placeholder={placeholder} error={errors[name]} disabled={submitting} />
+                        placeholder={placeholder} error={errors[name]} disabled={hook.loading} />
                     {errors[name] && <span className="text-error text-xs mt-1">{errors[name]}</span>}
                 </div>
             ))}
@@ -325,7 +334,7 @@ function RegisterForm({ onRegister, onSwitch, onClose, serverError }) {
             <div className="form-control">
                 <label className="label cursor-pointer justify-start gap-2">
                     <input type="checkbox" className="checkbox checkbox-sm checkbox-primary"
-                        checked={agree} onChange={() => setAgree(p => !p)} disabled={submitting} />
+                        checked={agree} onChange={() => setAgree(p => !p)} disabled={hook.loading} />
                     <span className="label-text text-sm whitespace-normal">
                         Bằng việc đăng ký, tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật.
                     </span>
@@ -333,12 +342,12 @@ function RegisterForm({ onRegister, onSwitch, onClose, serverError }) {
                 {errors.agree && <span className="text-error text-xs">{errors.agree}</span>}
             </div>
 
-            <button className="btn btn-primary w-full uppercase" type="submit" disabled={submitting}>Đăng ký</button>
+            <button className="btn btn-primary w-full uppercase" type="submit" disabled={hook.loading}>Đăng ký</button>
 
             <div className="divider my-1" />
             <div className="text-center space-y-2">
                 <p className="text-sm">Bạn đã có tài khoản?</p>
-                <button type="button" className="btn btn-outline btn-primary w-full" onClick={onSwitch} disabled={submitting}>Đăng nhập</button>
+                <button type="button" className="btn btn-outline btn-primary w-full" onClick={onSwitch} disabled={hook.loading}>Đăng nhập</button>
             </div>
         </form>
     );
@@ -396,7 +405,7 @@ function StepEmail({ hook }) {
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN = 60;
 
-function StepOtp({ hook }) {
+function StepOtp({ hook, onClose }) {
     const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
     const [cooldown, setCooldown] = useState(RESEND_COOLDOWN);
     const inputs = useRef([]);
@@ -434,7 +443,12 @@ function StepOtp({ hook }) {
         const code = otp.join("");
         if (code.length < OTP_LENGTH) return;
         try {
-            await hook.verifyOtp(code);
+            const result = await hook.verifyOtp(code);
+            if (result?.success && onClose) {
+                await MyAlert.alert("Đăng ký thành công", "Tài khoản của bạn đã được tạo. Vui lòng đăng nhập để tiếp tục.",
+                    [{ text: "Đăng nhập", style: "primary", onClick: () => onClose("login") }]
+                );
+            }
         } catch {
             //
         };
@@ -509,7 +523,7 @@ function StepNewPassword({ hook, onBackToLogin }) {
         const next = {};
         if (!form.password) next.password = emptyFieldError;
         else if (!passwordRegex.test(form.password))
-            next.password = "Ít nhất 8 ký tự, có chữ hoa, chữ thường, số và ký tự đặc biệt";
+            next.password = "Mật khẩu phải bao gồm những yêu cầu bên dưới";
         if (!form.confirm_password) next.confirm_password = emptyFieldError;
         else if (form.confirm_password !== form.password) next.confirm_password = "Mật khẩu không khớp";
         setErrors(next);
@@ -521,7 +535,7 @@ function StepNewPassword({ hook, onBackToLogin }) {
         if (!validate()) return;
         try {
             await hook.resetPassword(form.password);
-            await MyAlert("Đặt lại mật khẩu thành công", "Mật khẩu của bạn đã được cập nhật. Vui lòng đăng nhập lại để tiếp tục.",
+            await MyAlert.alert("Đặt lại mật khẩu thành công", "Mật khẩu của bạn đã được cập nhật. Vui lòng đăng nhập lại để tiếp tục.",
                 [{ text: "Đăng nhập", style: "primary", onClick: () => onBackToLogin() }]
             );
         } catch {

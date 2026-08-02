@@ -14,12 +14,11 @@ export function useResetPassword() {
         setLoading(true);
         setError(null);
         try {
-            await authService.forgotPW(inputEmail);
+            await authService.sendOTP("reset_password", { email: inputEmail });
             setEmail(inputEmail);
             setStep(2);
         } catch (err) {
-            const msg = err.response?.data?.message || "Gửi OTP thất bại, vui lòng thử lại";
-            setError(msg);
+            setError(err.response?.data?.message || "Gửi OTP thất bại, vui lòng thử lại");
             throw err;
         } finally {
             setLoading(false);
@@ -30,10 +29,9 @@ export function useResetPassword() {
         setLoading(true);
         setError(null);
         try {
-            await authService.forgotPW(email);
+            await authService.sendOTP("reset_password", { email });
         } catch (err) {
-            const msg = err.response?.data?.message || "Gửi lại OTP thất bại";
-            setError(msg);
+            setError(err.response?.data?.message || "Gửi lại OTP thất bại");
             throw err;
         } finally {
             setLoading(false);
@@ -44,12 +42,11 @@ export function useResetPassword() {
         setLoading(true);
         setError(null);
         try {
-            const data = await authService.verifyOTP(email, otp);
-            setResetToken(data.reset_token);
+            const { token } = await authService.verifyOTP("reset_password", { email }, otp);
+            setResetToken(token);
             setStep(3);
         } catch (err) {
-            const msg = err.response?.data?.message || "OTP không hợp lệ hoặc đã hết hạn";
-            setError(msg);
+            setError(err.response?.data?.message || "OTP không hợp lệ hoặc đã hết hạn");
             throw err;
         } finally {
             setLoading(false);
@@ -60,11 +57,10 @@ export function useResetPassword() {
         setLoading(true);
         setError(null);
         try {
-            await authService.resetPW(email, resetToken, newPassword);
+            await authService.authComplete("reset_password", { email, token: resetToken, new_password: newPassword });
             setStep(4);
         } catch (err) {
-            const msg = err.response?.data?.message || "Đặt lại mật khẩu thất bại, vui lòng thử lại";
-            setError(msg);
+            setError(err.response?.data?.message || "Đặt lại mật khẩu thất bại, vui lòng thử lại");
             throw err;
         } finally {
             setLoading(false);

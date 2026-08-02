@@ -35,21 +35,6 @@ export function AuthProvider({ children }) {
         return queryClient.invalidateQueries({ queryKey: ["currentUser"] });
     }, [queryClient]);
 
-    const register = useCallback(async (formData) => {
-        setActionLoading(true);
-        setError(null);
-        try {
-            await userService.register(formData);
-        } catch (err) {
-            const msg = "Đã có lỗi xảy ra, vui lòng thử lại";
-            console.log(err.response?.data);
-            setError(msg);
-            throw err;
-        } finally {
-            setActionLoading(false);
-        }
-    }, []);
-
     const login = useCallback(async ({ username, password }) => {
         setActionLoading(true);
         setError(null);
@@ -94,7 +79,6 @@ export function AuthProvider({ children }) {
                 actionLoading,
                 error,
                 isAuthenticated,
-                register,
                 login,
                 logout,
                 clearError,

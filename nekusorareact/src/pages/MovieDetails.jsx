@@ -1,21 +1,22 @@
 import { useState, useRef, useCallback } from "react";
 import { useLocation } from "react-router-dom";
-import { Clock, Calendar, Globe, Film, Users, Clapperboard, Send } from "lucide-react";
+import { Clock, Calendar, Globe, Film, Users, Clapperboard, Send, MapPin } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import LocalLoading from "../components/LocalLoading";
 import { getYtbEmbedUrl } from "../utils/EmbededUrl";
 import { formatDate, formatDuration, formatTimeAgo } from "../utils/DateTime";
 import { useCreateRating, useMyRating, useUpdateRating, useRatingsPagination } from "../hooks/useRatings";
 import { useMovieDetails } from "../hooks/useMovies";
+import { useMovieShowtimes } from "../hooks/useShowtimes";
 import DOMPurify from 'dompurify';
 import parse from 'html-react-parser';
 
 
 const AGE_BADGE = {
     P: { label: "P", cls: "badge-success" },
-    K: { label: "K", cls: "badge-info" },
-    T13: { label: "T13", cls: "badge-warning" },
-    T16: { label: "T16", cls: "badge-orange" },
+    K: { label: "K", cls: "badge-accent" },
+    T13: { label: "T13", cls: "badge-info" },
+    T16: { label: "T16", cls: "badge-warning" },
     T18: { label: "T18", cls: "badge-error" },
 };
 
@@ -101,7 +102,7 @@ function RatingCard({ rating }) {
     );
 }
 
-function RatingPanel({ movieId, avgRating, ratingCount }) {
+function RatingPanel({ movieId, movieStatus, avgRating, ratingCount }) {
     const { isAuthenticated } = useAuth();
     const scrollRef = useRef(null);
     const [score, setScore] = useState(0);
@@ -167,7 +168,7 @@ function RatingPanel({ movieId, avgRating, ratingCount }) {
         }
     };
 
-    const PANEL_HEIGHT = 440;
+    const PANEL_HEIGHT = 480;
 
     return (
         <div className="flex flex-col gap-4">
@@ -184,11 +185,15 @@ function RatingPanel({ movieId, avgRating, ratingCount }) {
                             <span key={i} className={`text-base ${i < Math.round(avgRating ?? 0) ? "text-warning" : "text-base-content/15"}`}>★</span>
                         ))}
                     </div>
-                    <p className="text-xs text-base-content/50">{ratingCount?.toLocaleString("vi-VN") ?? 0} đánh giá</p>
+                    {movieStatus !== "COMING_SOON" ? (
+                        <p className="text-xs text-base-content/50">{ratingCount?.toLocaleString("vi-VN") ?? 0} đánh giá</p>
+                    ) : (
+                        <p className="text-xs text-base-content/50">COMING SOON</p>
+                    )}
                 </div>
             </div>
 
-            {isAuthenticated ? (
+            {movieStatus !== "COMING_SOON" && isAuthenticated ? (
                 <div className="bg-base-100 border border-base-300 rounded-2xl p-4">
                     {hasMyRating && !isEditing ? (
                         <div className="space-y-3">
@@ -258,7 +263,7 @@ function RatingPanel({ movieId, avgRating, ratingCount }) {
                         </>
                     )}
                 </div>
-            ) : (
+            ) : movieStatus !== "COMING_SOON" && (
                 <div className="bg-base-100 border border-base-300 rounded-2xl p-4 text-center">
                     <p className="text-sm text-base-content/60">
                         <button
@@ -311,10 +316,196 @@ function RatingPanel({ movieId, avgRating, ratingCount }) {
     );
 }
 
+// ─── Showtime helpers ────────────────────────────────────────────────────────
+
+function buildDateTabs() {
+    const tabs = [];
+    const today = new Date();
+    const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+    for (let i = 0; i < 5; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + i);
+        const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        tabs.push({
+            dateStr,
+            label: i === 0 ? "Hôm nay" : dayNames[d.getDay()],
+            dayNum: `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`,
+        });
+    }
+    return tabs;
+}
+
+function groupShowtimes(showtimes) {
+    const locMap = new Map();
+    for (const st of showtimes) {
+        if (!locMap.has(st.location.id)) locMap.set(st.location.id, { location: st.location, branches: new Map() });
+        const locEntry = locMap.get(st.location.id);
+        if (!locEntry.branches.has(st.branch.id)) locEntry.branches.set(st.branch.id, { branch: st.branch, formats: new Map() });
+        const brEntry = locEntry.branches.get(st.branch.id);
+        if (!brEntry.formats.has(st.screening_format.id)) brEntry.formats.set(st.screening_format.id, { format: st.screening_format, showtimes: [] });
+        brEntry.formats.get(st.screening_format.id).showtimes.push(st);
+    }
+    return [...locMap.values()].map(l => ({ ...l, branches: [...l.branches.values()].map(b => ({ ...b, formats: [...b.formats.values()] })) }));
+}
+
+function formatTime(t) { return t?.slice(0, 5) ?? ""; }
+
+// ─── ShowtimesPanel ───────────────────────────────────────────────────────────
+
+function ShowtimesPanel({ movieId }) {
+    const DATE_TABS = buildDateTabs();
+    const [selectedDate, setSelectedDate] = useState(DATE_TABS[0].dateStr);
+    const [filterLocation, setFilterLocation] = useState("all");
+    const [filterBranch, setFilterBranch] = useState("all");
+
+    const { data: showtimes = [], isLoading } = useMovieShowtimes({ movieId, date: selectedDate });
+
+    const allLocations = [...new Map(showtimes.map(s => [s.location.id, s.location])).values()];
+    const allBranches = [...new Map(
+        showtimes
+            .filter(s => filterLocation === "all" || s.location.id === Number(filterLocation))
+            .map(s => [s.branch.id, s.branch])
+    ).values()];
+
+    const handleLocationChange = (val) => { setFilterLocation(val); setFilterBranch("all"); };
+
+    const filtered = showtimes.filter(s =>
+        (filterLocation === "all" || s.location.id === Number(filterLocation)) &&
+        (filterBranch === "all" || s.branch.id === Number(filterBranch))
+    );
+    const grouped = groupShowtimes(filtered);
+
+    return (
+        <div className="py-2 bg-base-100 border border-base-300 rounded-2xl overflow-hidden">
+            <div className="px-5 pt-4 pb-4 border-b border-base-200 space-y-3">
+                <h2 className="font-bold text-2xl pb-2">Lịch chiếu</h2>
+
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                    {DATE_TABS.map(tab => (
+                        <button
+                            key={tab.dateStr}
+                            onClick={() => setSelectedDate(tab.dateStr)}
+                            className={`flex flex-col items-center shrink-0 px-3 py-3 gap-1 rounded-xl border text-xs font-medium transition-all
+                                ${selectedDate === tab.dateStr
+                                    ? "bg-primary text-primary-content border-primary shadow-sm"
+                                    : "border-base-300 text-base-content/70 hover:border-primary/50 hover:text-primary"
+                                }`}
+                        >
+                            <span className={`text-xs font-semibold leading-none ${selectedDate === tab.dateStr ? "opacity-80" : "opacity-60"}`}>
+                                {tab.label}
+                            </span>
+                            <span className="text-sm font-bold mt-0.5 leading-none">{tab.dayNum}</span>
+                        </button>
+                    ))}
+
+                    <div className="h-8 w-px bg-base-300 shrink-0 mx-1" />
+
+                    <div className="flex flex-col py-2 gap-2">
+                        <div className="relative shrink-0">
+                            <select
+                                className="select select-bordered select-sm pr-10 text-sm appearance-none min-w-120px"
+                                value={filterLocation}
+                                onChange={e => handleLocationChange(e.target.value)}
+                            >
+                                <option value="all">Tất cả khu vực</option>
+                                {allLocations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                            </select>
+                        </div>
+
+                        <div className="relative shrink-0">
+                            <select
+                                className="select select-bordered select-sm pr-12 text-sm appearance-none min-w-140px"
+                                value={filterBranch}
+                                onChange={e => setFilterBranch(e.target.value)}
+                            >
+                                <option value="all">Tất cả chi nhánh</option>
+                                {allBranches.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="divide-y divide-base-200">
+                {isLoading ? (
+                    <div className="flex justify-center items-center py-12">
+                        <span className="loading loading-bars loading-md text-primary" />
+                    </div>
+                ) : grouped.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-12 gap-2 text-base-content/40">
+                        <Calendar size={32} className="opacity-40" />
+                        <p className="text-sm">Không có suất chiếu nào</p>
+                    </div>
+                ) : (
+                    grouped.map(({ location, branches }) => (
+                        <div key={location.id} className="px-5 py-4 space-y-4">
+                            <div className="flex items-center gap-1.5 text-lg font-bold text-primary">
+                                <MapPin size={22} />
+                                {location.name}
+                            </div>
+
+                            {branches.map(({ branch, formats }) => (
+                                <div key={branch.id} className="pl-3 border-l-2 border-base-200 space-y-3">
+                                    <div>
+                                        <div className="flex items-center gap-1.5 text-md font-semibold">
+                                            {branch.name}
+                                        </div>
+                                        {branch.address && (
+                                            <p className="text-xs text-base-content/40 mt-0.5">{branch.address}</p>
+                                        )}
+                                    </div>
+
+                                    {formats.map(({ format, showtimes: fmtSt }) => (
+                                        <div key={format.id} className="flex items-start gap-3">
+                                            <span className="shrink-0 inline-flex self-center items-center text-xs font-semibold px-3 py-2 rounded-md bg-base-200 text-base-content/60 tracking-wide whitespace-nowrap">
+                                                {format.name}
+                                            </span>
+                                            <div className="flex flex-wrap gap-1.5">
+                                                {fmtSt.map(st => {
+                                                    const ok = st.status === "SCHEDULED";
+                                                    return (
+                                                        <button
+                                                            key={st.id}
+                                                            disabled={!ok}
+                                                            className={`px-3 py-1.5 rounded-lg border text-sm font-semibold transition-all
+                                                                ${ok
+                                                                    ? "border-primary/40 text-primary hover:bg-primary hover:text-primary-content hover:border-primary active:scale-95"
+                                                                    : "border-base-200 text-base-content/25 bg-base-200/50 cursor-not-allowed line-through"
+                                                                }`}
+                                                        >
+                                                            {formatTime(st.start_time)}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 const MovieDetails = () => {
     const location = useLocation();
     const movieId = location.state?.movieId;
     const [trailerActive, setTrailerActive] = useState(false);
+    const showtimeRef = useRef(null);
+
+    const handleScrollToShowtime = () => {
+        if (showtimeRef.current) {
+            showtimeRef.current.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start'
+            });
+        }
+    };
 
     const { data: movie, isLoading } = useMovieDetails({ movieId });
 
@@ -375,7 +566,6 @@ const MovieDetails = () => {
                 <div className="w-full lg:w-[70%] space-y-6">
 
                     <div className="flex gap-5">
-
                         <div className="hover-3d shrink-0 relative" style={{ width: 280 }}>
                             <img
                                 src={movie.poster}
@@ -398,27 +588,15 @@ const MovieDetails = () => {
                                 <AgeBadge rating={movie.age_rating} />
                                 <StatusBadge status={movie.status} />
                             </div>
-
                             <h1 className="text-2xl font-black leading-tight">{movie.title}</h1>
-
                             <div className="space-y-2 text-sm">
                                 {[
                                     { icon: <Clock size={14} />, label: "Thời lượng", value: formatDuration(movie.duration) },
                                     { icon: <Calendar size={14} />, label: "Khởi chiếu", value: formatDate(movie.release_date) },
                                     { icon: <Globe size={14} />, label: "Quốc gia", value: movie.country },
                                     { icon: <Clapperboard size={14} />, label: "Đạo diễn", value: movie.director },
-                                    {
-                                        icon: <Users size={14} />,
-                                        label: "Diễn viên",
-                                        value: movie.actors?.length > 0
-                                            ? movie.actors.map(a => a.name ?? a).join(", ")
-                                            : "Đang cập nhật",
-                                    },
-                                    {
-                                        icon: <Film size={14} />,
-                                        label: "Thể loại",
-                                        value: movie.genres?.map(g => g.name).join(", ") ?? "—",
-                                    },
+                                    { icon: <Users size={14} />, label: "Diễn viên", value: movie.actors?.length > 0 ? movie.actors.map(a => a.name ?? a).join(", ") : "Đang cập nhật" },
+                                    { icon: <Film size={14} />, label: "Thể loại", value: movie.genres?.map(g => g.name).join(", ") ?? "—" },
                                 ].map(({ icon, label, value }) => (
                                     <div key={label} className="flex items-start gap-2">
                                         <span className="text-primary mt-0.5 shrink-0">{icon}</span>
@@ -427,11 +605,12 @@ const MovieDetails = () => {
                                     </div>
                                 ))}
                             </div>
-
                             {movie.status === "NOW_SHOWING" && (
-                                <button className="btn btn-primary mt-2">
-                                    Đặt vé ngay
-                                </button>
+                                <>
+                                    <div className="pt-2 flex justify-end">
+                                        <button className="btn btn-primary" onClick={handleScrollToShowtime}>Đặt vé ngay</button>
+                                    </div>
+                                </>
                             )}
                         </div>
                     </div>
@@ -442,17 +621,26 @@ const MovieDetails = () => {
                             {parse(movieDescription)}
                         </div>
                     </div>
+
+                    {movie.status === "NOW_SHOWING" && (
+                        <>
+                            <div ref={showtimeRef} className="scroll-mt-20">
+                                <ShowtimesPanel ref={showtimeRef} movieId={movieId} />
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <div className="w-full lg:w-[30%] lg:sticky lg:top-20">
                     <RatingPanel
                         movieId={movieId}
+                        movieStatus={movie.status}
                         avgRating={movie.avg_rating}
                         ratingCount={movie.rating_count}
                     />
                 </div>
             </div>
-        </div >
+        </div>
     );
 }
 

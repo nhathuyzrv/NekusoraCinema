@@ -1,35 +1,48 @@
-import threading
+from celery import shared_task
 from django.core.mail import EmailMultiAlternatives
 from django.core.cache import cache
 import random, string
-
 from django.template.loader import render_to_string
+from nekusoracinema import services
+from nekusoracinema.models import *
 
 
 def generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
 
-def _send_email_thread(email):
+@shared_task(bind=True, max_retries=3, default_retry_delay=10)
+def send_otp_email(self, email, mode):
     try:
         otp = generate_otp()
-        cache.set(f"password_reset_otp:{email}", otp, timeout=300)
+        cache.set(f"otp:{mode}:{email}", otp, timeout=300)
 
-        html_content = render_to_string('email/otp.html', {
-            'otp_code': otp,
-        })
+        template_map = {
+            'register': ('email/otp_register.html', '[Nekusora Cinema] Xác nhận đăng ký'),
+            'reset_password': ('email/otp_reset_pw.html', '[Nekusora Cinema] Đặt lại mật khẩu'),
+        }
+        template, subject = template_map[mode]
+        html_content = render_to_string(template, {'otp_code': otp})
 
-        email = EmailMultiAlternatives(
-            subject='[Nekusora Cinema] Yêu cầu đặt lại mật khẩu',
-            body=f'Bạn đang yêu cầu đặt lại mật khẩu cho tài khoản Nekusora Cinema.\nMã OTP của bạn là: {otp}\nMã OTP có hiệu lực trong vòng 5 phút. Vui lòng không chia sẻ mã này cho bất kỳ ai.\nNếu bạn không phải là người yêu cầu, vui lòng bỏ qua email này.',
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=f'Bạn đang yêu cầu mã xác nhận từ Nekusora Cinema.\nMã OTP của bạn là: {otp}\nMã có hiệu lực trong 5 phút, vui lòng không chia sẻ mã này với bất kỳ ai.',
             from_email=None,
             to=[email],
         )
-        email.attach_alternative(html_content, "text/html")
-        email.send()
-
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
     except Exception as exc:
-        raise
+        raise self.retry(exc=exc)
 
-def send_otp_email(email):
-    thread = threading.Thread(target=_send_email_thread, args=(email,))
-    thread.start()
+
+@shared_task
+def auto_cancel_booking(booking_id):
+    try:
+        booking = Booking.objects.get(pk=booking_id, status=BookingStatus.HOLDING)
+    except Booking.DoesNotExist:
+        return
+
+    seat_ids = list(booking.showtime.room.seats.values_list('id', flat=True))
+    services.release_seats(booking.showtime.pk, seat_ids, booking.customer.pk)
+    booking.status = BookingStatus.CANCELLED
+    booking.save(update_fields=['status'])

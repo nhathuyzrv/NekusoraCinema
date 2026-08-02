@@ -17,21 +17,21 @@ const authService = {
             { headers: { "Content-Type": "application/json" } }
         ),
 
-    forgotPW: (email) =>
-        Apis.post(endpoints.forgotPW,
-            JSON.stringify({ email }),
+    sendOTP: (mode, data) =>
+        Apis.post(endpoints.sendOTP,
+            JSON.stringify({ mode, ...data }),
             { headers: { "Content-Type": "application/json" } }
         ).then(res => res.data),
 
-    verifyOTP: (email, otp) =>
+    verifyOTP: (mode, data, otp) =>
         Apis.post(endpoints.verifyOTP,
-            JSON.stringify({ email, otp }),
+            JSON.stringify({ mode, ...data, otp }),
             { headers: { "Content-Type": "application/json" } }
         ).then(res => res.data),
 
-    resetPW: (email, reset_token, new_password) =>
-        Apis.post(endpoints.resetPW,
-            JSON.stringify({ email, reset_token, new_password }),
+    authComplete: (mode, data) =>
+        Apis.post(endpoints.authComplete,
+            JSON.stringify({ mode, ...data }),
             { headers: { "Content-Type": "application/json" } }
         ).then(res => res.data),
 };

@@ -4,6 +4,7 @@
   name: "celestial-horizon";
   default: true;
   color-scheme: "light";
+  --color-background-core: oklch(98% 0.008 61.5);
   --color-base-100: oklch(98% 0.008 61.5);
   --color-base-200: oklch(93% 0.015 61.3);
   --color-base-300: oklch(88% 0.025 61.6);
@@ -16,13 +17,13 @@
   --color-accent-content: oklch(88% 0.063 188.416);
   --color-neutral: oklch(21% 0.021 311.6);
   --color-neutral-content: oklch(92% 0.004 286.32);
-  --color-info: oklch(55% 0.15 220);
+  --color-info: oklch(65% 0.15 220);
   --color-info-content: oklch(8% 0.066 243.157);
-  --color-success: oklch(55% 0.18 145);
+  --color-success: oklch(65% 0.18 145);
   --color-success-content: oklch(17% 0.077 168.94);
-  --color-warning: oklch(65% 0.18 85);
+  --color-warning: oklch(75% 0.18 85);
   --color-warning-content: oklch(21% 0.112 45.904);
-  --color-error: oklch(68% 0.20 27);
+  --color-error: oklch(70% 0.20 27);
   --color-error-content: oklch(30% 0.105 12.094);
   --radius-selector: 0.5rem;
   --radius-field: 0.25rem;
@@ -37,11 +38,12 @@
 @plugin "daisyui/theme" {
   name: "midnight-velvet";
   color-scheme: "light";
+  --color-background-core: oklch(19% 0.013 277.5);
   --color-base-100: oklch(17% 0.013 277.5);
   --color-base-200: oklch(21% 0.013 277.5);
   --color-base-300: oklch(25% 0.013 277.5);
   --color-base-content: oklch(93% 0.020 50.1);
-  --color-primary: oklch(39% 0.129 21.5);
+  --color-primary: oklch(42% 0.129 21.5);
   --color-primary-content: oklch(93% 0.020 50.1);
   --color-secondary: oklch(29% 0.068 264.1);
   --color-secondary-content: oklch(93% 0.020 50.1);
@@ -69,6 +71,10 @@
 
 @plugin "daisyui" {
   themes: celestial-horizon, midnight-velvet;
+}
+
+:root {
+  background-color: var(--color-background-core);
 }
 
 @keyframes slideInRight {

@@ -46,7 +46,7 @@ class MovieAdmin(ImageViewAdmin):
         fields = '__all__'
 
 class MyAdminSite(admin.AdminSite):
-    site_header = "Nekusora Cinema - Kết nối điện ảnh với bầu trời"
+    site_header = "Nekusora Cinema: Kết nối điện ảnh với bầu trời"
 
 admin_site = MyAdminSite()
 admin_site.register(User)

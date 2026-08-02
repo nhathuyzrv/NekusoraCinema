@@ -17,6 +17,6 @@ const ratingService = {
     updateRating: (ratingId, formData) =>
         authApis.patch(endpoints.ratingDetails(ratingId), formData)
             .then(res => res.data),
-}
+};
 
 export default ratingService;

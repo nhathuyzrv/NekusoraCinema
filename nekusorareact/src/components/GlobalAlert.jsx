@@ -77,7 +77,7 @@ const GlobalAlert = () => {
                             type="button"
                             className={`btn ${btn.style === "primary" ? "btn-primary" : ""} ${btn.style === "error" ? "btn-error" : ""} ${btn.style === "ghost" ? "btn-ghost" : ""}`}
                             onClick={() => {
-                                btn.onPress?.();
+                                btn.onClick?.();
                                 close(btn.text);
                             }}
                         >

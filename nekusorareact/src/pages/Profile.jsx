@@ -170,8 +170,8 @@ const Profile = () => {
                                 <span className="text-base font-medium text-base-content/60 ml-1">pts</span>
                             </p>
                             <div className="mt-3 space-y-1 text-xs text-base-content/50">
-                                <p>Tích lũy: <span className="font-medium text-base-content/70">10.000₫ = 1 pt</span></p>
-                                <p>Quy đổi: <span className="font-medium text-base-content/70">1 pt = 1.000₫</span></p>
+                                <p>Tích lũy: <span className="font-medium text-base-content/70">10.000 vnd = 1 pt</span></p>
+                                <p>Quy đổi: <span className="font-medium text-base-content/70">1 pt = 1.000 vnd</span></p>
                             </div>
                         </div>
 
