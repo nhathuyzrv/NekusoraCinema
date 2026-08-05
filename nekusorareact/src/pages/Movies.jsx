@@ -95,14 +95,16 @@ function MoviePoster({ movie, onTrailerClick }) {
 
             {movie.trailer_url && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); onTrailerClick(); }}
-                        className="btn btn-sm btn-white gap-1.5 shadow-lg"
-                    >
-                        <Play size={14} className="fill-current" />
-                        Trailer
-                    </button>
+                    <div className="tooltip" data-tip="phát trailer">
+                        <div
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onTrailerClick(); }}
+                            className="btn btn-sm btn-primary btn-white gap-1.5 shadow-lg"
+                        >
+                            <Play size={14} className="fill-current" />
+                            Trailer
+                        </div>
+                    </div>
                 </div>
             )}
 

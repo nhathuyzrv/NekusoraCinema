@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, MapPin, Film, Clock, Ticket as TicketIcon, Tag, CreditCard, Loader2, X, Plus, Minus, Flame } from "lucide-react";
-import { useLocations, useLocationMovies, useBookingMovieShowtimes, useRoomSeats, useProducts, usePaymentMethods, useHoldSeats, useSetProducts, useApplyPromotion, useRemovePromotion, useRedeemPoints, useClearPoints, useSelectPaymentMethod, useCancelBooking, useBookingDetails } from "../hooks/useBooking";
+import { useLocations, useLocationMovies, useBookingMovieShowtimes, useRoomSeats, useProducts, usePaymentMethods, useHoldSeats, useSetProducts, useApplyPromotion, useRemovePromotion, useRedeemPoints, useClearPoints, useSelectPaymentMethod, useCancelBooking, useBookingDetails, useBookingsStatus } from "../hooks/useBooking";
 import { useSeatSocket } from "../hooks/useSeatSocket";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/useToast";
@@ -11,6 +11,7 @@ import { SeatCountdown } from "../components/SeatCountdown";
 import { formatMoney, formatSignedMoney } from "../utils/Money";
 import { formatDate, formatShortWeekday } from "../utils/DateTime";
 import { callAuthModal } from "../utils/CallAuthModal";
+import bookingService from "../services/bookingService";
 
 
 const STEPS = ["Chọn suất chiếu", "Chọn ghế", "Chọn bắp/nước", "Khuyến mãi", "Xác nhận đơn", "Thanh toán"];
@@ -302,7 +303,6 @@ function SeatMap({ showtime, selectedSeats, setSelectedSeats }) {
         const evicted = selectedSeats.filter((s) => unavailable.has(s.id));
         if (evicted.length === 0) return;
         setSelectedSeats((prev) => prev.filter((s) => !unavailable.has(s.id)));
-        toast.warning("Một số ghế bạn chọn đã có người chọn trước", `Chúng tôi đã loại ${evicted.length} ghế đó khỏi danh sách của bạn`);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [booked, held]);
 
@@ -313,9 +313,7 @@ function SeatMap({ showtime, selectedSeats, setSelectedSeats }) {
             if (!map.has(s.row_label)) map.set(s.row_label, []);
             map.get(s.row_label).push(s);
         });
-        return Array.from(map.entries())
-            .sort((a, b) => a[0].localeCompare(b[0]))
-            .map(([label, seatList]) => [label, seatList.sort((a, b) => a.seat_number - b.seat_number)]);
+        return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([label, seatList]) => [label, seatList.sort((a, b) => a.seat_number - b.seat_number)]);
     }, [seats]);
 
     const toggleSeat = (seat) => {
@@ -326,15 +324,16 @@ function SeatMap({ showtime, selectedSeats, setSelectedSeats }) {
         if (isSelected) {
             next = selectedSeats.filter((s) => s.id !== seat.id);
         } else {
-            if (selectedSeats.length >= MAX_SEATS) return;
+            if (selectedSeats.length >= MAX_SEATS) {
+                toast.warning("Đã đạt giới hạn", `Bạn chỉ được chọn tối đa ${MAX_SEATS} ghế`);
+                return;
+            }
             next = [...selectedSeats, seat];
         }
 
         const rowSeats = rows.find(([label]) => label === seat.row_label)?.[1] ?? [];
         const seatsPerRowCount = rowSeats.length;
-        const selectedInRow = next
-            .filter((s) => s.row_label === seat.row_label)
-            .map((s) => s.seat_number);
+        const selectedInRow = next.filter((s) => s.row_label === seat.row_label).map((s) => s.seat_number);
 
         if (!isValidSeatSelection(selectedInRow, seatsPerRowCount)) {
             toast.warning("Không thể chọn hoặc bỏ chọn ghế này", "Vui lòng không chừa trống 1 ghế lẻ ở đầu, giữa hoặc cuối dãy ghế đã chọn");
@@ -361,7 +360,7 @@ function SeatMap({ showtime, selectedSeats, setSelectedSeats }) {
     return (
         <LocalLoading show={isLoading}>
             <div className="bg-base-100 border border-base-300 rounded-2xl p-5">
-                <div className="mt-2 mb-2">
+                <div className="mt-1 mb-2 border-b border-base-300 pb-3">
                     <p className="text-center text-xs text-base-content/60 mb-1 tracking-widest">{showtime.room.name}</p>
                 </div>
 
@@ -552,7 +551,7 @@ function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
         }
         redeemPts(pointsInput, {
             onSuccess: () => {
-                toast.success("Quy đổi điểm thành công", `Bạn được giảm ${formatMoney(pointsInput * 1000)}`)
+                toast.success("Quy đổi điểm thành công", `Bạn được giảm ${formatMoney(pointsInput * 200)}`)
             }
         });
     };
@@ -567,7 +566,7 @@ function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
                         <p className="text-sm font-semibold mb-3 flex items-center gap-2">
                             <Tag size={14} className="text-primary" /> Mã khuyến mãi
                         </p>
-                        {appliedPromo && !removingPromo ? (
+                        {appliedPromo ? (
                             <div className="flex items-center justify-between bg-success/10 border border-success/30 rounded-lg px-3 py-2">
                                 <div>
                                     <p className="text-sm font-medium text-success">{appliedPromo.promotion.code}</p>
@@ -584,6 +583,7 @@ function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
                         ) : (
                             <div className="flex gap-2">
                                 <input
+                                    type="text"
                                     className="input input-sm flex-1"
                                     placeholder="Nhập mã khuyến mãi"
                                     value={code}
@@ -607,7 +607,7 @@ function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
                         </p>
                         <p className="text-xs text-base-content/50 mb-3">
                             Bạn đang có <span className="font-semibold text-primary">{user?.loyalty_points.toLocaleString('vi-VN') ?? 0}</span> điểm
-                            (1 điểm = 1.000đ)
+                            (5 điểm = 1.000đ)
                         </p>
                         {booking?.points_used > 0 ? (
                             <div className="flex items-center justify-between bg-success/10 border border-success/30 rounded-lg px-3 py-2">
@@ -692,9 +692,16 @@ function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBac
     const { data: methods, isLoading } = usePaymentMethods();
     const [selectedMethod, setSelectedMethod] = useState(null);
     const { mutate: selectPaymentMethod, isPending } = useSelectPaymentMethod(bookingCode);
+    const { user } = useAuth();
     const toast = useToast();
-
+    const [emailOption, setEmailOption] = useState("my-email");
     const methodList = methods?.results ?? methods ?? [];
+
+    useEffect(() => {
+        if (emailOption === "my-email") {
+            setEmail(user?.email ?? "");
+        }
+    }, [emailOption, user?.email, setEmail]);
 
     const handleContinue = async () => {
         if (!selectedMethod) {
@@ -723,15 +730,46 @@ function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBac
 
     return (
         <div className="space-y-4">
-            <div className="bg-base-100 border border-base-300 rounded-2xl p-4">
-                <p className="text-sm font-semibold mb-3">Email nhận vé</p>
+            <div className="bg-base-100 border border-base-300 rounded-2xl p-4 space-y-3">
+                <p className="text-sm font-semibold">Email nhận vé</p>
+
+                <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="radio"
+                            name="email_option"
+                            className="radio radio-primary radio-sm"
+                            checked={emailOption === "my-email"}
+                            onChange={() => setEmailOption("my-email")}
+                        />
+                        <span className="text-sm">Email của tôi</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="radio"
+                            name="email_option"
+                            className="radio radio-primary radio-sm"
+                            checked={emailOption === "other"}
+                            onChange={() => setEmailOption("other")}
+                        />
+                        <span className="text-sm">Khác</span>
+                    </label>
+                </div>
+
                 <input
                     type="email"
                     className="input w-full"
                     placeholder="you@email.com"
                     value={email}
+                    disabled={emailOption === "my-email"}
                     onChange={(e) => setEmail(e.target.value)}
                 />
+
+                {emailOption === "other" && (
+                    <p className="text-xs text-warning flex items-start gap-1.5">
+                        Lưu ý: Vui lòng kiểm tra kỹ địa chỉ email trước khi tiếp tục. Vé điện tử sẽ được gửi đến địa chỉ này và không thể thay đổi sau khi xác nhận.
+                    </p>
+                )}
             </div>
 
             <div className="bg-base-100 border border-base-300 rounded-2xl p-4">
@@ -798,6 +836,20 @@ function OrderSummaryPanel({ selection, selectedSeats, cart, booking, step }) {
         );
     }
 
+    const displaySeats = selectedSeats.length > 0 ? selectedSeats : (booking?.tickets?.map((t) => t.seat).filter(Boolean) ?? []);
+
+    const displayCart = cart.length > 0 ? cart : (booking?.products?.map((bp) => {
+        const prod = bp.product !== null ? bp.product : null;
+        return {
+            product: prod ? prod.id : bp.product,
+            quantity: bp.quantity,
+            _info: prod || {
+                name: bp.product_name || "Sản phẩm",
+                price: bp.price || 0,
+            },
+        };
+    }) ?? []);
+
     return (
         <div className="bg-base-100 border border-base-300 rounded-2xl p-4 top-20 space-y-4">
             <div className="w-full text-md text-center text-primary font-medium pb-3 border-b border-base-300">
@@ -825,21 +877,21 @@ function OrderSummaryPanel({ selection, selectedSeats, cart, booking, step }) {
                 </div>
             </div>
 
-            {selectedSeats.length > 0 && (
+            {displaySeats.length > 0 && (
                 <div className="border-t border-base-200 pt-3">
                     <p className="text-xs text-base-content/50 mb-1">Ghế đã chọn</p>
                     <div className="flex flex-wrap gap-1.5">
-                        {selectedSeats.map((s) => (
-                            <span key={s.id} className="badge badge-primary badge-sm">{s.seat_code}</span>
+                        {displaySeats.map((s) => (
+                            <span key={s.id || s.seat_code} className="badge badge-primary badge-sm">{s.seat_code}</span>
                         ))}
                     </div>
                 </div>
             )}
 
-            {cart.length > 0 && (
+            {displayCart.length > 0 && (
                 <div className="border-t border-base-200 pt-3 space-y-1">
                     <p className="text-xs text-base-content/50 mb-1">Bắp / Nước</p>
-                    {cart.map((item) => (
+                    {displayCart.map((item) => (
                         <div key={item.product} className="flex justify-between text-xs">
                             <span className="text-base-content/70">{item._info?.name} x{item.quantity}</span>
                             <span className="font-medium">{formatMoney((item._info?.price ?? 0) * item.quantity)}</span>
@@ -882,6 +934,13 @@ function OrderSummaryPanel({ selection, selectedSeats, cart, booking, step }) {
     );
 }
 
+function getResumeStep(booking) {
+    const hasProducts = Array.isArray(booking.booking_products)
+        ? booking.booking_products.length > 0
+        : booking.product_amount > 0;
+    return hasProducts ? 3 : 2;
+}
+
 const Booking = () => {
     const [step, setStep] = useState(0);
     const [maxUnlockedStep, setMaxUnlockedStep] = useState(0);
@@ -894,8 +953,84 @@ const Booking = () => {
 
     const { data: booking } = useBookingDetails(bookingCode);
 
+    const { data: holdingBookingsData, isLoading: checkingHolding } = useBookingsStatus(
+        isAuthenticated && !bookingCode ? "HOLDING" : null
+    );
+
     const { mutate: holdSeats, isPending: holding } = useHoldSeats();
     const { mutate: cancelBooking } = useCancelBooking();
+
+    useEffect(() => {
+        if (!isAuthenticated || bookingCode || checkingHolding) return;
+        const holdingList = holdingBookingsData ?? [];
+        if (holdingList.length === 0) return;
+
+        const holdingBooking = holdingList[0];
+        const heldUntil = new Date(holdingBooking.held_until);
+        const now = new Date();
+
+        if (heldUntil <= now) {
+            bookingService.expireBooking(holdingBooking.booking_code).catch(() => { });
+            return;
+        }
+
+        const showtime = holdingBooking.showtime;
+        const movieTitle = holdingBooking.movie?.title ?? "Không rõ";
+        const seatCount = holdingBooking.tickets?.length ?? "??";
+        const showtimeInfo = showtime ? `${showtime.start_time?.slice(0, 5)} - ${formatDate(showtime.show_date)}` : "Không rõ";
+
+        const resumeStep = getResumeStep(holdingBooking);
+
+        MyAlert.alert(
+            "Bạn có đơn đặt vé chưa hoàn tất",
+            `Phim: ${movieTitle}\n. Suất chiếu: ${showtimeInfo}\n. Số ghế: ${seatCount}\n\nBạn muốn tiếp tục hoàn thành đơn này hay hủy bỏ để đặt đơn mới?`,
+            [
+                {
+                    text: "Hủy đơn cũ",
+                    style: "ghost",
+                    onClick: () => {
+                        cancelBooking(holdingBooking.booking_code);
+                    },
+                },
+                {
+                    text: "Tiếp tục đơn cũ",
+                    style: "primary",
+                    onClick: () => {
+                        setBookingCode(holdingBooking.booking_code);
+                        if (holdingBooking.movie && holdingBooking.showtime) {
+                            setSelection({
+                                location: holdingBooking.showtime?.branch?.location ?? null,
+                                movie: holdingBooking.movie,
+                                showtime: holdingBooking.showtime,
+                            });
+                        }
+                        if (holdingBooking.tickets) {
+                            setSelectedSeats(holdingBooking.tickets.map((t) => t.seat).filter(Boolean));
+                        }
+                        if (holdingBooking.booking_products) {
+                            setCart(
+                                holdingBooking.booking_products.map((bp) => {
+                                    const prod = typeof bp.product === "object" && bp.product !== null ? bp.product : null;
+                                    return {
+                                        product: prod ? prod.id : bp.product,
+                                        quantity: bp.quantity,
+                                        _info: prod || {
+                                            id: bp.product,
+                                            name: bp.product_name || "Sản phẩm",
+                                            price: bp.price || 0,
+                                        },
+                                    };
+                                })
+                            );
+                        }
+                        setStep(resumeStep);
+                        setMaxUnlockedStep(resumeStep);
+                    },
+                },
+            ]
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [holdingBookingsData, checkingHolding]);
 
     const goTo = (i) => {
         setStep(i);
@@ -968,7 +1103,7 @@ const Booking = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
-            {holding && <GlobalLoading message="Đang giữ ghế..." />}
+            {holding && <GlobalLoading />}
 
             <BookingStepper currentStep={step} maxUnlockedStep={maxUnlockedStep} onStepClick={goTo} />
 

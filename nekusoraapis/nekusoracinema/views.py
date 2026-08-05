@@ -12,7 +12,7 @@ from rest_framework.response import Response
 
 from nekusoracinema import serializers, paginators, perms, utils, tasks, services
 from nekusoracinema.models import *
-from nekusoracinema.patterns import OTP_MODE, require_holding_booking
+from nekusoracinema.patterns import OTP_MODE, require_holding_booking_not_expired, require_holding_booking
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -277,8 +277,6 @@ class BookingsViewSet(viewsets.ViewSet):
     def get_permissions(self):
         if self.action in ['hold']:
             return [perms.IsCustomer()]
-        if self.action in ['set_products', 'promotion', 'points', 'select_payment_method', 'cancel']:
-            return [perms.BookingOwner()]
         return [permissions.IsAuthenticated()]
 
     def retrieve(self, request, pk=None):
@@ -287,7 +285,10 @@ class BookingsViewSet(viewsets.ViewSet):
 
     @action(methods=['get'], url_path='my', detail=False)
     def bookings_my_view(self, request):
-        my_bookings = Booking.objects.filter(active=True, customer=request.user)
+        my_bookings = (Booking.objects.filter(active=True, customer=request.user)
+            .select_related('showtime__movie','showtime__room__branch__location','showtime__screening_format')
+            .prefetch_related('booking_tickets__seat', 'booking_products'))
+
         q_status = request.query_params.get('status')
         if q_status:
             my_bookings = my_bookings.filter(status=q_status)
@@ -307,7 +308,7 @@ class BookingsViewSet(viewsets.ViewSet):
         return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
 
     @action(methods=['post'], url_path='products', detail=True)
-    @require_holding_booking
+    @require_holding_booking_not_expired
     def set_products(self, request, pk=None, booking=None):
         s = serializers.SetProductsInputSerializer(data=request.data)
         s.is_valid(raise_exception=True)
@@ -316,7 +317,7 @@ class BookingsViewSet(viewsets.ViewSet):
         return Response(serializers.BookingSerializer(booking).data)
 
     @action(methods=['post', 'delete'], url_path='promotion', detail=True)
-    @require_holding_booking
+    @require_holding_booking_not_expired
     def promotion(self, request, pk=None, booking=None):
         if request.method == 'DELETE':
             booking = services.remove_promotion(booking)
@@ -328,7 +329,7 @@ class BookingsViewSet(viewsets.ViewSet):
         return Response(serializers.BookingSerializer(booking).data)
 
     @action(methods=['post', 'delete'], url_path='points', detail=True)
-    @require_holding_booking
+    @require_holding_booking_not_expired
     def points(self, request, pk=None, booking=None):
         if request.method == 'DELETE':
             booking = services.clear_points(booking)
@@ -340,7 +341,7 @@ class BookingsViewSet(viewsets.ViewSet):
         return Response(serializers.BookingSerializer(booking).data)
 
     @action(methods=['post'], url_path='payment-method', detail=True)
-    @require_holding_booking
+    @require_holding_booking_not_expired
     def select_payment_method(self, request, pk=None, booking=None):
         s = serializers.SelectPaymentMethodInputSerializer(data=request.data)
         s.is_valid(raise_exception=True)
@@ -353,7 +354,13 @@ class BookingsViewSet(viewsets.ViewSet):
         return Response(serializers.BookingSerializer(booking).data)
 
     @action(methods=['post'], url_path='cancel', detail=True)
-    @require_holding_booking
+    @require_holding_booking_not_expired
     def cancel(self, request, pk=None, booking=None):
-        services.cancel_booking(booking, 'CANCELLED')
+        services.delete_booking(booking, 'CANCELLED')
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=['post'], url_path='expire', detail=True)
+    @require_holding_booking
+    def expire(self, request, pk=None, booking=None):
+        services.delete_booking(booking, 'EXPIRED')
         return Response(status=status.HTTP_204_NO_CONTENT)

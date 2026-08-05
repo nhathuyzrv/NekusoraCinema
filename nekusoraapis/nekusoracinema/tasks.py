@@ -36,10 +36,10 @@ def send_otp_email(self, email, mode):
 
 
 @shared_task
-def auto_cancel_booking(booking_id):
+def auto_expire_booking(booking_id):
     try:
         booking = Booking.objects.get(pk=booking_id, status=BookingStatus.HOLDING)
     except Booking.DoesNotExist:
         return
 
-    services.cancel_booking(booking, 'EXPIRED')
+    services.delete_booking(booking, 'EXPIRED')

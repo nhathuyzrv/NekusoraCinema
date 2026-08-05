@@ -1,8 +1,8 @@
 import Apis, { authApis, endpoints } from "../configs/Apis";
 
 const bookingService = {
-    getByStatus: (status) =>
-        authApis.get(endpoints.bookings + `?status=${status}`)
+    getMyByStatus: (status) =>
+        authApis.get(endpoints.bookings + `my/?status=${status}`)
             .then(res => res.data),
 
     getLocations: () =>
@@ -24,6 +24,9 @@ const bookingService = {
             .then(r => r.data),
     cancelBooking: (bookingCode) =>
         authApis.post(endpoints.bookingDetails(bookingCode) + "cancel/")
+            .then(r => r.data),
+    expireBooking: (bookingCode) =>
+        authApis.post(endpoints.bookingDetails(bookingCode) + "expire/")
             .then(r => r.data),
 
     getProducts: () =>

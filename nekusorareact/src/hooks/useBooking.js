@@ -57,9 +57,10 @@ export function usePaymentMethods() {
 export function useBookingsStatus(status) {
     return useQuery({
         queryKey: ["bookings", "status", status],
-        queryFn: () => bookingService.getByStatus(status),
-        staleTime: 1000 * 60,
-    })
+        queryFn: () => bookingService.getMyByStatus(status),
+        enabled: typeof status === "string" && status.length > 0,
+        staleTime: 0,
+    });
 }
 
 export function useBookingDetails(bookingCode) {
@@ -113,8 +114,7 @@ export function useClearPoints(bookingCode) {
 }
 
 export function useSelectPaymentMethod(bookingCode) {
-    return useBookingMutation(({ method, email }) =>
-        bookingService.selectPaymentMethod(bookingCode, method, email));
+    return useBookingMutation(({ method, email }) => bookingService.selectPaymentMethod(bookingCode, method, email));
 }
 
 export function useCancelBooking() {
@@ -123,7 +123,7 @@ export function useCancelBooking() {
         mutationFn: (bookingCode) => bookingService.cancelBooking(bookingCode),
         onSuccess: () => toast.success("Thông báo", "Bạn đã hủy đặt vé thành công"),
         onError: (err) => {
-            const msg = err.response?.data?.message || Object.values(err.response?.data ?? {})[0]?.[0] || "Đã có lỗi xảy ra, vui lòng thử lại";
+            const msg = err.response?.data?.message || Object.values(err.response?.data) || "Đã có lỗi xảy ra, vui lòng thử lại";
             toast.error("Hủy đặt vé thất bại", msg);
         }
     });

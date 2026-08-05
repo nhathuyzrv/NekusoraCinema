@@ -127,7 +127,7 @@ def create_holding_booking(user, showtime_id, seat_ids):
                 for seat in seats
             ])
 
-            tasks.auto_cancel_booking.apply_async((booking.pk,), eta=held_until)
+            tasks.auto_expire_booking.apply_async((booking.pk,), eta=held_until)
 
     except Exception:
         release_seats(showtime_id, seat_ids, user.pk)
@@ -137,14 +137,19 @@ def create_holding_booking(user, showtime_id, seat_ids):
     return booking
 
 
-def cancel_booking(booking, status):
+def delete_booking(booking, status):
     if booking.status != BookingStatus.HOLDING:
         raise ValidationError('Đơn đặt vé không thể huỷ ở trạng thái hiện tại')
+
+    BOOKING_STATUS = {
+        'EXPIRED': BookingStatus.EXPIRED,
+        'CANCELLED': BookingStatus.CANCELLED,
+    }
 
     seat_ids = list(booking.booking_tickets.values_list('seat_id', flat=True))
     release_seats(booking.showtime_id, seat_ids, booking.customer_id)
     booking.booking_tickets.update(status=TicketStatus.CANCELLED)
-    booking.status = BookingStatus.CANCELLED if status == 'CANCELLED' else BookingStatus.HOLDING
+    booking.status = BOOKING_STATUS.get(status)
     booking.save(update_fields=['status'])
 
     broadcast_seat_update(booking.showtime_id)

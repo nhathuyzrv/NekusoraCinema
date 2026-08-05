@@ -75,7 +75,7 @@ class ResetPasswordMode(OTPMode):
 OTP_MODE = {cls.mode_key: cls for cls in [RegisterMode, ResetPasswordMode]}
 
 # DECORATOR BOOKING
-def require_holding_booking(view_func):
+def require_holding_booking_not_expired(view_func):
     @wraps(view_func)
     def wrapper(self, request, *args, **kwargs):
         pk = kwargs.get('pk')
@@ -83,6 +83,20 @@ def require_holding_booking(view_func):
 
         if booking.held_until < timezone.now() or booking.status != BookingStatus.HOLDING:
             return Response({'message': 'Đã hết thời gian giữ ghế, vui lòng đặt lại đơn mới'}, status=status.HTTP_400_BAD_REQUEST)
+
+        kwargs['booking'] = booking
+        return view_func(self, request, *args, **kwargs)
+
+    return wrapper
+
+def require_holding_booking(view_func):
+    @wraps(view_func)
+    def wrapper(self, request, *args, **kwargs):
+        pk = kwargs.get('pk')
+        booking = get_object_or_404(Booking, booking_code=pk, customer=request.user)
+
+        if booking.status != BookingStatus.HOLDING:
+            return Response({'message': 'Đơn này không còn ở trạng thái giữ ghế, vui lòng đặt lại đơn mới'}, status=status.HTTP_400_BAD_REQUEST)
 
         kwargs['booking'] = booking
         return view_func(self, request, *args, **kwargs)
