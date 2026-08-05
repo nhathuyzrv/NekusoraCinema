@@ -12,7 +12,6 @@ def _seat_hold_key(showtime_id, seat_id):
 _redis_pool = aioredis.ConnectionPool.from_url(
     "redis://127.0.0.1:6379/1",
     decode_responses=True,
-    max_connections=20,
     socket_keepalive=True,
     socket_connect_timeout=5,
     socket_timeout=5,
@@ -29,11 +28,18 @@ class SeatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
-        payload = await self.get_seat_status()
+        try:
+            payload = await self.get_seat_status()
+        except Exception:
+            payload = {"booked": [], "held": []}
+
         await self.send(text_data=json.dumps({"type": "seat_status", **payload}))
 
     async def disconnect(self, close_code):
-        await self.redis.aclose(close_connection_pool=False)
+        try:
+            await self.redis.aclose(close_connection_pool=False)
+        except Exception:
+            pass
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def seat_update(self, event):
@@ -58,5 +64,8 @@ class SeatConsumer(AsyncWebsocketConsumer):
 
     async def _get_held_seats(self):
         pattern = _seat_hold_key(self.showtime_id, '*')
-        keys = await self.redis.keys(pattern)
-        return [int(k.rsplit(':', 1)[-1]) for k in keys]
+        try:
+            keys = await self.redis.keys(pattern)
+            return [int(k.rsplit(':', 1)[-1]) for k in keys]
+        except Exception:
+            return []
