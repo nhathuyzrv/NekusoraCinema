@@ -1,15 +1,18 @@
 import random
 import string
+from datetime import date
+
 from django.core.cache import cache
 from django.db.models import Prefetch
 from django.db.models.aggregates import Avg, Count
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, generics, parsers, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
-from nekusoracinema import serializers, paginators, perms, utils, tasks
+from nekusoracinema import serializers, paginators, perms, utils, tasks, services
 from nekusoracinema.models import *
-from nekusoracinema.decorators import OTP_MODE
+from nekusoracinema.patterns import OTP_MODE, require_holding_booking
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -21,7 +24,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
             permission_classes=[permissions.IsAuthenticated])
     def current_user(self, request):
         user = request.user
-        if request.method.__eq__('PATCH'):
+        if request.method == 'PATCH':
             serializer = serializers.UserUpdateSerializer(user, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             user = serializer.save()
@@ -105,8 +108,10 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
     pagination_class = paginators.MovieItemPaginator
 
     def get_permissions(self):
-        if self.action in ['ratings'] and self.request.method in ['POST']:
+        if self.action in ['movie_ratings_view'] and self.request.method in ['POST']:
             return [perms.IsCustomer()]
+        if self.action in ['movie_my_rating_view']:
+            return [permissions.IsAuthenticated()]
         return [permissions.AllowAny()]
 
     def get_serializer_class(self):
@@ -115,10 +120,10 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
         return serializers.SimpleMovieSerializer
 
     def get_queryset(self):
-        query = self.queryset.annotate(avg_rating=Avg('ratings__score'), rating_count=Count('ratings'))
+        query = self.queryset.annotate(avg_rating=Avg('movie_ratings__score'), rating_count=Count('movie_ratings'))
         if self.action in ['retrieve']:
             query = query.prefetch_related('genres','actors',
-                                           Prefetch('ratings', queryset=Rating.objects.filter(active=True)))
+                                           Prefetch('movie_ratings', queryset=Rating.objects.filter(active=True)))
 
         q_title = self.request.query_params.get('title')
         if q_title:
@@ -137,10 +142,10 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
         return query
 
     @action(methods=['get', 'post'], url_path='ratings', detail=True)
-    def movie_ratings(self, request, pk):
+    def movie_ratings_view(self, request, pk):
         movie = self.get_object()
 
-        if request.method in ['POST']:
+        if request.method == 'POST':
             s = serializers.RatingSerializer(data={
                 **request.data,
                 'movie': movie.pk,
@@ -150,7 +155,7 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
             rating = s.save()
             return Response(serializers.RatingSerializer(rating).data, status=status.HTTP_201_CREATED)
 
-        ratings = (movie.ratings.filter(active=True).order_by('-created_at')
+        ratings = (movie.movie_ratings.filter(active=True).order_by('-created_at')
                    .select_related('user'))
         paginator = paginators.RatingItemPaginator()
         page = paginator.paginate_queryset(ratings, request, view=self)
@@ -158,23 +163,26 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
         return paginator.get_paginated_response(serializers.RatingSerializer(page, many=True).data)
 
     @action(methods=['get'], url_path='ratings/my', detail=True)
-    def movie_my_rating(self, request, pk):
+    def movie_my_rating_view(self, request, pk):
         movie = self.get_object()
         user = request.user
-        rating = Rating.objects.filter(movie=movie, user=user).first()
-        if not rating:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        rating = get_object_or_404(Rating, movie=movie, user=user)
+
         return Response(serializers.RatingSerializer(rating).data, status=status.HTTP_200_OK)
 
     @action(methods=['get'], url_path='showtimes', detail=True)
-    def movie_showtimes(self, request, pk):
+    def movie_showtimes_view(self, request, pk):
         movie = self.get_object()
-        showtimes = (movie.showtimes.filter(active=True, status__in=[ShowtimeStatus.SCHEDULED, ShowtimeStatus.COMPLETED]).order_by('start_time')
+        showtimes = (movie.movie_showtimes.filter(active=True, status__in=[ShowtimeStatus.SCHEDULED, ShowtimeStatus.COMPLETED]).order_by('start_time')
                      .select_related('screening_format', 'room__branch__location'))
 
         q_date = request.query_params.get('date')
         if q_date:
             showtimes = showtimes.filter(show_date=q_date)
+
+        q_location = request.query_params.get('location')
+        if q_location:
+            showtimes = showtimes.filter(room__branch__location_id=q_location)
 
         return Response(serializers.ShowtimeSerializer(showtimes, many=True).data, status=status.HTTP_200_OK)
 
@@ -190,20 +198,34 @@ class LocationViewSet(viewsets.ViewSet, generics.ListAPIView):
     serializer_class = serializers.LocationSerializer
 
     @action(methods=['get'], url_path='branches', detail=True)
-    def location_branches(self, request, pk):
+    def location_branches_view(self, request, pk):
         location = self.get_object()
         branches = location.branches.filter(active=True).order_by('name')
 
-
         return Response(serializers.BranchSerializer(branches, many=True).data, status=status.HTTP_200_OK)
 
+    @action(methods=['get'], url_path='movies', detail=True)
+    def location_movies_view(self, request, pk):
+        location = self.get_object()
+        today = date.today()
+        movies = Movie.objects.filter(
+            movie_showtimes__room__branch__location_id=location.pk,
+            movie_showtimes__show_date__gte=today,
+            movie_showtimes__active=True
+        ).distinct()
 
-class BranchViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+        paginator = paginators.MovieItemPaginator()
+        page = paginator.paginate_queryset(movies, request, view=self)
+
+        return paginator.get_paginated_response(serializers.MovieLocationSerializer(page, many=True).data)
+
+
+class BranchViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Branch.objects.filter(active=True).order_by('name')
     serializer_class = serializers.BranchSerializer
 
     @action(methods=['get'], url_path='rooms', detail=True)
-    def branch_rooms(self, request, pk):
+    def branch_rooms_view(self, request, pk):
         branch = self.get_object()
         rooms = branch.rooms.filter(active=True).order_by('name')
 
@@ -219,9 +241,119 @@ class CinemaRoomViewSet(viewsets.ViewSet, generics.ListAPIView, generics.Retriev
     queryset = CinemaRoom.objects.filter(active=True).order_by('branch')
     serializer_class = serializers.CinemaRoomSerializer
 
+    def get_queryset(self):
+        query = self.queryset
+        q_branch = self.request.query_params.get('branch')
+        if q_branch:
+            query = self.queryset.filter(branch=q_branch)
+
+        return query
+
     @action(methods=['get'], url_path='seats', detail=True)
-    def room_seats(self, request, pk):
+    def room_seats_view(self, request, pk):
         room = self.get_object()
         seats = room.seats.filter(active=True).order_by('seat_code')
 
         return Response(serializers.SeatSerializer(seats, many=True).data, status=status.HTTP_200_OK)
+
+
+class ProductViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
+    queryset = Product.objects.filter(active=True).order_by('product_type', 'name')
+    serializer_class = serializers.SimpleProductSerializer
+
+    def get_serializer_class(self):
+        if self.action in ['retrieve']:
+            return serializers.SimpleProductDetailSerializer
+        return serializers.SimpleProductSerializer
+
+
+class PaymentMethodViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = PaymentMethod.objects.filter(active=True)
+    serializer_class = serializers.PaymentMethodSerializer
+
+
+class BookingsViewSet(viewsets.ViewSet):
+
+    def get_permissions(self):
+        if self.action in ['hold']:
+            return [perms.IsCustomer()]
+        if self.action in ['set_products', 'promotion', 'points', 'select_payment_method', 'cancel']:
+            return [perms.BookingOwner()]
+        return [permissions.IsAuthenticated()]
+
+    def retrieve(self, request, pk=None):
+        booking = get_object_or_404(Booking, booking_code=pk, customer=request.user)
+        return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_200_OK)
+
+    @action(methods=['get'], url_path='my', detail=False)
+    def bookings_my_view(self, request):
+        my_bookings = Booking.objects.filter(active=True, customer=request.user)
+        q_status = request.query_params.get('status')
+        if q_status:
+            my_bookings = my_bookings.filter(status=q_status)
+
+        return Response(serializers.BookingSerializer(my_bookings, many=True).data, status=status.HTTP_200_OK)
+
+    @action(methods=['post'], url_path='hold', detail=False)
+    def hold(self, request):
+        s = serializers.HoldSeatsInputSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+
+        booking = services.create_holding_booking(
+            request.user,
+            s.validated_data['showtime'],
+            s.validated_data['seats'],
+        )
+        return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
+
+    @action(methods=['post'], url_path='products', detail=True)
+    @require_holding_booking
+    def set_products(self, request, pk=None, booking=None):
+        s = serializers.SetProductsInputSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+
+        booking = services.set_products(booking, s.validated_data['items'])
+        return Response(serializers.BookingSerializer(booking).data)
+
+    @action(methods=['post', 'delete'], url_path='promotion', detail=True)
+    @require_holding_booking
+    def promotion(self, request, pk=None, booking=None):
+        if request.method == 'DELETE':
+            booking = services.remove_promotion(booking)
+        else:
+            s = serializers.ApplyPromotionInputSerializer(data=request.data)
+            s.is_valid(raise_exception=True)
+            booking = services.apply_promotion_code(booking, s.validated_data['code'])
+
+        return Response(serializers.BookingSerializer(booking).data)
+
+    @action(methods=['post', 'delete'], url_path='points', detail=True)
+    @require_holding_booking
+    def points(self, request, pk=None, booking=None):
+        if request.method == 'DELETE':
+            booking = services.clear_points(booking)
+        else:
+            s = serializers.RedeemPointsInputSerializer(data=request.data)
+            s.is_valid(raise_exception=True)
+            booking = services.redeem_points(booking, s.validated_data['points'])
+
+        return Response(serializers.BookingSerializer(booking).data)
+
+    @action(methods=['post'], url_path='payment-method', detail=True)
+    @require_holding_booking
+    def select_payment_method(self, request, pk=None, booking=None):
+        s = serializers.SelectPaymentMethodInputSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+
+        method = get_object_or_404(PaymentMethod, pk=s.validated_data['method'], active=True)
+        Payment.objects.update_or_create(booking=booking, defaults={
+            'method': method,
+            'amount': booking.final_amount
+        })
+        return Response(serializers.BookingSerializer(booking).data)
+
+    @action(methods=['post'], url_path='cancel', detail=True)
+    @require_holding_booking
+    def cancel(self, request, pk=None, booking=None):
+        services.cancel_booking(booking, 'CANCELLED')
+        return Response(status=status.HTTP_204_NO_CONTENT)

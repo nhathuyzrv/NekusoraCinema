@@ -10,6 +10,7 @@ import { useMovieDetails } from "../hooks/useMovies";
 import { useMovieShowtimes } from "../hooks/useShowtimes";
 import DOMPurify from 'dompurify';
 import parse from 'html-react-parser';
+import MyAlert from "../configs/MyAlert";
 
 
 const AGE_BADGE = {
@@ -102,8 +103,7 @@ function RatingCard({ rating }) {
     );
 }
 
-function RatingPanel({ movieId, movieStatus, avgRating, ratingCount }) {
-    const { isAuthenticated } = useAuth();
+function RatingPanel({ movieId, movieStatus, avgRating, ratingCount, isAuthenticated }) {
     const scrollRef = useRef(null);
     const [score, setScore] = useState(0);
     const [comment, setComment] = useState("");
@@ -316,8 +316,6 @@ function RatingPanel({ movieId, movieStatus, avgRating, ratingCount }) {
     );
 }
 
-// ─── Showtime helpers ────────────────────────────────────────────────────────
-
 function buildDateTabs() {
     const tabs = [];
     const today = new Date();
@@ -368,6 +366,21 @@ function ShowtimesPanel({ movieId }) {
     ).values()];
 
     const handleLocationChange = (val) => { setFilterLocation(val); setFilterBranch("all"); };
+    const handleNavigateBooking = async (showtime) => {
+        await MyAlert.alert("Chọn suất chiếu",
+            `Bạn muốn đặt vé cho suất chiếu lúc ${showtime.start_time} tại ${showtime.branch.name}?
+            Chúng tôi sẽ chuyển hướng bạn đến sơ đồ ghế của suất chiếu này.`,
+            [
+                { text: 'Hủy', style: 'ghost' },
+                {
+                    text: 'Tôi muốn đặt', style: 'primary',
+                    onClick: async () => {
+
+                    }
+                }
+            ]
+        )
+    }
 
     const filtered = showtimes.filter(s =>
         (filterLocation === "all" || s.location.id === Number(filterLocation)) &&
@@ -464,17 +477,22 @@ function ShowtimesPanel({ movieId }) {
                                                 {fmtSt.map(st => {
                                                     const ok = st.status === "SCHEDULED";
                                                     return (
-                                                        <button
-                                                            key={st.id}
-                                                            disabled={!ok}
-                                                            className={`px-3 py-1.5 rounded-lg border text-sm font-semibold transition-all
+                                                        <>
+                                                            <div className="tooltip tooltip-accent" data-tip="đặt vé">
+                                                                <button
+                                                                    key={st.id}
+                                                                    disabled={!ok}
+                                                                    className={`px-3 py-1.5 rounded-lg border text-sm font-semibold transition-all
                                                                 ${ok
-                                                                    ? "border-primary/40 text-primary hover:bg-primary hover:text-primary-content hover:border-primary active:scale-95"
-                                                                    : "border-base-200 text-base-content/25 bg-base-200/50 cursor-not-allowed line-through"
-                                                                }`}
-                                                        >
-                                                            {formatTime(st.start_time)}
-                                                        </button>
+                                                                            ? "border-primary/40 text-primary hover:bg-primary hover:text-primary-content hover:border-primary active:scale-95"
+                                                                            : "border-base-200 text-base-content/25 bg-base-200/50 cursor-not-allowed line-through"
+                                                                        }`}
+                                                                    onClick={() => handleNavigateBooking(st)}
+                                                                >
+                                                                    {formatTime(st.start_time)}
+                                                                </button>
+                                                            </div>
+                                                        </>
                                                     );
                                                 })}
                                             </div>
@@ -490,10 +508,9 @@ function ShowtimesPanel({ movieId }) {
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-
 const MovieDetails = () => {
     const location = useLocation();
+    const { isAuthenticated } = useAuth();
     const movieId = location.state?.movieId;
     const [trailerActive, setTrailerActive] = useState(false);
     const showtimeRef = useRef(null);
@@ -625,7 +642,7 @@ const MovieDetails = () => {
                     {movie.status === "NOW_SHOWING" && (
                         <>
                             <div ref={showtimeRef} className="scroll-mt-20">
-                                <ShowtimesPanel ref={showtimeRef} movieId={movieId} />
+                                <ShowtimesPanel ref={showtimeRef} movieId={movieId} isAuthenticated={isAuthenticated} />
                             </div>
                         </>
                     )}
@@ -637,6 +654,7 @@ const MovieDetails = () => {
                         movieStatus={movie.status}
                         avgRating={movie.avg_rating}
                         ratingCount={movie.rating_count}
+                        isAuthenticated={isAuthenticated}
                     />
                 </div>
             </div>

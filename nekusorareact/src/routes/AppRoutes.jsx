@@ -4,7 +4,7 @@ import ProtectedRoutes from "./ProtectedRoutes";
 
 import Movies from "../pages/Movies";
 import MovieDetails from "../pages/MovieDetails";
-// import Booking from "../pages/Booking";
+import Booking from "../pages/Booking";
 import Profile from "../pages/Profile";
 // import History from "../pages/History";
 import NotFound from "../pages/NotFound";
@@ -21,10 +21,11 @@ const AppRoutes = () => {
             <Route element={<Layout />}>
                 <Route path="movies" element={<Movies />} />
                 <Route path="movies/:slug" element={<MovieDetails />} />
+                <Route path="booking" element={<Booking />} />
 
                 <Route element={<ProtectedRoutes roles={["CUSTOMER"]} />}>
-                    {/* <Route path="booking" element={<Booking />} /> */}
                     <Route path="profile" element={<Profile />} />
+                    {/* <Route path="bookings" element={<MyBookings/>}/> */}
                     {/* <Route path="history" element={<History />} /> */}
                 </Route>
 

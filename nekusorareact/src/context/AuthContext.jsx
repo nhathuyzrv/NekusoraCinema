@@ -43,9 +43,7 @@ export function AuthProvider({ children }) {
             Token.save(data);
             await queryClient.invalidateQueries({ queryKey: ["currentUser"] });
         } catch (err) {
-            const msg = err.response?.status === 400
-                ? "Email hoặc Mật khẩu sai"
-                : "Đã có lỗi xảy ra, vui lòng thử lại";
+            const msg = err.response?.status === 400 ? "Email hoặc Mật khẩu sai" : "Đã có lỗi xảy ra, vui lòng thử lại";
             setError(msg);
             throw err;
         } finally {

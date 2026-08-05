@@ -42,7 +42,4 @@ def auto_cancel_booking(booking_id):
     except Booking.DoesNotExist:
         return
 
-    seat_ids = list(booking.showtime.room.seats.values_list('id', flat=True))
-    services.release_seats(booking.showtime.pk, seat_ids, booking.customer.pk)
-    booking.status = BookingStatus.CANCELLED
-    booking.save(update_fields=['status'])
+    services.cancel_booking(booking, 'EXPIRED')

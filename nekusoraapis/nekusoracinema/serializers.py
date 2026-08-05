@@ -110,6 +110,13 @@ class MovieDetailsSerializer(SimpleMovieSerializer):
         fields = SimpleMovieSerializer.Meta.fields + ['duration', 'release_date', 'country', 'director', 'description', 'genres', 'actors']
 
 
+class MovieLocationSerializer(ImageURLMixin, serializers.ModelSerializer):
+    image_fields = ['poster']
+    class Meta:
+        model = Movie
+        fields = ['id', 'title', 'age_rating', 'duration', 'poster', 'status']
+
+
 class RatingSerializer(serializers.ModelSerializer):
     user = UserLiteSerializer(read_only=True)
 
@@ -152,7 +159,126 @@ class ShowtimeSerializer(serializers.ModelSerializer):
     branch = BranchSerializer(source='room.branch', read_only=True)
     location = LocationSerializer(source='room.branch.location', read_only=True)
     screening_format = ScreeningFormatSerializer(read_only=True)
+    room = CinemaRoomSerializer(read_only=True)
 
     class Meta:
         model = Showtime
         fields = ['id', 'show_date', 'start_time', 'end_time', 'price', 'status', 'movie', 'room', 'branch', 'location', 'screening_format']
+
+
+class TicketSerializer(serializers.ModelSerializer):
+    seat = SeatSerializer(read_only=True)
+
+    class Meta:
+        model = Ticket
+        fields = ['id', 'seat', 'price', 'status']
+
+
+class SimpleProductSerializer(ImageURLMixin, serializers.ModelSerializer):
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'description', 'image', 'price', 'product_type']
+
+
+class ComboItemSerializer(serializers.ModelSerializer):
+    item = SimpleProductSerializer(read_only=True)
+
+    class Meta:
+        model = ComboItem
+        fields = ['id', 'item', 'quantity']
+
+
+class SimpleProductDetailSerializer(SimpleProductSerializer):
+    combo_items = ComboItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = SimpleProductSerializer.Meta.model
+        fields = SimpleProductSerializer.Meta.fields + ['combo_items']
+
+
+class BookingProductSerializer(serializers.ModelSerializer):
+    product = SimpleProductSerializer(read_only=True)
+
+    class Meta:
+        model = BookingProduct
+        fields = ['id', 'product', 'quantity', 'unit_price', 'subtotal']
+
+
+class PromotionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Promotion
+        fields = ['id', 'code', 'name', 'description', 'discount_type', 'discount_value', 'min_order_amount', 'max_discount_amount']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['name'] = instance.name + f' - Giảm {instance.discount_value}'
+        data['name'] += '%' if instance.discount_type == PromotionDiscountType.PERCENT else 'đ'
+        if instance.max_discount_amount:
+            data['name'] += f', tối đa {instance.max_discount_amount}đ'
+
+        return data
+
+
+class BookingPromotionSerializer(serializers.ModelSerializer):
+    promotion = PromotionSerializer(read_only=True)
+
+    class Meta:
+        model = BookingPromotion
+        fields = ['id', 'promotion', 'discount_amount']
+
+
+class PaymentMethodSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PaymentMethod
+        fields = ['id', 'code', 'name']
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    method = PaymentMethodSerializer(read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = ['id', 'method', 'amount', 'status', 'transaction_ref', 'paid_at']
+
+
+class BookingSerializer(serializers.ModelSerializer):
+    showtime = ShowtimeSerializer(read_only=True)
+    movie = MovieLocationSerializer(source='showtime.movie', read_only=True)
+    tickets = TicketSerializer(source='booking_tickets', many=True, read_only=True)
+    products = BookingProductSerializer(source='booking_products', many=True, read_only=True)
+    promotion = BookingPromotionSerializer(source='booking_promotion', read_only=True)
+    payment = PaymentSerializer(read_only=True)
+
+    class Meta:
+        model = Booking
+        fields = [
+            'id', 'booking_code', 'status', 'showtime', 'movie', 'tickets', 'products', 'promotion', 'payment', 'seat_amount', 'product_amount',
+            'discount_amount', 'points_used', 'points_used_amount', 'points_earned', 'final_amount', 'held_until', 'confirmed_at', 'created_at'
+        ]
+
+
+class HoldSeatsInputSerializer(serializers.Serializer):
+    showtime = serializers.IntegerField()
+    seats = serializers.ListField(child=serializers.IntegerField(), min_length=1, max_length=8)
+
+
+class ProductItemInputSerializer(serializers.Serializer):
+    product = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class SetProductsInputSerializer(serializers.Serializer):
+    items = ProductItemInputSerializer(many=True, required=False, default=list)
+
+
+class ApplyPromotionInputSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=30)
+
+
+class RedeemPointsInputSerializer(serializers.Serializer):
+    points = serializers.IntegerField(min_value=0)
+
+
+class SelectPaymentMethodInputSerializer(serializers.Serializer):
+    method = serializers.IntegerField()
+    email = serializers.EmailField(required=False, allow_blank=True)

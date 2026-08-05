@@ -1,27 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-sample_data.py
-===============================================================================
-Script sinh dữ liệu mẫu cho hệ thống "Đặt vé xem phim trực tuyến".
-
-CÁCH CHẠY (từ thư mục gốc project, cùng cấp manage.py):
-    PYTHONIOENCODING=utf-8:surrogateescape python manage.py shell -c "exec(open('sample_data.py', encoding='utf-8').read())"
-
-GHI CHÚ:
-- Script KHÔNG đụng tới superuser đã có sẵn.
-- Script sẽ dùng lại các User CUSTOMER/STAFF/MANAGER đã có sẵn (script không
-  biết chắc username của họ nên sẽ tự query theo role), đồng thời tạo thêm
-  RẤT NHIỀU user/booking/showtime khác để dữ liệu đa dạng và đồ sộ.
-- Model được truy xuất động bằng apps.get_models() nên KHÔNG cần biết chính
-  xác app label chứa models.py -> script chạy được dù app tên gì.
-- Toàn bộ phim (Movie) là phim CÓ THẬT, phát hành/công chiếu năm 2026 (bao
-  gồm cả phim sắp chiếu), lấy từ tin tức điện ảnh thực tế. Mô tả phim được
-  viết lại bằng lời văn riêng (không copy nguyên văn từ bất kỳ nguồn nào).
-- Có thể chỉnh các hằng số trong phần CONFIG bên dưới để tăng/giảm khối
-  lượng dữ liệu sinh ra.
-===============================================================================
-"""
-
 import random
 import sys
 import string
@@ -85,6 +62,7 @@ Booking = find_model("Booking")
 Ticket = find_model("Ticket")
 BookingProduct = find_model("BookingProduct")
 BookingPromotion = find_model("BookingPromotion")
+PromotionUsage = find_model("PromotionUsage")
 PointTransaction = find_model("PointTransaction")
 PaymentMethod = find_model("PaymentMethod")
 Payment = find_model("Payment")
@@ -99,9 +77,9 @@ NUM_EXTRA_STAFF = 25
 NUM_EXTRA_MANAGERS = 4
 
 ROOMS_PER_BRANCH = 4
-SHOWTIME_DAYS_BEFORE_TODAY = 7      # suất chiếu đã qua (để có dữ liệu booking/rating quá khứ)
-SHOWTIME_DAYS_AFTER_TODAY = 14      # suất chiếu sắp tới
-ROOMS_SAMPLED_PER_SHOWDAY = 6       # mỗi ngày, mỗi phim chiếu tại tối đa bấy nhiêu phòng (toàn hệ thống)
+SHOWTIME_DAYS_BEFORE_TODAY = 7
+SHOWTIME_DAYS_AFTER_TODAY = 14
+ROOMS_SAMPLED_PER_SHOWDAY = 6
 SHOWTIMES_PER_ROOM_PER_DAY = 3
 
 TARGET_BOOKINGS = 4000
@@ -302,7 +280,7 @@ for name in ACTOR_NAMES:
 
 print(f"    -> {len(genres)} genre, {len(actors)} actor.")
 
-# 5. MOVIE (PHIM CÓ THẬT, NĂM 2026) + MOVIEACTOR
+# 5. MOVIE + MOVIEACTOR
 print(">>> [4/10] Tạo Movie (dữ liệu phim có thật, phát hành 2026)...")
 
 MOVIES = [
@@ -310,7 +288,7 @@ MOVIES = [
          country="Nhật Bản", duration=100, age_rating=MovieAgeRating.P,
          release_date=date(2026, 5, 22), genres=["Hoạt hình", "Phiêu lưu", "Gia đình"],
          cast=[], desc="Nobita và nhóm bạn tình cờ bước vào một thế giới bí ẩn nằm sâu dưới đáy đại dương, "
-                        "nơi các cậu phải cùng nhau khám phá và bảo vệ vương quốc cổ xưa khỏi hiểm họa đang rình rập."),
+                       "nơi các cậu phải cùng nhau khám phá và bảo vệ vương quốc cổ xưa khỏi hiểm họa đang rình rập."),
     dict(title="Mandalorian & Grogu", director="Jon Favreau",
          country="Mỹ", duration=130, age_rating=MovieAgeRating.T13,
          release_date=date(2026, 5, 22), genres=["Khoa học viễn tưởng", "Phiêu lưu", "Hành động"],
@@ -424,6 +402,75 @@ MOVIES = [
          release_date=date(2026, 1, 23), genres=["Hoạt hình", "Trinh thám", "Hành động"],
          cast=[], desc="Một âm mưu đánh bom nhắm vào tòa tháp cao nhất thành phố buộc Conan phải chạy đua với "
                        "thời gian để ngăn chặn thảm họa."),
+    dict(title="Thư Tình Gửi Ngoại", director="Lam Hồng Xuân",
+         country="Trung Quốc", duration=120, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 8, 7),
+         genres=["Tâm lý", "Gia đình", "Tình cảm"],
+         cast=[], desc="Lấy bối cảnh từ thập niên 1950 đến hiện tại, phim kể về Diệp Thục Nhu — người phụ nữ "
+                       "từ bỏ cuộc sống đủ đầy để theo người mình yêu. Biến cố lịch sử khiến đôi vợ chồng chia cắt "
+                       "suốt nhiều thập kỷ, và người vợ không biết chữ chỉ có thể gửi nỗi nhớ qua những lá thư "
+                       "nhờ người đọc hộ. Người cháu Hiểu Vĩ lặng lẽ sang Thái Lan tìm ông nội và dần khám phá "
+                       "câu chuyện về tình yêu, lòng thủy chung vượt qua nửa thế kỷ. Tựa quốc tế 'Dear You' đạt "
+                       "doanh thu 2 tỷ NDT và điểm 9.1/10 trên Douban."),
+    dict(title="Ma Xưởng Hòm", director="Awi Suryadi",
+         country="Indonesia", duration=98, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 8, 7),
+         genres=["Kinh dị"],
+         cast=[], desc="Risa tưởng đã thoát khỏi thế giới tâm linh sau khi từ bỏ khả năng nhìn thấy ma. "
+                       "Thế nhưng em gái cô trở thành mục tiêu của một oán linh mang nỗi hận từ bi kịch hôn nhân, "
+                       "buộc Risa phải trải qua năm cái chết để gặp lại năm người bạn ma cũ nhằm giải cứu em. "
+                       "Đây là phần kết của loạt phim Danur đình đám từ Indonesia."),
+    dict(title="Ngày Tàn Của Phố Oak", director="David Robert Mitchell",
+         country="Mỹ", duration=112, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 8, 14),
+         genres=["Khoa học viễn tưởng", "Bí ẩn", "Kinh dị"],
+         cast=["Anne Hathaway"],
+         desc="Cuộc sống gia đình Platt đảo lộn khi cả khu phố Oak bị cuốn vào hiện tượng bí ẩn, dịch chuyển "
+              "đến vùng đất hoàn toàn xa lạ và đầy hiểm nguy. Ba thành viên gia đình phải sinh tồn, lần theo "
+              "manh mối để giải đáp nguyên nhân thảm họa, trong khi sự thật họ khám phá ra vượt ngoài "
+              "sức tưởng tượng."),
+    dict(title="Sợi Chỉ Đỏ", director="Hàm Trần",
+         country="Việt Nam", duration=105, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 8, 14),
+         genres=["Kinh dị"],
+         cast=[], desc="Một kẻ cuồng tín phát hiện trên trán xuất hiện con mắt thứ ba, tin rằng mình được trao "
+                       "sứ mệnh thu thập linh hồn tội lỗi và gây ra hàng loạt vụ sát nhân. Một cô bé mang lời "
+                       "nguyền nhìn thấy người khuất và một podcaster siêu nhiên bị cuốn vào chuỗi sự kiện rùng "
+                       "rợn, dần được kết nối bởi sợi chỉ đỏ bí ẩn. Tác phẩm kinh dị tâm linh mới nhất của "
+                       "đạo diễn Hàm Trần."),
+    dict(title="PAW Patrol: Phim Khủng Long", director="Cal Brunker",
+         country="Mỹ", duration=92, age_rating=MovieAgeRating.P,
+         release_date=date(2026, 8, 14),
+         genres=["Hoạt hình", "Phiêu lưu", "Gia đình"],
+         cast=[], desc="Cơn bão bí ẩn cuốn đội cún cứu hộ PAW Patrol đến hòn đảo nhiệt đới nơi khủng long "
+                       "vẫn sinh sống. Cả nhóm gặp Rex, chuyên gia am hiểu khủng long, và phải đối đầu với "
+                       "Thị trưởng Humdinger đang khai thác tài nguyên đảo, vô tình đánh thức núi lửa khổng lồ. "
+                       "Biệt đội cún dũng cảm thực hiện sứ mệnh giải cứu quy mô lớn."),
+    dict(title="Nghỉ Hè Sợ Nghỉ Hưu", director="Huỳnh Lập",
+         country="Việt Nam", duration=100, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 8, 21),
+         genres=["Hài", "Gia đình"],
+         cast=["Hồng Ánh", "Hứa Vĩ Văn", "Huỳnh Lập"],
+         desc="Chàng trai Gen Z Trí Bình về quê nghỉ hè thăm ông nội — cựu chiến binh Thời sống đơn độc "
+              "với những ký ức chiến tranh. Khoảng cách thế hệ khiến hai ông cháu liên tục nảy sinh mâu thuẫn, "
+              "trong khi những hiện tượng tâm linh kỳ lạ xảy ra xung quanh ông nội dần hé lộ bí mật và "
+              "giúp cậu thấu hiểu sự hy sinh của thế hệ đi trước."),
+    dict(title="Insidious: Quỷ Quyệt Ranh Giới Vô Định", director="Jacob Chase",
+         country="Mỹ", duration=108, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 8, 21),
+         genres=["Kinh dị"],
+         cast=[], desc="Gemma, người mẹ đơn thân sống cùng con gái Maya trong ngôi nhà thời thơ ấu, phát hiện "
+                       "mình có khả năng bước vào Cõi Vô Định. Mỗi lần trở về, cô vô tình mang theo thực thể "
+                       "đáng sợ sang thế giới thực. Khi mối nguy vượt tầm kiểm soát, Gemma phải đóng cánh cửa "
+                       "giữa hai thế giới trước khi những người thân trở thành nạn nhân tiếp theo."),
+    dict(title="Shin Cậu Bé Bút Chì: Kỳ Nghỉ Yêu Quái Của Tớ", director="Masaki Watanabe",
+         country="Nhật Bản", duration=95, age_rating=MovieAgeRating.P,
+         release_date=date(2026, 8, 21),
+         genres=["Hoạt hình", "Phiêu lưu", "Gia đình"],
+         cast=[], desc="Mùa hè năm nay gia đình Nohara về quê ông nội tại Akita. Một sự kiện kỳ lạ đưa Shin "
+                       "cùng cả gia đình lạc vào Xứ Sở Yêu Quái bí ẩn, nơi con người chưa từng đặt chân. "
+                       "Giữa những sinh vật kỳ lạ và thử thách bất ngờ, Shin phát huy sự lém lỉnh để cùng "
+                       "gia đình tìm đường trở về."),
     dict(title="Avengers: Doomsday", director="Anthony Russo, Joe Russo",
          country="Mỹ", duration=165, age_rating=MovieAgeRating.T13,
          release_date=date(2026, 12, 18), genres=["Hành động", "Khoa học viễn tưởng", "Siêu anh hùng"],
@@ -565,31 +612,32 @@ print(f"    -> {len(single_products)} sản phẩm đơn, {len(combo_products)} 
 print(">>> [6/10] Tạo Promotion...")
 
 PROMOTIONS = [
-    ("WELCOME50", "Chào mừng thành viên mới", PromotionDiscountType.PERCENT, 50, 0, 50000, 500),
-    ("MEMBER10", "Ưu đãi thành viên 10%", PromotionDiscountType.PERCENT, 10, 100000, 30000, None),
-    ("STUDENT15", "Ưu đãi học sinh sinh viên", PromotionDiscountType.PERCENT, 15, 50000, 20000, 1000),
-    ("SUMMER2026", "Khuyến mãi hè 2026", PromotionDiscountType.FIXED_AMOUNT, 30000, 100000, None, 2000),
-    ("TET2026", "Ưu đãi Tết Nguyên Đán 2026", PromotionDiscountType.PERCENT, 20, 150000, 60000, 800),
-    ("FLASH20", "Flash sale 20%", PromotionDiscountType.PERCENT, 20, 0, 40000, 300),
-    ("WEEKDAY30K", "Giảm 30K ngày thường", PromotionDiscountType.FIXED_AMOUNT, 30000, 80000, None, None),
-    ("COMBO50K", "Giảm 50K khi mua combo", PromotionDiscountType.FIXED_AMOUNT, 50000, 150000, None, 600),
-    ("BIRTHDAY", "Quà sinh nhật thành viên", PromotionDiscountType.PERCENT, 100, 0, 100000, 100),
-    ("VIP2026", "Ưu đãi khách hàng VIP", PromotionDiscountType.PERCENT, 25, 200000, 80000, 400),
-    ("NEWMOVIE", "Ưu đãi phim mới ra mắt", PromotionDiscountType.FIXED_AMOUNT, 20000, 60000, None, None),
-    ("WEEKEND15", "Giảm 15% cuối tuần", PromotionDiscountType.PERCENT, 15, 100000, 35000, None),
-    ("GROUP4", "Ưu đãi nhóm từ 4 vé", PromotionDiscountType.FIXED_AMOUNT, 40000, 250000, None, 500),
-    ("FIRSTBOOK", "Ưu đãi đặt vé lần đầu qua app", PromotionDiscountType.PERCENT, 30, 0, 45000, 1000),
-    ("LOYALTY5", "Tri ân khách hàng thân thiết", PromotionDiscountType.PERCENT, 5, 50000, 15000, None),
+    ("WELCOME50", "Chào mừng thành viên mới", PromotionDiscountType.PERCENT, 50, 0, 50000, 500, 1),
+    ("MEMBER10", "Ưu đãi thành viên 10%", PromotionDiscountType.PERCENT, 10, 100000, 30000, None, 3),
+    ("STUDENT15", "Ưu đãi học sinh sinh viên", PromotionDiscountType.PERCENT, 15, 50000, 20000, 1000, 2),
+    ("SUMMER2026", "Khuyến mãi hè 2026", PromotionDiscountType.FIXED_AMOUNT, 30000, 100000, None, 2000, 2),
+    ("TET2026", "Ưu đãi Tết Nguyên Đán 2026", PromotionDiscountType.PERCENT, 20, 150000, 60000, 800, 1),
+    ("FLASH20", "Flash sale 20%", PromotionDiscountType.PERCENT, 20, 0, 40000, 300, 1),
+    ("WEEKDAY30K", "Giảm 30K ngày thường", PromotionDiscountType.FIXED_AMOUNT, 30000, 80000, None, None, 5),
+    ("COMBO50K", "Giảm 50K khi mua combo", PromotionDiscountType.FIXED_AMOUNT, 50000, 150000, None, 600, 2),
+    ("BIRTHDAY", "Quà sinh nhật thành viên", PromotionDiscountType.PERCENT, 100, 0, 100000, 100, 1),
+    ("VIP2026", "Ưu đãi khách hàng VIP", PromotionDiscountType.PERCENT, 25, 200000, 80000, 400, 3),
+    ("NEWMOVIE", "Ưu đãi phim mới ra mắt", PromotionDiscountType.FIXED_AMOUNT, 20000, 60000, None, None, 3),
+    ("WEEKEND15", "Giảm 15% cuối tuần", PromotionDiscountType.PERCENT, 15, 100000, 35000, None, 4),
+    ("GROUP4", "Ưu đãi nhóm từ 4 vé", PromotionDiscountType.FIXED_AMOUNT, 40000, 250000, None, 500, 2),
+    ("FIRSTBOOK", "Ưu đãi đặt vé lần đầu qua app", PromotionDiscountType.PERCENT, 30, 0, 45000, 1000, 1),
+    ("LOYALTY5", "Tri ân khách hàng thân thiết", PromotionDiscountType.PERCENT, 5, 50000, 15000, None, None),
 ]
 promotions = []
-for code, name, dtype, value, min_amt, max_amt, limit in PROMOTIONS:
+for code, name, dtype, value, min_amt, max_amt, usage_limit, per_user_limit in PROMOTIONS:
     promo, _ = Promotion.objects.get_or_create(
         code=code,
         defaults=dict(
             name=name, description=name, discount_type=dtype, discount_value=Decimal(value),
             min_order_amount=Decimal(min_amt), max_discount_amount=Decimal(max_amt) if max_amt else None,
             start_date=NOW - timedelta(days=90), end_date=NOW + timedelta(days=180),
-            usage_limit=limit, used_count=0,
+            usage_limit=usage_limit, used_count=0,
+            per_user_limit=per_user_limit if per_user_limit is not None else 9999,
         ),
     )
     promotions.append(promo)
@@ -658,7 +706,6 @@ customers = existing_customers + new_customers
 staff_users = existing_staff + new_staff
 manager_users = existing_managers + new_managers
 
-# Đảm bảo mọi STAFF/MANAGER đều có StaffProfile
 for u in staff_users:
     StaffProfile.objects.get_or_create(
         user=u, defaults=dict(
@@ -725,7 +772,6 @@ for movie in now_showing_movies:
     day_range = range(-SHOWTIME_DAYS_BEFORE_TODAY, SHOWTIME_DAYS_AFTER_TODAY + 1)
     all_showtimes.extend(build_showtimes_for_movie(movie, day_range))
 
-# Vài suất chiếu "bán vé sớm" cho phim sắp chiếu trong 10 ngày tới
 for movie in coming_soon_movies:
     days_until_release = (movie.release_date - TODAY).days
     if 0 < days_until_release <= 10:
@@ -751,9 +797,8 @@ if existing_booking_count:
 
 booking_count = 0
 point_tx_bulk = []
-rating_candidates = []  # (customer, movie, booking) cho bước tạo Rating
+rating_candidates = []
 
-# Trộn ngẫu nhiên danh sách showtime để phân bổ booking đa dạng khắp hệ thống
 random.shuffle(all_showtimes_qs)
 
 for st in all_showtimes_qs:
@@ -764,8 +809,6 @@ for st in all_showtimes_qs:
     if not room_seats:
         continue
 
-    # Loại các ghế đã có vé HELD/BOOKED cho đúng suất chiếu này (kể cả từ lần chạy trước)
-    # để không bao giờ tạo trùng ghế -> tránh lỗi unique_active_seat_per_showtime khi resume.
     taken_seat_ids = set(
         Ticket.objects.filter(
             showtime=st, status__in=[TicketStatus.HELD, TicketStatus.BOOKED]
@@ -776,7 +819,6 @@ for st in all_showtimes_qs:
         continue
 
     is_past = st.show_date < TODAY
-    # Suất chiếu quá khứ: lấp đầy nhiều hơn (đông khách hơn) so với suất tương lai
     occupancy_ratio = random.uniform(0.35, 0.85) if is_past else random.uniform(0.05, 0.45)
     num_bookings_for_showtime = max(1, int(len(room_seats) * occupancy_ratio / 2.3))
 
@@ -794,7 +836,6 @@ for st in all_showtimes_qs:
         customer = random.choice(customers)
         seat_amount = st.price * len(chosen_seats)
 
-        # Sản phẩm bắp nước: 55% booking có mua thêm
         chosen_products = []
         product_amount = Decimal(0)
         if random.random() < 0.55:
@@ -805,7 +846,6 @@ for st in all_showtimes_qs:
                 chosen_products.append((prod, qty, subtotal))
                 product_amount += subtotal
 
-        # Khuyến mãi: 20% booking có áp dụng promotion
         applied_promo = None
         discount_amount = Decimal(0)
         gross = seat_amount + product_amount
@@ -824,7 +864,6 @@ for st in all_showtimes_qs:
         final_amount = gross - discount_amount
         points_earned = int(final_amount // 10000)
 
-        # Xác định trạng thái booking
         if is_past:
             status = random.choices(
                 [BookingStatus.CONFIRMED, BookingStatus.CANCELLED, BookingStatus.EXPIRED],
@@ -837,11 +876,14 @@ for st in all_showtimes_qs:
             )[0]
 
         created_at = timezone.make_aware(
-            datetime.combine(st.show_date - timedelta(days=random.randint(0, 20)), time(random.randint(8, 22), random.randint(0, 59)))
+            datetime.combine(st.show_date - timedelta(days=random.randint(0, 20)),
+                             time(random.randint(8, 22), random.randint(0, 59)))
         ) if is_past else NOW - timedelta(hours=random.randint(0, 72))
-        confirmed_at = created_at + timedelta(minutes=random.randint(1, 6)) if status == BookingStatus.CONFIRMED else None
+        confirmed_at = created_at + timedelta(
+            minutes=random.randint(1, 6)) if status == BookingStatus.CONFIRMED else None
         is_checked_in = is_past and status == BookingStatus.CONFIRMED and random.random() < 0.8
-        checked_in_at = (timezone.make_aware(datetime.combine(st.show_date, st.start_time)) + timedelta(minutes=random.randint(-15, 5))) if is_checked_in else None
+        checked_in_at = (timezone.make_aware(datetime.combine(st.show_date, st.start_time)) + timedelta(
+            minutes=random.randint(-15, 5))) if is_checked_in else None
 
         booking = Booking.objects.create(
             customer=customer, showtime=st, status=status,
@@ -866,7 +908,6 @@ for st in all_showtimes_qs:
                 booking=booking, showtime=st, seat=seat, price=st.price,
                 status=ticket_status, created_at=created_at, updated_at=created_at,
             )
-        # ghế đã bị hủy có thể coi như trả lại pool (đơn giản hoá: không trả lại để tránh trùng)
 
         for prod, qty, subtotal in chosen_products:
             BookingProduct.objects.create(
@@ -908,7 +949,6 @@ for st in all_showtimes_qs:
 if point_tx_bulk:
     PointTransaction.objects.bulk_create(point_tx_bulk, batch_size=1000)
 
-# Cập nhật loyalty_points bằng cách cộng dồn qua F() cho chính xác & nhanh
 from django.db.models import F
 from collections import defaultdict
 earned_map = defaultdict(int)

@@ -38,6 +38,7 @@ OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSON
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -45,6 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'nekusoracinema.apps.NekusoracinemaConfig',
+    'channels',
     'rest_framework',
     'drf_yasg',
     'oauth2_provider',
@@ -84,13 +86,16 @@ EMAIL_HOST_USER=config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD=config('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL=config('DEFAULT_FROM_EMAIL')
 
+ASGI_APPLICATION = "nekusoraapis.asgi.application"
+
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": [("127.0.0.1", 6379)],
+            "hosts": ["redis://127.0.0.1:6379/0"],
+            "expiry": 10,
         },
-    }
+    },
 }
 
 AUTH_USER_MODEL = 'nekusoracinema.User'

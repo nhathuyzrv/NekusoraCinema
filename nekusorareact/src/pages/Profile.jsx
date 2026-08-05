@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { User, Mail, Phone, Star, Calendar, Venus, Mars, Camera, Save, CircleUserRound } from "lucide-react";
+import { User, Mail, Phone, Calendar, Venus, Mars, Camera, Save, CircleUserRound, Flame } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useUpdateUser } from "../hooks/useUpdateUser";
 import LocalLoading from "../components/LocalLoading";
@@ -131,6 +131,7 @@ const Profile = () => {
             Object.entries(diff).forEach(([key, value]) => payload.append(key, value));
             payload.append("avatar", avatarFile);
             mutate(payload);
+            setAvatarFile(null);
         } else {
             mutate(diff);
         }
@@ -162,21 +163,20 @@ const Profile = () => {
 
                         <div className="bg-base-100 border border-base-300 rounded-2xl p-5 mt-4">
                             <div className="flex items-center gap-2 mb-3">
-                                <Star size={16} className="text-warning fill-warning" />
-                                <p className="font-semibold text-sm">Điểm thành viên</p>
+                                <Flame size={20} className="text-primary fill-primary" />
+                                <p className="font-semibold text-md">Điểm thành viên</p>
                             </div>
                             <p className="text-3xl font-black text-primary">
-                                {(user.loyalty_points)}
+                                {(user.loyalty_points.toLocaleString('vi-VN'))}
                                 <span className="text-base font-medium text-base-content/60 ml-1">pts</span>
                             </p>
                             <div className="mt-3 space-y-1 text-xs text-base-content/50">
                                 <p>Tích lũy: <span className="font-medium text-base-content/70">10.000 vnd = 1 pt</span></p>
-                                <p>Quy đổi: <span className="font-medium text-base-content/70">1 pt = 1.000 vnd</span></p>
+                                <p>Quy đổi: <span className="font-medium text-base-content/70">5 pts = 1.000 vnd</span></p>
                             </div>
                         </div>
 
                         <div className="bg-base-100 border border-base-300 rounded-2xl p-5 mt-4">
-                            <p className="font-semibold text-sm mb-1">Chi tiết</p>
                             <InfoRow icon={<Mail size={15} />} label="Email" value={user?.email} />
                             <InfoRow icon={<Phone size={15} />} label="Số điện thoại" value={user?.phone_number} />
                             <InfoRow
@@ -221,9 +221,9 @@ const Profile = () => {
                                     className="hidden"
                                     onChange={handleAvatarChange}
                                 />
-                                {avatarPreview && (
+                                {avatarPreview && avatarFile && (
                                     <p className="text-xs text-base-content/50">
-                                        Ảnh đai diện mới đã được chọn. Nhấn <span className="font-bold">Lưu</span> để cập nhật
+                                        Ảnh đai diện mới đã được chọn, nhấn <span className="font-bold">Lưu thay đổi</span> để cập nhật
                                     </p>
                                 )}
                             </div>

@@ -274,8 +274,8 @@ class MovieActor(BaseModel):
 
 
 class Showtime(BaseModel):
-    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="showtimes")
-    room = models.ForeignKey(CinemaRoom, on_delete=models.CASCADE, related_name="showtimes")
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="movie_showtimes")
+    room = models.ForeignKey(CinemaRoom, on_delete=models.CASCADE, related_name="room_showtimes")
     screening_format = models.ForeignKey(ScreeningFormat, on_delete=models.PROTECT)
     show_date = models.DateField()
     start_time = models.TimeField()
@@ -330,9 +330,23 @@ class Promotion(BaseModel):
     end_date = models.DateTimeField()
     usage_limit = models.PositiveIntegerField(null=True, blank=True) #Để trống -> không giới hạn
     used_count = models.PositiveIntegerField(default=0)
+    per_user_limit = models.PositiveIntegerField(default=1)
 
     def __str__(self):
         return f"{self.code} - {self.name}"
+
+
+class PromotionUsage(BaseModel):
+    """
+    Ghi nhận mỗi lần 1 user dùng 1 promotion thành công (Booking CONFIRMED).
+    Chỉ tạo record này khi thanh toán thành công, không phải khi apply mã.
+    """
+    promotion = models.ForeignKey(Promotion, on_delete=models.CASCADE, related_name="promotion_usages")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_promotion_usages")
+    booking = models.ForeignKey("Booking", on_delete=models.CASCADE, related_name="promotion_usage_records")
+
+    class Meta:
+        indexes = [models.Index(fields=["promotion", "user"])]
 
 
 #ĐẶT VÉ (BOOKING)
@@ -347,8 +361,8 @@ class Booking(BaseModel):
     khách xuất trình tại rạp để vào xem (cho cả nhóm nhiều người đi cùng vé).
     """
 
-    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="bookings")
-    showtime = models.ForeignKey(Showtime, on_delete=models.PROTECT, related_name="bookings")
+    customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="customer_bookings")
+    showtime = models.ForeignKey(Showtime, on_delete=models.PROTECT, related_name="showtime_bookings")
 
     booking_code = models.CharField(max_length=20, unique=True, default=generate_booking_code)
     status = EnumField(BookingStatus, default=BookingStatus.HOLDING)
@@ -361,7 +375,7 @@ class Booking(BaseModel):
     points_earned = models.PositiveIntegerField(default=0)
     final_amount = models.DecimalField(max_digits=10, decimal_places=0, default=0)
 
-    held_until = models.DateTimeField(help_text="Thời điểm hết hạn giữ ghế = created_at + 7 mins")
+    held_until = models.DateTimeField()
     confirmed_at = models.DateTimeField(null=True, blank=True)
 
     is_checked_in = models.BooleanField(default=False)
@@ -383,9 +397,9 @@ class Ticket(BaseModel):
     tại một thời điểm (unique constraint có điều kiện bên dưới).
     """
 
-    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="tickets")
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="booking_tickets")
     # Denormalize showtime để có thể ràng buộc unique (showtime, seat) ở mức DB.
-    showtime = models.ForeignKey(Showtime, on_delete=models.CASCADE, related_name="tickets")
+    showtime = models.ForeignKey(Showtime, on_delete=models.CASCADE, related_name="showtime_tickets")
     seat = models.ForeignKey(Seat, on_delete=models.PROTECT, related_name="tickets")
     price = models.DecimalField(max_digits=10, decimal_places=0)
     status = EnumField(TicketStatus, default=TicketStatus.HELD)
@@ -414,9 +428,9 @@ class BookingProduct(BaseModel):
 
 
 class BookingPromotion(BaseModel):
-    """Khuyến mãi được áp dụng cho 1 Booking (cho phép áp dụng nhiều mã cùng lúc)."""
+    """Khuyến mãi được áp dụng cho 1 Booking (chỉ được áp duụng 1 mã cho mỗi booking)."""
 
-    booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="booking_promotions")
+    booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name="booking_promotion")
     promotion = models.ForeignKey(Promotion, on_delete=models.PROTECT)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=0)
 
@@ -427,8 +441,8 @@ class BookingPromotion(BaseModel):
 class PointTransaction(BaseModel):
     """Lịch sử tích/dùng điểm thành viên."""
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="point_transactions")
-    booking = models.ForeignKey(Booking, on_delete=models.SET_NULL, null=True, blank=True, related_name="point_transactions")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_point_transactions")
+    booking = models.ForeignKey(Booking, on_delete=models.SET_NULL, null=True, blank=True, related_name="booking_point_transactions")
     points = models.IntegerField(help_text="Dương = cộng điểm, Âm = trừ điểm")
     transaction_type = EnumField(PointTransactionType)
     description = models.CharField(max_length=255, blank=True)
@@ -436,7 +450,7 @@ class PointTransaction(BaseModel):
 
 #THANH TOÁN
 class PaymentMethod(BaseModel):
-    code = models.CharField(max_length=30, unique=True)  # vd: BANK_QR, MOMO
+    code = models.CharField(max_length=30, unique=True)
     name = models.CharField(max_length=100)
 
     def __str__(self):
@@ -463,8 +477,8 @@ class Rating(BaseModel):
         (kiểm tra logic ở tầng service/serializer).
     """
 
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="ratings")
-    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="ratings")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_ratings")
+    movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="movie_ratings")
     verified_booking = models.ForeignKey(Booking, on_delete=models.SET_NULL, null=True, blank=True, help_text="Booking đã check-in dùng để chứng minh đủ điều kiện đánh giá.")
     score = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
     comment = models.TextField(blank=True)

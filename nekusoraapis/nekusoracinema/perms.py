@@ -7,6 +7,11 @@ class IsCustomer(permissions.BasePermission):
         return request.user and request.user.is_authenticated and request.user.role == UserRole.CUSTOMER
 
 
+class BookingOwner(permissions.BasePermission):
+    def has_object_permission(self, request, view, booking):
+        return request.user and request.user.is_authenticated and request.user == booking.customer
+
+
 class IsStaff(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and request.user.role == UserRole.STAFF
@@ -27,7 +32,7 @@ class DenyIsStaff(IsStaff):
         return not IsStaff.has_permission(self, request, view)
 
 
-class DenyIsManager(permissions.BasePermission):
+class DenyIsManager(IsManager):
     def has_permission(self, request, view):
         return not IsManager.has_permission(self, request, view)
 

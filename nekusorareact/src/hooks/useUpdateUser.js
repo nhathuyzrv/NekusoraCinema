@@ -13,9 +13,11 @@ export function useUpdateUser({ options }) {
             toast.success("Cập nhật thành công", "Thông tin cá nhân của bạn đã được cập nhật");
             options.onSuccess?.(...args);
         },
-        onError: (...args) => {
-            toast.error("Cập nhật thất bại", "Đã có lỗi xảy ra, vui lòng thử lại sau");
-            options.onError?.(...args);
+        onError: (err) => {
+            let msg = err.response?.data?.message || Object.values(err.response?.data) || "Đã có lỗi xảy ra, vui lòng thử lại";
+            if (typeof (msg) === 'object' && msg?.[0][0].includes("phone number"))
+                msg = 'Số điện thoại này đã được sử dụng';
+            toast.error("Thao tác thất bại", msg);
         },
     });
 }

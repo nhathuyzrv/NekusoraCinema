@@ -35,11 +35,16 @@ export const endpoints = {
 
     // Đặt vé
     bookings: "/bookings/",
-    bookingDetail: (code) => `/bookings/${code}/`,
+    bookingDetails: (code) => `/bookings/${code}/`,
 
     // Vị trí & chi nhánh
     locations: "/locations/",
+    locationMovies: (locationId, page) => `/locations/${locationId}/movies/?page=${page}`,
     branches: "/branches/",
+
+    // Phòng & ghế
+    rooms: "/rooms/",
+    roomSeats: (roomId) => `/rooms/${roomId}/seats/`,
 
     // Sản phẩm bắp nước
     products: "/products/",
