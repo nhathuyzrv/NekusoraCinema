@@ -1,14 +1,17 @@
+from datetime import timedelta
 from functools import wraps
 
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.response import Response
+
+from nekusoraapis import settings
 from nekusoracinema import serializers
 from nekusoracinema.models import *
 
 
 # STRATEGY OTP
-class OTPMode:
+class OTPModeStrategy:
     mode_key = None
     email_template = None
     email_subject = None
@@ -22,7 +25,7 @@ class OTPMode:
         raise NotImplementedError
 
 
-class RegisterMode(OTPMode):
+class RegisterModeStrategy(OTPModeStrategy):
     mode_key = 'register'
     email_template = 'email/otp_register.html'
     email_subject = '[Nekusora Cinema] Xác nhận đăng ký tài khoản mới'
@@ -47,7 +50,7 @@ class RegisterMode(OTPMode):
         return Response(serializers.UserSerializer(user).data, status=status.HTTP_201_CREATED)
 
 
-class ResetPasswordMode(OTPMode):
+class ResetPasswordModeStrategy(OTPModeStrategy):
     mode_key = 'reset_password'
     email_template = 'email/otp_reset_pw.html'
     email_subject = '[Nekusora Cinema] Xác nhận đặt lại mật khẩu'
@@ -72,7 +75,7 @@ class ResetPasswordMode(OTPMode):
         return Response({'message': 'Đặt lại mật khẩu thành công'}, status=status.HTTP_200_OK)
 
 
-OTP_MODE = {cls.mode_key: cls for cls in [RegisterMode, ResetPasswordMode]}
+OTP_MODE = {cls.mode_key: cls for cls in [RegisterModeStrategy, ResetPasswordModeStrategy]}
 
 # DECORATOR BOOKING
 def require_holding_booking_not_expired(view_func):
@@ -102,3 +105,140 @@ def require_holding_booking(view_func):
         return view_func(self, request, *args, **kwargs)
 
     return wrapper
+
+# STRATEGY PAYMENT
+class PaymentStrategy:
+    method_code = None
+
+    @classmethod
+    def create(cls, booking, method, validated_data):
+        raise NotImplementedError
+
+    @classmethod
+    def _base_payment_defaults(cls, booking, method):
+        return {
+            "method": method,
+            "amount": booking.final_amount,
+            "status": PaymentStatus.PENDING,
+        }
+
+
+class PayOSPayment(PaymentStrategy):
+    method_code = "BANK_QR"
+
+    @classmethod
+    def create(cls, booking, method, validated_data):
+        from payos import PayOS
+        from payos.types import CreatePaymentLinkRequest, ItemData
+
+        client = PayOS(
+            client_id=settings.PAYOS_CLIENT_ID,
+            api_key=settings.PAYOS_API_KEY,
+            checksum_key=settings.PAYOS_CHECKSUM_KEY,
+        )
+
+        order_code = int(booking.booking_code, 16) % (10 ** 9)
+
+        seat_codes = ", ".join(booking.booking_tickets.values_list("seat__seat_code", flat=True))
+
+        items = [
+            ItemData(
+                name=f"Đơn: {order_code}. Vé: {seat_codes}",
+                quantity=1,
+                price=int(booking.final_amount)
+            )
+        ]
+
+        response = client.payment_requests.create(
+            payment_data=CreatePaymentLinkRequest(
+                order_code=order_code,
+                amount=int(booking.final_amount),
+                description=f"NEKUSORA_{booking.booking_code}",
+                items=items,
+                return_url=settings.PAYOS_RETURN_URL,
+                cancel_url=settings.PAYOS_CANCEL_URL,
+                expired_at=int(booking.held_until.timestamp())
+            )
+        )
+
+        payment, _ = Payment.objects.update_or_create(
+            booking=booking,
+            defaults={
+                **cls._base_payment_defaults(booking, method),
+                "contact_email": validated_data.get("email", ""),
+                "order_code": order_code,
+                "payment_link_id": response.get("paymentLinkId", ""),
+                "checkout_url": response.get("checkoutUrl", ""),
+                "qr_code_url": response.get("qrCode", ""),
+                "expired_at": booking.held_until,
+                "provider_response": response,
+            }
+        )
+        return payment
+
+
+class MoMoPayment(PaymentStrategy):
+    method_code = "MOMO"
+
+    @classmethod
+    def create(cls, booking, method, validated_data):
+        pass
+        # import hashlib
+        # import hmac
+        # import requests
+        #
+        # endpoint = "https://payment.momo.vn/v2/gateway/api/create"
+        # partner_code = settings.MOMO_PARTNER_CODE
+        # access_key = settings.MOMO_ACCESS_KEY
+        # secret_key = settings.MOMO_SECRET_KEY
+        #
+        # request_id = f"{booking.booking_code}_{int(timezone.now().timestamp())}"
+        # order_id = request_id
+        # amount = str(int(booking.final_amount))
+        # order_info = f"Thanh toan ve xem phim {booking.booking_code}"
+        # redirect_url = validated_data.get("return_url", settings.MOMO_RETURN_URL)
+        # ipn_url = settings.MOMO_IPN_URL
+        # request_type = "captureWallet"
+        # extra_data = ""
+        #
+        # raw = (
+        #     f"accessKey={access_key}&amount={amount}&extraData={extra_data}"
+        #     f"&ipnUrl={ipn_url}&orderId={order_id}&orderInfo={order_info}"
+        #     f"&partnerCode={partner_code}&redirectUrl={redirect_url}"
+        #     f"&requestId={request_id}&requestType={request_type}"
+        # )
+        #
+        # signature = hmac.new(secret_key.encode(), raw.encode(), hashlib.sha256).hexdigest()
+        #
+        # payload = {
+        #     "partnerCode": partner_code,
+        #     "accessKey": access_key,
+        #     "requestId": request_id,
+        #     "amount": amount,
+        #     "orderId": order_id,
+        #     "orderInfo": order_info,
+        #     "redirectUrl": redirect_url,
+        #     "ipnUrl": ipn_url,
+        #     "extraData": extra_data,
+        #     "requestType": request_type,
+        #     "signature": signature,
+        #     "lang": "vi",
+        # }
+        #
+        # response = requests.post(endpoint, json=payload, timeout=10).json()
+        #
+        # payment, _ = Payment.objects.update_or_create(
+        #     booking=booking,
+        #     defaults={
+        #         **cls._base_payment_defaults(booking, method),
+        #         "checkout_url": response.get("payUrl", ""),
+        #         "deeplink": response.get("deeplink", ""),
+        #         "qr_code_url": response.get("qrCodeUrl", ""),
+        #         "expired_at": timezone.now() + timedelta(minutes=15),
+        #         "provider_response": response,
+        #     }
+        # )
+        # return payment
+
+
+PAYMENT_STRATEGY = {cls.method_code: cls for cls in [PayOSPayment, MoMoPayment]}

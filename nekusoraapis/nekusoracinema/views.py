@@ -1,5 +1,3 @@
-import random
-import string
 from datetime import date
 
 from django.core.cache import cache
@@ -12,7 +10,7 @@ from rest_framework.response import Response
 
 from nekusoracinema import serializers, paginators, perms, utils, tasks, services
 from nekusoracinema.models import *
-from nekusoracinema.patterns import OTP_MODE, require_holding_booking_not_expired, require_holding_booking
+from nekusoracinema.patterns import OTP_MODE, require_holding_booking_not_expired, require_holding_booking, PAYMENT_STRATEGY
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -30,10 +28,6 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
             user = serializer.save()
 
         return Response(serializers.UserSerializer(user).data, status=status.HTTP_200_OK)
-
-
-def generate_otp(length=6):
-    return ''.join(random.choices(string.digits, k=length))
 
 
 class AuthViewSet(viewsets.ViewSet):
@@ -75,7 +69,7 @@ class AuthViewSet(viewsets.ViewSet):
             return Response({'message': 'OTP không hợp lệ hoặc đã hết hạn'}, status=status.HTTP_400_BAD_REQUEST)
 
         cache.delete(f"otp:{mode.mode_key}:{email}")
-        token = generate_otp(32)
+        token = utils.generate_otp(32)
         cache.set(f"verified:{mode.mode_key}:{email}", token, timeout=600)
         return Response({'token': token}, status=status.HTTP_200_OK)
 
@@ -340,18 +334,20 @@ class BookingsViewSet(viewsets.ViewSet):
 
         return Response(serializers.BookingSerializer(booking).data)
 
-    @action(methods=['post'], url_path='payment-method', detail=True)
+    @action(methods=['post'], url_path='checkout', detail=True)
     @require_holding_booking_not_expired
-    def select_payment_method(self, request, pk=None, booking=None):
-        s = serializers.SelectPaymentMethodInputSerializer(data=request.data)
+    def checkout(self, request, pk=None, booking=None):
+        s = serializers.CreatePaymentInputSerializer(data=request.data)
         s.is_valid(raise_exception=True)
 
         method = get_object_or_404(PaymentMethod, pk=s.validated_data['method'], active=True)
-        Payment.objects.update_or_create(booking=booking, defaults={
-            'method': method,
-            'amount': booking.final_amount
-        })
-        return Response(serializers.BookingSerializer(booking).data)
+
+        payment_strategy = PAYMENT_STRATEGY.get(method.code)
+        if not payment_strategy:
+            return Response({'message': f'Phương thức thanh toán "{method.name}" đang được cập nhật'}, status=status.HTTP_400_BAD_REQUEST)
+
+        payment = payment_strategy.create(booking, method, s.validated_data)
+        return Response(serializers.PaymentSerializer(payment).data, status=status.HTTP_200_OK)
 
     @action(methods=['post'], url_path='cancel', detail=True)
     @require_holding_booking_not_expired
@@ -364,3 +360,13 @@ class BookingsViewSet(viewsets.ViewSet):
     def expire(self, request, pk=None, booking=None):
         services.delete_booking(booking, 'EXPIRED')
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PayOSWebhookViewSet(viewsets.ViewSet):
+
+    def create(self, request):
+        try:
+            services.handle_payos_webhook(data=request.data)
+        except Exception:
+            pass
+        return Response(status=status.HTTP_200_OK)

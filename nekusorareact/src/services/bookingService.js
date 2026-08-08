@@ -49,10 +49,11 @@ const bookingService = {
         authApis.delete(endpoints.bookingDetails(bookingCode) + "points/")
             .then(r => r.data),
 
-    getPaymentMethods: () => Apis.get("/payment-methods/")
-        .then(r => r.data),
-    selectPaymentMethod: (bookingCode, method, email) =>
-        authApis.post(endpoints.bookingDetails(bookingCode) + "payment-method/", { method, email })
+    getPaymentMethods: () =>
+        Apis.get(endpoints.paymentMethods)
+            .then(r => r.data),
+    initCheckout: (bookingCode, method, email) =>
+        authApis.post(endpoints.bookingDetails(bookingCode) + "checkout/", { method, email })
             .then(r => r.data),
 };
 

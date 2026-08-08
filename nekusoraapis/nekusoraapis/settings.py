@@ -64,6 +64,12 @@ PAYOS_CHECKSUM_KEY = config('PAYOS_CHECKSUM_KEY')
 PAYOS_RETURN_URL = config('PAYOS_RETURN_URL')
 PAYOS_CANCEL_URL = config('PAYOS_CANCEL_URL')
 
+MOMO_PARTNER_CODE = config("MOMO_PARTNER_CODE")
+MOMO_ACCESS_KEY = config("MOMO_ACCESS_KEY")
+MOMO_SECRET_KEY = config("MOMO_SECRET_KEY")
+MOMO_RETURN_URL = config("MOMO_RETURN_URL")
+MOMO_IPN_URL = config("MOMO_IPN_URL")
+
 CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
 CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
@@ -104,9 +110,9 @@ CKEDITOR_UPLOAD_PATH = 'images/ckeditor'
 import cloudinary.api
 
 cloudinary.config(
-    cloud_name="ddzhk8woq",
-    api_key="267313767713637",
-    api_secret="4rFOgpshSCbuy6Oc3rCdulSTtbc",
+    cloud_name=config('CLOUD_NAME'),
+    api_key=config('CLOUD_API_KEY'),
+    api_secret=config('CLOUD_API_SECRET'),
 )
 
 REST_FRAMEWORK = {

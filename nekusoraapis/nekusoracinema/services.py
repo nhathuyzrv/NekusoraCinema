@@ -83,7 +83,7 @@ def calculate_promotion_discount(promotion, base_amount):
 
 
 # Booking Service
-POINTS_TO_VND = Decimal(200)
+POINTS_TO_VND = Decimal(500)
 VND_TO_POINTS = Decimal(10000)
 MAX_SEATS_PER_BOOKING = 8
 
@@ -272,7 +272,7 @@ def clear_points(booking):
     return recalculate(booking)
 
 
-def confirm_booking_payment_success(booking, payment):
+def confirm_booking(booking, payment):
     with transaction.atomic():
         booking.status = BookingStatus.CONFIRMED
         booking.confirmed_at = timezone.now()
@@ -290,17 +290,70 @@ def confirm_booking_payment_success(booking, payment):
             user.save(update_fields=['loyalty_points'])
 
         if booking.points_used > 0:
-            PointTransaction.objects.create(user=user, booking=booking, points=-booking.points_used, transaction_type=PointTransactionType.REDEEM, description=f'Quy đổi điểm cho đơn {booking.booking_code}')
+            PointTransaction.objects.create(
+                user=user, booking=booking,
+                points=-booking.points_used,
+                transaction_type=PointTransactionType.REDEEM,
+                description=f'Quy đổi điểm cho đơn {booking.booking_code}'
+            )
         if points_earned > 0:
-            PointTransaction.objects.create(user=user, booking=booking, points=points_earned, transaction_type=PointTransactionType.EARN, description=f'Tích điểm từ đơn {booking.booking_code}')
+            PointTransaction.objects.create(
+                user=user, booking=booking,
+                points=points_earned,
+                transaction_type=PointTransactionType.EARN,
+                description=f'Tích điểm từ đơn {booking.booking_code}'
+            )
 
         try:
             bp = booking.booking_promotion
-            PromotionUsage.objects.create(promotion=bp.promotion, user=booking.customer, booking=booking)
+            PromotionUsage.objects.create(promotion=bp.promotion, user=user, booking=booking)
             Promotion.objects.filter(pk=bp.promotion_id).update(used_count=models.F('used_count') + 1)
         except BookingPromotion.DoesNotExist:
             pass
 
+        payment.status = PaymentStatus.SUCCESS
+        payment.paid_at = timezone.now()
+        payment.save(update_fields=['status', 'paid_at'])
+
     broadcast_seat_update(booking.showtime_id)
-    # TODO: gửi email vé điện tử (tasks.send_ticket_email.delay(booking.pk))
+    tasks.send_ticket_email.delay(email=payment.contact_email, booking_id=booking.pk)
+    return booking
+
+
+def handle_payos_webhook(data):
+    from payos import PayOS
+    from nekusoraapis import settings
+
+    client = PayOS(
+        client_id=settings.PAYOS_CLIENT_ID,
+        api_key=settings.PAYOS_API_KEY,
+        checksum_key=settings.PAYOS_CHECKSUM_KEY,
+    )
+
+    client.webhooks.verify(data)
+
+    webhook_data = data.get('data', {})
+    code = data.get('code', '')
+    order_code = webhook_data.get('orderCode')
+
+    if order_code is None:
+        raise ValidationError({'orderCode': 'Invalid orderCode'})
+
+    payment = get_object_or_404(Payment, order_code=order_code)
+    booking = payment.booking
+
+    if payment.status in (PaymentStatus.SUCCESS, PaymentStatus.FAILED, PaymentStatus.REFUNDED) or booking.status in (BookingStatus.CONFIRMED, BookingStatus.CANCELLED, BookingStatus.EXPIRED):
+        return booking
+
+    if code == '00':
+        payment.transaction_ref = webhook_data.get('reference', '')
+        payment.save(update_fields=['transaction_ref'])
+        confirm_booking(booking=booking, payment=payment)
+    elif code == '01':
+        with transaction.atomic():
+            payment.status = PaymentStatus.FAILED
+            payment.cancelled_at = timezone.now()
+            payment.cancel_reason = 'Người dùng huỷ giao dịch'
+            payment.save(update_fields=['status', 'cancelled_at', 'cancel_reason'])
+
     return booking

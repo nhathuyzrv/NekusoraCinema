@@ -68,7 +68,7 @@ const GlobalAlert = () => {
         <dialog ref={ref} className="modal" onCancel={handleCancel}>
             <div className="modal-box">
                 {title && <h3 className="font-bold text-lg">{title}</h3>}
-                {content && <p className="py-4 text-sm text-base-content/90">{content}</p>}
+                {content && <p className="whitespace-pre-line py-4 text-sm text-base-content/90">{content}</p>}
 
                 <div className="modal-action">
                     {buttons.map((btn, idx) => (

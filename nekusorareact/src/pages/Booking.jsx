@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronLeft, MapPin, Film, Clock, Ticket as TicketIcon, Tag, CreditCard, Loader2, X, Plus, Minus, Flame } from "lucide-react";
-import { useLocations, useLocationMovies, useBookingMovieShowtimes, useRoomSeats, useProducts, usePaymentMethods, useHoldSeats, useSetProducts, useApplyPromotion, useRemovePromotion, useRedeemPoints, useClearPoints, useSelectPaymentMethod, useCancelBooking, useBookingDetails, useBookingsStatus } from "../hooks/useBooking";
+import { useLocations, useLocationMovies, useBookingMovieShowtimes, useRoomSeats, useProducts, usePaymentMethods, useHoldSeats, useSetProducts, useApplyPromotion, useRemovePromotion, useRedeemPoints, useClearPoints, useInitCheckout, useCancelBooking, useBookingDetails, useBookingsStatus } from "../hooks/useBooking";
 import { useSeatSocket } from "../hooks/useSeatSocket";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/useToast";
@@ -17,6 +17,7 @@ import bookingService from "../services/bookingService";
 const STEPS = ["Chọn suất chiếu", "Chọn ghế", "Chọn bắp/nước", "Khuyến mãi", "Xác nhận đơn", "Thanh toán"];
 const MAX_SEATS = 8;
 const SEAT_HOLD_MINUTES = 8;
+const POINTS_TO_VND = 500;
 
 function todayStr() {
     return new Date().toISOString().split("T")[0];
@@ -531,7 +532,7 @@ function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
 
     const appliedPromo = booking?.promotion;
     const subtotal = parseFloat(booking?.seat_amount ?? 0) + parseFloat(booking?.product_amount ?? 0);
-    const maxPointsByAmount = Math.floor(Math.max(subtotal - parseFloat(booking?.discount_amount ?? 0), 0) / 1000);
+    const maxPointsByAmount = Math.floor(Math.max(subtotal - parseFloat(booking?.discount_amount ?? 0), 0) / POINTS_TO_VND);
     const maxPoints = Math.min(user?.loyalty_points ?? 0, maxPointsByAmount);
 
     const handleApplyCode = () => {
@@ -551,7 +552,7 @@ function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
         }
         redeemPts(pointsInput, {
             onSuccess: () => {
-                toast.success("Quy đổi điểm thành công", `Bạn được giảm ${formatMoney(pointsInput * 200)}`)
+                toast.success("Quy đổi điểm thành công", `Bạn được giảm ${formatMoney(pointsInput * POINTS_TO_VND)}`)
             }
         });
     };
@@ -607,7 +608,7 @@ function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
                         </p>
                         <p className="text-xs text-base-content/50 mb-3">
                             Bạn đang có <span className="font-semibold text-primary">{user?.loyalty_points.toLocaleString('vi-VN') ?? 0}</span> điểm
-                            (5 điểm = 1.000đ)
+                            (2 điểm = 1.000đ)
                         </p>
                         {booking?.points_used > 0 ? (
                             <div className="flex items-center justify-between bg-success/10 border border-success/30 rounded-lg px-3 py-2">
@@ -691,7 +692,7 @@ function SummaryRow({ label, value, bold, negative }) {
 function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBack }) {
     const { data: methods, isLoading } = usePaymentMethods();
     const [selectedMethod, setSelectedMethod] = useState(null);
-    const { mutate: selectPaymentMethod, isPending } = useSelectPaymentMethod(bookingCode);
+    const { mutate: initCheckout, isPending } = useInitCheckout(bookingCode);
     const { user } = useAuth();
     const toast = useToast();
     const [emailOption, setEmailOption] = useState("my-email");
@@ -716,7 +717,14 @@ function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBac
         const seatCodes = booking?.tickets?.map(t => t.seat.seat_code).join(", ");
         const confirmed = await MyAlert.alert(
             "Xác nhận đặt vé",
-            `Phim: ${booking?.movie?.title}\nGhế: ${seatCodes}\nTổng tiền: ${formatMoney(booking?.final_amount)}\nVé sẽ được gửi tới: ${email}\n\nBạn có chắc chắn muốn tiếp tục?`,
+            `Phim: ${booking?.movie?.title}
+            Thời gian: ${booking?.showtime?.start_time.slice(0, 5)} - ${formatShortWeekday(booking?.showtime?.show_date)}, ${formatDate(booking?.showtime?.show_date)}
+            Tại: ${booking?.showtime?.room?.name} - ${booking?.showtime?.branch?.name}
+            Ghế: ${seatCodes}
+            Số tiền cần thanh toán: ${formatMoney(booking?.final_amount)}
+
+            Vé sẽ được gửi tới email: ${email}
+            Bạn sẽ không thể thay đổi thông tin sau khi xác nhận`,
             [
                 { text: "Kiểm tra lại", style: "ghost" },
                 { text: "Xác nhận", style: "primary" },
@@ -725,7 +733,7 @@ function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBac
 
         if (confirmed !== "Xác nhận") return;
 
-        selectPaymentMethod({ method: selectedMethod, email }, { onSuccess: onConfirmed });
+        initCheckout({ method: selectedMethod, email }, { onSuccess: onConfirmed });
     };
 
     return (
@@ -983,7 +991,11 @@ const Booking = () => {
 
         MyAlert.alert(
             "Bạn có đơn đặt vé chưa hoàn tất",
-            `Phim: ${movieTitle}\n. Suất chiếu: ${showtimeInfo}\n. Số ghế: ${seatCount}\n\nBạn muốn tiếp tục hoàn thành đơn này hay hủy bỏ để đặt đơn mới?`,
+            `Phim: ${movieTitle}
+            Suất chiếu: ${showtimeInfo}
+            Số ghế: ${seatCount}
+            
+            Bạn có thể tiếp tục hoàn thành đơn này hoặc hủy bỏ để đặt đơn mới`,
             [
                 {
                     text: "Hủy đơn cũ",
@@ -1047,7 +1059,9 @@ const Booking = () => {
             callAuthModal();
             return;
         }
-        await MyAlert.alert("Bạn không thể đổi ghế sau khi tiếp tục", `Chúng tôi sẽ tiến hành giữ ghế cho bạn trong vòng ${SEAT_HOLD_MINUTES} phút. Sau khi hết thời gian, đơn đặt vé này sẽ bị hủy bỏ nếu bạn chưa hoàn tất thanh toán.`,
+        await MyAlert.alert("Bạn không thể đổi ghế sau khi tiếp tục",
+            `Chúng tôi sẽ tiến hành giữ ghế cho bạn trong vòng ${SEAT_HOLD_MINUTES} phút
+            Sau khi hết thời gian, đơn đặt vé này sẽ bị hủy bỏ nếu bạn chưa hoàn tất thanh toán`,
             [
                 { text: "Chờ chút", style: "ghost" },
                 {
@@ -1151,7 +1165,9 @@ const Booking = () => {
                             onBack={() => goTo(3)}
                         />
                     )}
-                    {step === 5 && <StepPayment booking={booking} />}
+                    {step === 5 && (
+                        <StepPayment booking={booking} />
+                    )}
                 </div>
 
                 <div className="lg:w-[35%] w-full lg:sticky lg:top-20">

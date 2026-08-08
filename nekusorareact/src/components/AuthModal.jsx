@@ -7,6 +7,7 @@ import { useResetPassword } from "../hooks/useResetPassword";
 import GlobalLoading from "./GlobalLoading";
 import MyAlert from "../configs/MyAlert";
 import { useRegister } from "../hooks/useRegister";
+import { Link } from "react-router-dom";
 
 const emptyFieldError = "Trường này không được để trống";
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
@@ -35,6 +36,26 @@ function PasswordInput({ value, onChange, placeholder, error, disabled }) {
             </button>
         </div>
     );
+}
+
+function PasswordRules({ form }) {
+    const passwordRules = [
+        [/.{8,}/, "Ít nhất 8 ký tự"],
+        [/[A-Z]/, "Có chữ hoa"],
+        [/[a-z]/, "Có chữ thường"],
+        [/\d/, "Có chữ số"],
+        [/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/, "Có ký tự đặc biệt"],
+    ];
+
+    return (
+        <ul className="text-xs space-y-0.5 pl-1">
+            {passwordRules.map(([regex, label]) => (
+                <li key={label} className={`flex items-center gap-1.5 transition-colors ${regex.test(form.password) ? "text-success" : "text-base-content/40"}`}>
+                    <span>{regex.test(form.password) ? "✓" : "·"}</span> {label}
+                </li>
+            ))}
+        </ul>
+    )
 }
 
 function ServerError({ msg }) {
@@ -261,7 +282,7 @@ function RegisterForm({ hook, onSwitch }) {
         if (!form.gender) next.gender = emptyFieldError;
         if (!form.date_of_birth) next.date_of_birth = emptyFieldError;
         if (!form.password) next.password = emptyFieldError;
-        else if (!passwordRegex.test(form.password)) next.password = "Mật khẩu phải chứa nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt";
+        else if (!passwordRegex.test(form.password)) next.password = "Mật khẩu không đúng định dạng";
         if (form.confirm_password !== form.password) next.confirm_password = "Mật khẩu không khớp";
         if (!agree) next.agree = "Bạn phải đồng ý để tiếp tục";
         setErrors(next);
@@ -331,12 +352,14 @@ function RegisterForm({ hook, onSwitch }) {
                 </div>
             ))}
 
+            <PasswordRules form={form} />
+
             <div className="form-control">
                 <label className="label cursor-pointer justify-start gap-2">
                     <input type="checkbox" className="checkbox checkbox-sm checkbox-primary"
                         checked={agree} onChange={() => setAgree(p => !p)} disabled={hook.loading} />
                     <span className="label-text text-sm whitespace-normal">
-                        Bằng việc đăng ký, tôi đồng ý với Điều khoản dịch vụ và Chính sách bảo mật.
+                        Bằng việc đăng ký, tôi đồng ý với <Link to="/terms" className="font-semibold text-info/80 hover:underline hover:underline-offset-3">Điều khoản dịch vụ</Link> và <Link to="/privacy" className="font-medium text-info/80 hover:underline hover:underline-offset-3">Chính sách bảo mật</Link>
                     </span>
                 </label>
                 {errors.agree && <span className="text-error text-xs">{errors.agree}</span>}
@@ -523,9 +546,9 @@ function StepNewPassword({ hook, onBackToLogin }) {
         const next = {};
         if (!form.password) next.password = emptyFieldError;
         else if (!passwordRegex.test(form.password))
-            next.password = "Mật khẩu phải bao gồm những yêu cầu bên dưới";
+            next.password = "Mật khẩu không hợp lệ";
         if (!form.confirm_password) next.confirm_password = emptyFieldError;
-        else if (form.confirm_password !== form.password) next.confirm_password = "Mật khẩu không khớp";
+        else if (form.confirm_password !== form.password) next.confirm_password = "Mật khẩu không đúng định dạng";
         setErrors(next);
         return Object.keys(next).length === 0;
     };
@@ -542,14 +565,6 @@ function StepNewPassword({ hook, onBackToLogin }) {
             //
         }
     };
-
-    const passwordRules = [
-        [/.{8,}/, "Ít nhất 8 ký tự"],
-        [/[A-Z]/, "Có chữ hoa"],
-        [/[a-z]/, "Có chữ thường"],
-        [/\d/, "Có chữ số"],
-        [/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/, "Có ký tự đặc biệt"],
-    ];
 
     return (
         <form onSubmit={submit} className="space-y-4">
@@ -574,13 +589,7 @@ function StepNewPassword({ hook, onBackToLogin }) {
                 </div>
             ))}
 
-            <ul className="text-xs space-y-0.5 pl-1">
-                {passwordRules.map(([regex, label]) => (
-                    <li key={label} className={`flex items-center gap-1.5 transition-colors ${regex.test(form.password) ? "text-success" : "text-base-content/40"}`}>
-                        <span>{regex.test(form.password) ? "✓" : "·"}</span> {label}
-                    </li>
-                ))}
-            </ul>
+            <PasswordRules form={form} />
 
             <button className="btn btn-primary w-full" type="submit" disabled={hook.loading}>Đặt lại mật khẩu</button>
         </form>

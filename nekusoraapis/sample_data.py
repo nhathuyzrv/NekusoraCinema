@@ -72,7 +72,7 @@ NOW = timezone.now()
 TODAY = timezone.localdate()
 
 # 1. CONFIG
-NUM_EXTRA_CUSTOMERS = 400
+NUM_EXTRA_CUSTOMERS = 500
 NUM_EXTRA_STAFF = 25
 NUM_EXTRA_MANAGERS = 4
 
@@ -82,13 +82,13 @@ SHOWTIME_DAYS_AFTER_TODAY = 14
 ROOMS_SAMPLED_PER_SHOWDAY = 6
 SHOWTIMES_PER_ROOM_PER_DAY = 3
 
-TARGET_BOOKINGS = 4000
+TARGET_BOOKINGS = 5000
 
 random.seed()
 
 print(f"    Ngày hiện tại dùng để tính trạng thái phim/suất chiếu: {TODAY.isoformat()}")
 
-# 2. HÀM TIỆN ÍCH SINH DỮ LIỆU TIẾNG VIỆT
+# 2. UTILS
 SURNAMES = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Huỳnh", "Phan", "Vũ",
             "Võ", "Đặng", "Bùi", "Đỗ", "Hồ", "Ngô", "Dương", "Lý"]
 MALE_MIDDLE = ["Văn", "Hữu", "Minh", "Thành", "Đức", "Quang", "Anh", "Bá", "Công", "Xuân"]
@@ -99,7 +99,7 @@ FEMALE_GIVEN = ["Anh", "Chi", "Dung", "Giang", "Hà", "Hoa", "Huyền", "Lan", "
                 "Nga", "Nhung", "Oanh", "Phương", "Quỳnh", "Thảo", "Trang", "Uyên", "Vy", "Yến"]
 
 
-def random_vn_name():
+def generate_random_name():
     gender = random.choice([Gender.MALE, Gender.FEMALE])
     surname = random.choice(SURNAMES)
     if gender == Gender.MALE:
@@ -121,7 +121,7 @@ _used_phones = set(
 
 def random_phone():
     while True:
-        p = "0" + random.choice(["3", "5", "7", "8", "9"]) + "".join(random.choices(string.digits, k=8))
+        p = "0" + random.choice(["3", "5", "7", "8", "9", "1", "2", "4", "6"]) + "".join(random.choices(string.digits, k=8))
         if p not in _used_phones:
             _used_phones.add(p)
             return p
@@ -193,7 +193,24 @@ FORMATS = [
     ("IMAX", "IMAX"),
     ("4DX", "4DX"),
 ]
-FORMAT_BASE_PRICE = {"2D_PD": 75000, "2D_LT": 75000, "3D": 95000, "IMAX": 150000, "4DX": 180000}
+
+FORMAT_SURCHARGE = {
+    "2D_PD": Decimal(0),
+    "2D_LT": Decimal(0),
+    "3D":    Decimal(30000),
+    "IMAX":  Decimal(50000),
+    "4DX":   Decimal(80000),
+}
+
+def calc_ticket_price(show_date, screening_format_code):
+    weekday = show_date.weekday()
+    if weekday == 1:
+        base = Decimal(60000)
+    elif weekday in (5, 6):
+        base = Decimal(90000)
+    else:
+        base = Decimal(80000)
+    return base + FORMAT_SURCHARGE.get(screening_format_code, Decimal(0))
 
 screening_formats = []
 for code, name in FORMATS:
@@ -204,9 +221,7 @@ PAYMENT_METHODS = [
     ("BANK_QR", "Chuyển khoản / QR ngân hàng"),
     ("MOMO", "Ví MoMo"),
     ("ZALOPAY", "Ví ZaloPay"),
-    ("VNPAY", "VNPay"),
     ("VISA_MASTER", "Thẻ Visa/Mastercard"),
-    ("CASH", "Tiền mặt tại quầy"),
 ]
 payment_methods = []
 for code, name in PAYMENT_METHODS:
@@ -658,7 +673,7 @@ print(f"    -> User có sẵn: {len(existing_customers)} customer, {len(existing
 next_customer_idx = User.objects.filter(username__startswith="khach").count() + 1
 new_customers = []
 for i in range(NUM_EXTRA_CUSTOMERS):
-    first, last, gender = random_vn_name()
+    first, last, gender = generate_random_name()
     idx = next_customer_idx + i
     username = f"khach{idx:04d}"
     if User.objects.filter(username=username).exists():
@@ -674,7 +689,7 @@ for i in range(NUM_EXTRA_CUSTOMERS):
 next_staff_idx = User.objects.filter(username__startswith="nhanvien").count() + 1
 new_staff = []
 for i in range(NUM_EXTRA_STAFF):
-    first, last, gender = random_vn_name()
+    first, last, gender = generate_random_name()
     idx = next_staff_idx + i
     username = f"nhanvien{idx:03d}"
     if User.objects.filter(username=username).exists():
@@ -689,7 +704,7 @@ for i in range(NUM_EXTRA_STAFF):
 next_manager_idx = User.objects.filter(username__startswith="quanly").count() + 1
 new_managers = []
 for i in range(NUM_EXTRA_MANAGERS):
-    first, last, gender = random_vn_name()
+    first, last, gender = generate_random_name()
     idx = next_manager_idx + i
     username = f"quanly{idx:02d}"
     if User.objects.filter(username=username).exists():
@@ -747,7 +762,7 @@ def build_showtimes_for_movie(movie, day_range):
             times_today = random.sample(SHOW_TIME_SLOTS, k=min(SHOWTIMES_PER_ROOM_PER_DAY, len(SHOW_TIME_SLOTS)))
             for start_t in times_today:
                 fmt = random.choice(screening_formats)
-                price = FORMAT_BASE_PRICE.get(fmt.code, 75000) + random.choice([-5000, 0, 0, 5000, 10000])
+                price = calc_ticket_price(show_date, fmt.code)
                 end_minutes = start_t.hour * 60 + start_t.minute + movie.duration + 15
                 end_t = time((end_minutes // 60) % 24, end_minutes % 60)
                 if show_date < TODAY:
@@ -798,6 +813,7 @@ if existing_booking_count:
 booking_count = 0
 point_tx_bulk = []
 rating_candidates = []
+promotion_usage_bulk_count = 0
 
 random.shuffle(all_showtimes_qs)
 
@@ -918,8 +934,12 @@ for st in all_showtimes_qs:
 
         if applied_promo:
             BookingPromotion.objects.get_or_create(
-                booking=booking, promotion=applied_promo,
-                defaults=dict(discount_amount=discount_amount, created_at=created_at, updated_at=created_at),
+                booking=booking,
+                defaults=dict(
+                    promotion=applied_promo,
+                    discount_amount=discount_amount,
+                    created_at=created_at, updated_at=created_at,
+                ),
             )
 
         if status == BookingStatus.CONFIRMED:
@@ -933,6 +953,7 @@ for st in all_showtimes_qs:
                 transaction_ref=("TXN" + "".join(random.choices(string.digits, k=10))),
                 status=pay_status,
                 paid_at=confirmed_at if pay_status == PaymentStatus.SUCCESS else None,
+                contact_email=customer.email,
                 created_at=created_at, updated_at=confirmed_at or created_at,
             )
             if points_earned:
@@ -942,6 +963,14 @@ for st in all_showtimes_qs:
                     description=f"Tích điểm từ đơn {booking.booking_code}",
                     created_at=created_at, updated_at=created_at,
                 ))
+            if applied_promo:
+                PromotionUsage.objects.create(
+                    promotion=applied_promo,
+                    user=customer,
+                    booking=booking,
+                    created_at=created_at, updated_at=created_at,
+                )
+                promotion_usage_bulk_count += 1
 
         if is_checked_in:
             rating_candidates.append((customer, st.movie, booking))
@@ -957,7 +986,7 @@ for tx in point_tx_bulk:
 for user_id, pts in earned_map.items():
     User.objects.filter(pk=user_id).update(loyalty_points=F("loyalty_points") + pts)
 
-print(f"    -> {booking_count} booking, {len(point_tx_bulk)} point transaction.")
+print(f"    -> {booking_count} booking, {len(point_tx_bulk)} point transaction, {promotion_usage_bulk_count} promotion usage.")
 
 # ------------------------------------------------------------------------- #
 # 11. RATING
@@ -1021,6 +1050,7 @@ print(f"Booking              : {Booking.objects.count()}")
 print(f"Ticket               : {Ticket.objects.count()}")
 print(f"BookingProduct       : {BookingProduct.objects.count()}")
 print(f"BookingPromotion     : {BookingPromotion.objects.count()}")
+print(f"PromotionUsage       : {PromotionUsage.objects.count()}")
 print(f"PointTransaction     : {PointTransaction.objects.count()}")
 print(f"PaymentMethod        : {PaymentMethod.objects.count()}")
 print(f"Payment              : {Payment.objects.count()}")

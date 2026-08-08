@@ -238,7 +238,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Payment
-        fields = ['id', 'method', 'amount', 'status', 'transaction_ref', 'paid_at']
+        fields = ['id', 'method', 'amount', 'status', 'transaction_ref', 'paid_at', 'checkout_url', 'qr_code_url', 'deeplink', 'expired_at', 'cancelled_at', 'created_at']
 
 
 class BookingSerializer(serializers.ModelSerializer):
@@ -279,6 +279,6 @@ class RedeemPointsInputSerializer(serializers.Serializer):
     points = serializers.IntegerField(min_value=0)
 
 
-class SelectPaymentMethodInputSerializer(serializers.Serializer):
+class CreatePaymentInputSerializer(serializers.Serializer):
     method = serializers.IntegerField()
-    email = serializers.EmailField(required=False, allow_blank=True)
+    email = serializers.EmailField()

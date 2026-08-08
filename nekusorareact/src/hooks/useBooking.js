@@ -113,8 +113,8 @@ export function useClearPoints(bookingCode) {
     return useBookingMutation(() => bookingService.clearPoints(bookingCode));
 }
 
-export function useSelectPaymentMethod(bookingCode) {
-    return useBookingMutation(({ method, email }) => bookingService.selectPaymentMethod(bookingCode, method, email));
+export function useInitCheckout(bookingCode) {
+    return useBookingMutation(({ method, email }) => bookingService.initCheckout(bookingCode, method, email));
 }
 
 export function useCancelBooking() {

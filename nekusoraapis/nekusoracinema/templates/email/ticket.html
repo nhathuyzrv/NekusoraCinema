@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vé điện tử Nekusora Cinema</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f5ede8;font-family:'Helvetica Neue',Arial,sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f5ede8;padding:32px 16px;">
+    <tr>
+      <td align="center">
+        <table width="540" cellpadding="0" cellspacing="0"
+          style="background:#ffffff;border-radius:12px;max-width:540px;width:100%;">
+
+          <tr>
+            <td style="background-color:#5a1a10;padding:20px 28px;border-radius:12px 12px 0 0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td>
+                    <p style="color:#f5ede8;font-size:20px;font-weight:700;margin:0;letter-spacing:0.3px;">Nekusora Cinema</p>
+                    <p style="color:#d4a090;font-size:12px;margin:4px 0 0;letter-spacing:0.5px;">Vé điện tử</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px 28px 0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td valign="top">
+                    <p style="font-size:18px;font-weight:700;color:#3a1a0a;margin:0 0 8px;">
+                      {{ booking.showtime.movie.title }}
+                    </p>
+                    <p style="margin:0 0 10px;">
+                      <span style="background:#f5ede8;border:1px solid #c08060;color:#7a4020;text-align:center;
+                                   font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;">
+                        {{ booking.showtime.movie.age_rating.value }}
+                      </span>
+                      &nbsp;
+                      <span style="background:#f5ede8;border:1px solid #c08060;color:#7a4020;text-align:center;
+                                   font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;">
+                        {{ booking.showtime.screening_format.name }}
+                      </span>
+                      &nbsp;
+                      <span style="background:#f5ede8;border:1px solid #c08060;color:#7a4020;text-align:center;
+                                   font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px;">
+                        {{ booking.showtime.movie.duration }} phút
+                      </span>
+                    </p>
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="color:#9a7060;font-size:12px;padding:2px 8px 2px 0;white-space:nowrap;">Địa điểm</td>
+                        <td style="color:#3a1a0a;font-size:12px;font-weight:600;padding:2px 0;">{{ booking.showtime.room.branch.name }}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#9a7060;font-size:12px;padding:2px 8px 2px 0;white-space:nowrap;">Phòng chiếu</td>
+                        <td style="color:#3a1a0a;font-size:12px;font-weight:600;padding:2px 0;">{{ booking.showtime.room.name }}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#9a7060;font-size:12px;padding:2px 8px 2px 0;white-space:nowrap;">Ngày</td>
+                        <td style="color:#3a1a0a;font-size:12px;font-weight:600;padding:2px 0;">
+                          {% with wd=booking.showtime.show_date|date:"w" %}
+                          {% if wd == "0" %}
+                          Chủ Nhật
+                          {% elif wd == "1" %}
+                          Thứ 2
+                          {% elif wd == "2" %}
+                          Thứ 3
+                          {% elif wd == "3" %}
+                          Thứ 4
+                          {% elif wd == "4" %}
+                          Thứ 5
+                          {% elif wd == "5" %}
+                          Thứ 6
+                          {% else %}
+                          Thứ 7
+                          {% endif %}
+                          {% endwith %}, {{ booking.showtime.show_date|date:"d/m/Y" }}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#9a7060;font-size:12px;padding:2px 8px 2px 0;white-space:nowrap;">Suất chiếu</td>
+                        <td style="color:#3a1a0a;font-size:12px;font-weight:600;padding:2px 0;">
+                          {{ booking.showtime.start_time|time:"H:i" }}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px 0 0;">
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td width="12" style="padding:0;line-height:0;vertical-align:middle;background:#ffffff;">
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td width="12" height="24"
+                            style="width:12px;height:24px;border-radius:0 12px 12px 0;
+                                   background:#f5ede8;font-size:0;line-height:0;">
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td style="padding:0;vertical-align:middle;">
+                    <table width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td height="11" style="height:11px;font-size:0;line-height:0;"></td>
+                      </tr>
+                      <tr>
+                        <td height="2" style="height:2px;background-color:#c08060;font-size:0;line-height:0;
+                          border-top:2px dashed #c08060;background:none;"></td>
+                      </tr>
+                      <tr>
+                        <td height="11" style="height:11px;font-size:0;line-height:0;"></td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td width="12" style="padding:0;line-height:0;vertical-align:middle;background:#ffffff;">
+                    <table cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td width="12" height="24"
+                            style="width:12px;height:24px;border-radius:12px 0 0 12px;
+                                   background:#f5ede8;font-size:0;line-height:0;">
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:20px 28px 28px;">
+
+              <p style="font-size:11px;color:#9a7060;text-transform:uppercase;
+                         letter-spacing:0.8px;font-weight:700;margin:0 0 8px;">Ghế</p>
+              <p style="margin:0 0 16px;">
+                {% for ticket in booking.booking_tickets.all %}
+                  <span style="background:#5a1a10;color:#f5ede8;font-size:13px;font-weight:700;
+                               padding:6px 14px;border-radius:6px;display:inline-block;margin:0 4px 4px 0;">
+                    {{ ticket.seat.seat_code }}
+                  </span>
+                {% endfor %}
+              </p>
+
+              <table width="100%" cellpadding="0" cellspacing="0"
+                style="border:1px solid #e8d5c8;border-radius:8px;overflow:hidden;margin-bottom:16px;">
+                <tr>
+                  <td width="50%" style="padding:10px 14px;border-right:1px solid #e8d5c8;border-bottom:1px solid #e8d5c8;">
+                    <p style="font-size:11px;color:#9a7060;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin:0 0 3px;">Khách hàng</p>
+                    <p style="font-size:13px;color:#3a1a0a;font-weight:600;margin:0;">
+                      {{ full_name }}
+                    </p>
+                  </td>
+                  <td width="50%" style="padding:10px 14px;border-bottom:1px solid #e8d5c8;">
+                    <p style="font-size:11px;color:#9a7060;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin:0 0 3px;">Mã vé</p>
+                    <p style="font-size:13px;color:#3a1a0a;font-weight:600;margin:0;">
+                      {{ booking.booking_code }}
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td width="50%" style="padding:10px 14px;border-right:1px solid #e8d5c8;">
+                    <p style="font-size:11px;color:#9a7060;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin:0 0 3px;">Bắp nước</p>
+                    <p style="font-size:13px;color:#3a1a0a;font-weight:600;margin:0;">
+                      {% with products=booking.booking_products.all %}
+                        {% if products %}
+                          {% for bp in products %}
+                            {{ bp.product.name }} (×{{ bp.quantity }}){% if not forloop.last %}<br>{% endif %}
+                          {% endfor %}
+                        {% else %}
+                          Không có
+                        {% endif %}
+                      {% endwith %}
+                    </p>
+                  </td>
+                  <td width="50%" style="padding:10px 14px;">
+                    <p style="font-size:11px;color:#9a7060;text-transform:uppercase;letter-spacing:0.8px;font-weight:700;margin:0 0 3px;">Xác nhận lúc</p>
+                    <p style="font-size:13px;color:#3a1a0a;font-weight:600;margin:0;">
+                      {{ booking.confirmed_at|date:"H:i, d/m/Y" }}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <table width="100%" cellpadding="0" cellspacing="0"
+                style="background:#f5ede8;border:1px solid #c08060;border-radius:8px;margin-bottom:20px;">
+                <tr>
+                  <td style="padding:12px 16px;">
+                    <p style="font-size:13px;color:#7a4020;font-weight:600;margin:0;">Đã thanh toán</p>
+                  </td>
+                  <td align="right" style="padding:12px 16px;">
+                    <p style="font-size:13px;color:#5a1a10;font-weight:700;margin:0;">
+                      {{ final_amount }}đ
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center">
+                    <p style="font-size:11px;color:#9a7060;text-transform:uppercase;
+                               letter-spacing:1px;font-weight:700;margin:0 0 12px;">
+                      Xuất trình mã này tại quầy soát vé
+                    </p>
+                    <img src="cid:barcode" width="280" alt="Barcode {{ booking.booking_code }}" style="display:block;margin:0 auto;">
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="background:#f0e0d5;padding:14px 28px;
+                       text-align:center;border-top:1px solid #e0c8b8;border-radius:0 0 12px 12px;">
+              <p style="color:#8a6050;font-size:12px;margin:0;line-height:1.6;">
+                Mọi thắc mắc vui lòng liên hệ CSKH để được hỗ trợ
+                <br>
+                Chúc bạn xem phim vui vẻ
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
