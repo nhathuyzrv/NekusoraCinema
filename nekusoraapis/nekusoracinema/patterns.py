@@ -128,6 +128,13 @@ class PayOSPayment(PaymentStrategy):
 
     @classmethod
     def create(cls, booking, method, validated_data):
+        try:
+            existing = booking.payment
+            if existing.status == PaymentStatus.PENDING:
+                return existing
+        except Payment.DoesNotExist:
+            pass
+
         from payos import PayOS
         from payos.types import CreatePaymentLinkRequest, ItemData
 
@@ -153,7 +160,7 @@ class PayOSPayment(PaymentStrategy):
             payment_data=CreatePaymentLinkRequest(
                 order_code=order_code,
                 amount=int(booking.final_amount),
-                description=f"NEKUSORA_{booking.booking_code}",
+                description=f"NEKUSORA {booking.booking_code}",
                 items=items,
                 return_url=settings.PAYOS_RETURN_URL,
                 cancel_url=settings.PAYOS_CANCEL_URL,
@@ -167,11 +174,11 @@ class PayOSPayment(PaymentStrategy):
                 **cls._base_payment_defaults(booking, method),
                 "contact_email": validated_data.get("email", ""),
                 "order_code": order_code,
-                "payment_link_id": response.get("paymentLinkId", ""),
-                "checkout_url": response.get("checkoutUrl", ""),
-                "qr_code_url": response.get("qrCode", ""),
+                "payment_link_id": getattr(response, "payment-link-id", ""),
+                "checkout_url": getattr(response, "checkout-url", ""),
+                "qr_code_url": getattr(response, "qr-code", ""),
                 "expired_at": booking.held_until,
-                "provider_response": response,
+                "provider_response": response.model_dump() if hasattr(response, "model_dump") else vars(response),
             }
         )
         return payment

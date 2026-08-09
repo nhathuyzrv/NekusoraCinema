@@ -1,7 +1,9 @@
+import hashlib
+
 import redis
 from decimal import Decimal
 from datetime import timedelta
-from django.conf import settings
+from nekusoraapis import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
@@ -26,31 +28,36 @@ def hold_seats(showtime_id, seat_ids, user_id, ttl=SEAT_HOLD_MINUTES * 60):
     held_now = []
     conflict = []
 
-    for seat_id in seat_ids:
-        key = _seat_hold_key(showtime_id, seat_id)
-        acquired = redis_client.set(key, str(user_id), nx=True, ex=ttl)
-        if acquired:
-            held_now.append(seat_id)
-        elif redis_client.get(key) != str(user_id):
-            conflict.append(seat_id)
+    with redis_client.pipeline() as pipe:
+        for seat_id in seat_ids:
+            key = _seat_hold_key(showtime_id, seat_id)
+            acquired = redis_client.set(key, str(user_id), nx=True, ex=ttl)
+            if acquired:
+                held_now.append(seat_id)
+            elif redis_client.get(key) != str(user_id):
+                conflict.append(seat_id)
 
-    if conflict:
-        release_seats(showtime_id, held_now, user_id)
-        return False, conflict
+        if conflict:
+            for seat_id in held_now:
+                pipe.delete(_seat_hold_key(showtime_id, seat_id))
+            pipe.execute()
+            return False, conflict
 
     return True, held_now
 
 
 def release_seats(showtime_id, seat_ids, user_id=None):
-    for seat_id in seat_ids:
-        key = _seat_hold_key(showtime_id, seat_id)
-        if user_id is None or redis_client.get(key) == str(user_id):
-            redis_client.delete(key)
+    with redis_client.pipeline() as pipe:
+        for seat_id in seat_ids:
+            key = _seat_hold_key(showtime_id, seat_id)
+            if user_id is None or redis_client.get(key) == str(user_id):
+                pipe.delete(key)
+        pipe.execute()
 
 
 def get_held_seat_ids(showtime_id):
-    keys = redis_client.keys(_seat_hold_key(showtime_id, '*'))
-    return [int(k.rsplit(':', 1)[-1]) for k in keys]
+    pattern = _seat_hold_key(showtime_id, '*')
+    return [int(k.rsplit(':', 1)[-1]) for k in redis_client.scan_iter(pattern)]
 
 
 # Broadcast for each time seat status update
@@ -110,7 +117,7 @@ def create_holding_booking(user, showtime_id, seat_ids):
     success, result = hold_seats(showtime_id, seat_ids, user.pk, ttl=SEAT_HOLD_MINUTES * 60)
     if not success:
         broadcast_seat_update(showtime_id)
-        raise ValidationError({'seats': f'Ghế vừa được người khác chọn, vui lòng thử lại'})
+        raise ValidationError({'seats': 'Ghế vừa được người khác chọn, vui lòng thử lại'})
 
     try:
         with transaction.atomic():
@@ -137,19 +144,19 @@ def create_holding_booking(user, showtime_id, seat_ids):
     return booking
 
 
-def delete_booking(booking, status):
+def delete_booking(booking, delete_status):
     if booking.status != BookingStatus.HOLDING:
         raise ValidationError('Đơn đặt vé không thể huỷ ở trạng thái hiện tại')
 
-    BOOKING_STATUS = {
-        'EXPIRED': BookingStatus.EXPIRED,
-        'CANCELLED': BookingStatus.CANCELLED,
-    }
+    try:
+        cancel_payos_payment_link(booking.payment)
+    except Payment.DoesNotExist:
+        pass
 
     seat_ids = list(booking.booking_tickets.values_list('seat_id', flat=True))
     release_seats(booking.showtime_id, seat_ids, booking.customer_id)
     booking.booking_tickets.update(status=TicketStatus.CANCELLED)
-    booking.status = BOOKING_STATUS.get(status)
+    booking.status = delete_status
     booking.save(update_fields=['status'])
 
     broadcast_seat_update(booking.showtime_id)
@@ -157,13 +164,14 @@ def delete_booking(booking, status):
 
 
 def set_products(booking, items):
-    booking.booking_products.all().delete()
+    with transaction.atomic():
+        booking.booking_products.all().delete()
 
-    if not items:
-        booking.product_amount = Decimal(0)
-    else:
-        product_ids = [i['product'] for i in items]
-        products = {p.pk: p for p in Product.objects.filter(pk__in=product_ids, active=True)}
+        if not items:
+            booking.product_amount = Decimal(0)
+        else:
+            product_ids = [i['product'] for i in items]
+            products = {p.pk: p for p in Product.objects.filter(pk__in=product_ids, active=True)}
 
         rows = []
         total = Decimal(0)
@@ -177,31 +185,31 @@ def set_products(booking, items):
             rows.append(BookingProduct(booking=booking, product=product, quantity=qty, unit_price=product.price, subtotal=subtotal))
             total += subtotal
 
-        BookingProduct.objects.bulk_create(rows)
-        booking.product_amount = total
+            BookingProduct.objects.bulk_create(rows)
+            booking.product_amount = total
 
-    new_base = booking.seat_amount + booking.product_amount
+        new_base = booking.seat_amount + booking.product_amount
 
-    try:
-        bp = booking.booking_promotion
-        promo = bp.promotion
-        if new_base < promo.min_order_amount or not promo.active:
-            bp.delete()
-            booking.discount_amount = Decimal(0)
-        else:
-            new_discount = calculate_promotion_discount(promo, new_base)
-            bp.discount_amount = new_discount
-            bp.save(update_fields=['discount_amount'])
-            booking.discount_amount = new_discount
-    except BookingPromotion.DoesNotExist:
-        pass
+        try:
+            bp = booking.booking_promotion
+            promo = bp.promotion
+            if new_base < promo.min_order_amount or not promo.active:
+                bp.delete()
+                booking.discount_amount = Decimal(0)
+            else:
+                new_discount = calculate_promotion_discount(promo, new_base)
+                bp.discount_amount = new_discount
+                bp.save(update_fields=['discount_amount'])
+                booking.discount_amount = new_discount
+        except BookingPromotion.DoesNotExist:
+            pass
 
-    available_after_discount = new_base - booking.discount_amount
-    if booking.points_used_amount > available_after_discount:
-        booking.points_used = 0
-        booking.points_used_amount = Decimal(0)
+        available_after_discount = new_base - booking.discount_amount
+        if booking.points_used_amount > available_after_discount:
+            booking.points_used = 0
+            booking.points_used_amount = Decimal(0)
 
-    return recalculate(booking)
+        return recalculate(booking)
 
 
 def apply_promotion_code(booking, code):
@@ -227,14 +235,13 @@ def apply_promotion_code(booking, code):
 
     discount = calculate_promotion_discount(promo, base_amount)
 
-    _delete_booking_promotion(booking)
+    delete_booking_promotion(booking)
     BookingPromotion.objects.create(booking=booking, promotion=promo, discount_amount=discount)
-
     booking.discount_amount = discount
     return recalculate(booking)
 
 
-def _delete_booking_promotion(booking):
+def delete_booking_promotion(booking):
     try:
         booking.booking_promotion.delete()
     except BookingPromotion.DoesNotExist:
@@ -242,7 +249,7 @@ def _delete_booking_promotion(booking):
 
 
 def remove_promotion(booking):
-    _delete_booking_promotion(booking)
+    delete_booking_promotion(booking)
     booking.discount_amount = Decimal(0)
     return recalculate(booking)
 
@@ -316,13 +323,15 @@ def confirm_booking(booking, payment):
         payment.save(update_fields=['status', 'paid_at'])
 
     broadcast_seat_update(booking.showtime_id)
+
+    broadcast_booking_confirmed(booking)
+
     tasks.send_ticket_email.delay(email=payment.contact_email, booking_id=booking.pk)
     return booking
 
 
 def handle_payos_webhook(data):
     from payos import PayOS
-    from nekusoraapis import settings
 
     client = PayOS(
         client_id=settings.PAYOS_CLIENT_ID,
@@ -357,3 +366,40 @@ def handle_payos_webhook(data):
             payment.save(update_fields=['status', 'cancelled_at', 'cancel_reason'])
 
     return booking
+
+
+def broadcast_booking_confirmed(booking):
+    channel_layer = get_channel_layer()
+    if not channel_layer:
+        return
+
+    safe_id = hashlib.md5(booking.customer.email.encode()).hexdigest()
+
+    group_channel = async_to_sync(channel_layer.group_send)
+    group_channel(f"user_{safe_id}", {
+        "type": "booking_confirmed",
+        "booking_code": booking.booking_code,
+    })
+
+
+def cancel_payos_payment_link(payment):
+    if not payment or payment.status != PaymentStatus.PENDING or not payment.payment_link_id:
+        return
+
+    try:
+        from payos import PayOS
+        from nekusoraapis import settings as app_settings
+
+        client = PayOS(
+            client_id=app_settings.PAYOS_CLIENT_ID,
+            api_key=app_settings.PAYOS_API_KEY,
+            checksum_key=app_settings.PAYOS_CHECKSUM_KEY,
+        )
+        client.payment_requests.cancel(payment.order_code)
+    except Exception:
+        pass
+
+    payment.status = PaymentStatus.FAILED
+    payment.cancelled_at = timezone.now()
+    payment.cancel_reason = 'Người dùng huỷ đặt vé'
+    payment.save(update_fields=['status', 'cancelled_at', 'cancel_reason'])

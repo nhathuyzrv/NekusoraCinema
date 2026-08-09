@@ -266,49 +266,54 @@ class PaymentMethodViewSet(viewsets.ViewSet, generics.ListAPIView):
     serializer_class = serializers.PaymentMethodSerializer
 
 
-class BookingsViewSet(viewsets.ViewSet):
+class BookingsViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView, generics.DestroyAPIView):
+    queryset = Booking.objects.filter(active=True)
+    lookup_field = 'booking_code'
+    lookup_url_kwarg = 'pk'
 
     def get_permissions(self):
-        if self.action in ['hold']:
+        if self.action in ['create']:
             return [perms.IsCustomer()]
         return [permissions.IsAuthenticated()]
 
-    def retrieve(self, request, pk=None):
-        booking = get_object_or_404(Booking, booking_code=pk, customer=request.user)
-        return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_200_OK)
+    def get_serializer_class(self):
+        if self.action in ['create']:
+            return serializers.HoldSeatsInputSerializer
+        return serializers.BookingSerializer
 
-    @action(methods=['get'], url_path='my', detail=False)
-    def bookings_my_view(self, request):
-        my_bookings = (Booking.objects.filter(active=True, customer=request.user)
-            .select_related('showtime__movie','showtime__room__branch__location','showtime__screening_format')
-            .prefetch_related('booking_tickets__seat', 'booking_products'))
+    def get_queryset(self):
+        query = (self.queryset.filter(customer=self.request.user)
+                 .select_related('showtime__movie', 'showtime__room__branch__location', 'showtime__screening_format')
+                 .prefetch_related('booking_tickets__seat', 'booking_products__product', 'booking_promotion__promotion', 'payment__method'))
 
-        q_status = request.query_params.get('status')
-        if q_status:
-            my_bookings = my_bookings.filter(status=q_status)
+        if self.action in ['list']:
+            q_status = self.request.query_params.get('status')
+            if q_status:
+                query = query.filter(status=q_status)
 
-        return Response(serializers.BookingSerializer(my_bookings, many=True).data, status=status.HTTP_200_OK)
+        return query
 
-    @action(methods=['post'], url_path='hold', detail=False)
-    def hold(self, request):
+    def create(self, request, *args, **kwargs):
         s = serializers.HoldSeatsInputSerializer(data=request.data)
         s.is_valid(raise_exception=True)
+        booking = services.create_holding_booking(request.user, s.validated_data['showtime'], s.validated_data['seats'])
 
-        booking = services.create_holding_booking(
-            request.user,
-            s.validated_data['showtime'],
-            s.validated_data['seats'],
-        )
         return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
 
-    @action(methods=['post'], url_path='products', detail=True)
+    @require_holding_booking
+    def destroy(self, request, pk=None, booking=None, *args, **kwargs):
+        delete_status = BookingStatus.CANCELLED if booking.held_until >= timezone.now() else BookingStatus.EXPIRED
+        services.delete_booking(booking, delete_status)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=['put'], url_path='products', detail=True)
     @require_holding_booking_not_expired
-    def set_products(self, request, pk=None, booking=None):
+    def products(self, request, pk=None, booking=None):
         s = serializers.SetProductsInputSerializer(data=request.data)
         s.is_valid(raise_exception=True)
 
         booking = services.set_products(booking, s.validated_data['items'])
-        return Response(serializers.BookingSerializer(booking).data)
+        return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_200_OK)
 
     @action(methods=['post', 'delete'], url_path='promotion', detail=True)
     @require_holding_booking_not_expired
@@ -320,7 +325,7 @@ class BookingsViewSet(viewsets.ViewSet):
             s.is_valid(raise_exception=True)
             booking = services.apply_promotion_code(booking, s.validated_data['code'])
 
-        return Response(serializers.BookingSerializer(booking).data)
+        return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_200_OK)
 
     @action(methods=['post', 'delete'], url_path='points', detail=True)
     @require_holding_booking_not_expired
@@ -332,11 +337,11 @@ class BookingsViewSet(viewsets.ViewSet):
             s.is_valid(raise_exception=True)
             booking = services.redeem_points(booking, s.validated_data['points'])
 
-        return Response(serializers.BookingSerializer(booking).data)
+        return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_200_OK)
 
-    @action(methods=['post'], url_path='checkout', detail=True)
+    @action(methods=['post'], url_path='payment', detail=True)
     @require_holding_booking_not_expired
-    def checkout(self, request, pk=None, booking=None):
+    def payment(self, request, pk=None, booking=None):
         s = serializers.CreatePaymentInputSerializer(data=request.data)
         s.is_valid(raise_exception=True)
 
@@ -344,22 +349,11 @@ class BookingsViewSet(viewsets.ViewSet):
 
         payment_strategy = PAYMENT_STRATEGY.get(method.code)
         if not payment_strategy:
-            return Response({'message': f'Phương thức thanh toán "{method.name}" đang được cập nhật'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': f'Phương thức thanh toán "{method.name}" đang được cập nhật'},
+                            status=status.HTTP_400_BAD_REQUEST)
 
         payment = payment_strategy.create(booking, method, s.validated_data)
-        return Response(serializers.PaymentSerializer(payment).data, status=status.HTTP_200_OK)
-
-    @action(methods=['post'], url_path='cancel', detail=True)
-    @require_holding_booking_not_expired
-    def cancel(self, request, pk=None, booking=None):
-        services.delete_booking(booking, 'CANCELLED')
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(methods=['post'], url_path='expire', detail=True)
-    @require_holding_booking
-    def expire(self, request, pk=None, booking=None):
-        services.delete_booking(booking, 'EXPIRED')
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response(serializers.PaymentSerializer(payment).data, status=status.HTTP_201_CREATED)
 
 
 class PayOSWebhookViewSet(viewsets.ViewSet):

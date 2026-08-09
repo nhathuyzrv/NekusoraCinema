@@ -2,7 +2,7 @@ import Apis, { authApis, endpoints } from "../configs/Apis";
 
 const bookingService = {
     getMyByStatus: (status) =>
-        authApis.get(endpoints.bookings + `my/?status=${status}`)
+        authApis.get(endpoints.bookings + `?status=${status}`)
             .then(res => res.data),
 
     getLocations: () =>
@@ -16,24 +16,21 @@ const bookingService = {
         Apis.get(endpoints.roomSeats(roomId))
             .then(r => r.data),
     holdSeats: (showtimeId, seatIds) =>
-        authApis.post(endpoints.bookings + "hold/", { showtime: showtimeId, seats: seatIds })
+        authApis.post(endpoints.bookings, { showtime: showtimeId, seats: seatIds })
             .then(r => r.data),
 
     getBooking: (bookingCode) =>
         authApis.get(endpoints.bookingDetails(bookingCode))
             .then(r => r.data),
-    cancelBooking: (bookingCode) =>
-        authApis.post(endpoints.bookingDetails(bookingCode) + "cancel/")
-            .then(r => r.data),
-    expireBooking: (bookingCode) =>
-        authApis.post(endpoints.bookingDetails(bookingCode) + "expire/")
+    deleteBooking: (bookingCode) =>
+        authApis.delete(endpoints.bookingDetails(bookingCode))
             .then(r => r.data),
 
     getProducts: () =>
         Apis.get("/products/")
             .then(r => r.data),
     setProducts: (bookingCode, items) =>
-        authApis.post(endpoints.bookingDetails(bookingCode) + "products/", { items })
+        authApis.put(endpoints.bookingDetails(bookingCode) + "products/", { items })
             .then(r => r.data),
 
     applyPromotion: (bookingCode, code) =>
@@ -52,8 +49,8 @@ const bookingService = {
     getPaymentMethods: () =>
         Apis.get(endpoints.paymentMethods)
             .then(r => r.data),
-    initCheckout: (bookingCode, method, email) =>
-        authApis.post(endpoints.bookingDetails(bookingCode) + "checkout/", { method, email })
+    createPayment: (bookingCode, method, email) =>
+        authApis.post(endpoints.bookingDetails(bookingCode) + "payment/", { method, email })
             .then(r => r.data),
 };
 

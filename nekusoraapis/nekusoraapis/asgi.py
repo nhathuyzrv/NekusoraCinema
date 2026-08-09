@@ -8,7 +8,7 @@ https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
 """
 
 import os
-from channels.auth import AuthMiddlewareStack
+from nekusoracinema.middleware import OAuthTokenMiddleware
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
 from nekusoracinema import routing
@@ -17,5 +17,5 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nekusoraapis.settings')
 
 application = ProtocolTypeRouter({
     "http": get_asgi_application(),
-    "websocket": AuthMiddlewareStack(URLRouter(routing.websocket_urlpatterns))
+    "websocket": OAuthTokenMiddleware(URLRouter(routing.websocket_urlpatterns))
 })

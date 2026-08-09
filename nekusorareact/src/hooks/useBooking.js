@@ -113,15 +113,30 @@ export function useClearPoints(bookingCode) {
     return useBookingMutation(() => bookingService.clearPoints(bookingCode));
 }
 
-export function useInitCheckout(bookingCode) {
-    return useBookingMutation(({ method, email }) => bookingService.initCheckout(bookingCode, method, email));
+export function useCreatePayment(bookingCode) {
+    const queryClient = useQueryClient();
+    const toast = useToast();
+
+    return useMutation({
+        mutationFn: ({ method, email }) => bookingService.createPayment(bookingCode, method, email),
+        onSuccess: (paymentData) => {
+            queryClient.setQueryData(["booking", bookingCode], (prev) => {
+                if (!prev) return prev;
+                return { ...prev, payment: paymentData };
+            });
+        },
+        onError: (err) => {
+            const msg = err.response?.data?.message || Object.values(err.response?.data) || "Đã có lỗi xảy ra, vui lòng thử lại";
+            toast.error("Thao tác thất bại", msg);
+        },
+    });
 }
 
-export function useCancelBooking() {
+export function useDeleteBooking() {
     const toast = useToast();
     return useMutation({
-        mutationFn: (bookingCode) => bookingService.cancelBooking(bookingCode),
-        onSuccess: () => toast.success("Thông báo", "Bạn đã hủy đặt vé thành công"),
+        mutationFn: (bookingCode) => bookingService.deleteBooking(bookingCode),
+        onSuccess: () => toast.success("Hủy đặt vé thành công", "Bây giờ bạn có thể đặt vé mới rồi"),
         onError: (err) => {
             const msg = err.response?.data?.message || Object.values(err.response?.data) || "Đã có lỗi xảy ra, vui lòng thử lại";
             toast.error("Hủy đặt vé thất bại", msg);

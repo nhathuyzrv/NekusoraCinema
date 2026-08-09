@@ -77,16 +77,14 @@ const AuthModal = ({ onLogin }) => {
         clearError();
         resetPwHook.reset();
         registerHook.reset();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [clearError, resetPwHook.reset, registerHook.reset]);
+    }, [clearError, resetPwHook.reset, registerHook.reset]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const switchMode = useCallback((next) => {
         setMode(next);
         clearError();
         resetPwHook.reset();
         registerHook.reset();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [clearError, resetPwHook.reset, registerHook.reset]);
+    }, [clearError, resetPwHook.reset, registerHook.reset]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         const modal = document.getElementById("auth_modal");
@@ -100,8 +98,7 @@ const AuthModal = ({ onLogin }) => {
             setOpen(true);
         };
         modal.close = close;
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [close, clearError]);
+    }, [close, clearError]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (!open) return;

@@ -1,3 +1,4 @@
+import hashlib
 import json
 import redis.asyncio as aioredis
 from channels.generic.websocket import AsyncWebsocketConsumer
@@ -50,22 +51,45 @@ class SeatConsumer(AsyncWebsocketConsumer):
         }))
 
     async def get_seat_status(self):
-        booked = await self._get_booked_seats()
-        held = await self._get_held_seats()
+        booked = await self.get_booked_seats()
+        held = await self.get_held_seats()
         return {"booked": booked, "held": held}
 
     @database_sync_to_async
-    def _get_booked_seats(self):
-        return list(
-            Ticket.objects
-            .filter(showtime_id=self.showtime_id, status=TicketStatus.BOOKED)
-            .values_list("seat_id", flat=True)
-        )
+    def get_booked_seats(self):
+        return list(Ticket.objects.filter(showtime_id=self.showtime_id, status=TicketStatus.BOOKED).values_list("seat_id", flat=True))
 
-    async def _get_held_seats(self):
+    async def get_held_seats(self):
         pattern = _seat_hold_key(self.showtime_id, '*')
         try:
             keys = await self.redis.keys(pattern)
             return [int(k.rsplit(':', 1)[-1]) for k in keys]
         except Exception:
             return []
+
+
+class UserConsumer(AsyncWebsocketConsumer):
+
+    async def connect(self):
+        self.user_email = self.scope["url_route"]["kwargs"]["user_email"]
+
+        user = self.scope.get("user")
+        if not user or not user.is_authenticated or user.email != self.user_email:
+            await self.close()
+            return
+
+        safe_email = hashlib.md5(self.user_email.encode()).hexdigest()
+        self.group_name = f"user_{safe_email}"
+
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        if hasattr(self, "group_name"):
+            await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def booking_confirmed(self, event):
+        await self.send(text_data=json.dumps({
+            "type": "booking_confirmed",
+            "booking_code": event["booking_code"],
+        }))

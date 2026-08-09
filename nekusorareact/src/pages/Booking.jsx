@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronLeft, MapPin, Film, Clock, Ticket as TicketIcon, Tag, CreditCard, Loader2, X, Plus, Minus, Flame } from "lucide-react";
-import { useLocations, useLocationMovies, useBookingMovieShowtimes, useRoomSeats, useProducts, usePaymentMethods, useHoldSeats, useSetProducts, useApplyPromotion, useRemovePromotion, useRedeemPoints, useClearPoints, useInitCheckout, useCancelBooking, useBookingDetails, useBookingsStatus } from "../hooks/useBooking";
-import { useSeatSocket } from "../hooks/useSeatSocket";
+import { Check, CheckCircle2, ChevronLeft, MapPin, Film, Clock, Ticket as TicketIcon, Tag, CreditCard, Loader2, X, Plus, Minus, Flame } from "lucide-react";
+import { useLocations, useLocationMovies, useBookingMovieShowtimes, useRoomSeats, useProducts, usePaymentMethods, useHoldSeats, useSetProducts, useApplyPromotion, useRemovePromotion, useRedeemPoints, useClearPoints, useCreatePayment, useDeleteBooking, useBookingDetails, useBookingsStatus } from "../hooks/useBooking";
+import { useSeatSocket, useBookingConfirmed } from "../hooks/useWebSockets";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/useToast";
 import LocalLoading from "../components/LocalLoading";
@@ -12,6 +13,7 @@ import { formatMoney, formatSignedMoney } from "../utils/Money";
 import { formatDate, formatShortWeekday } from "../utils/DateTime";
 import { callAuthModal } from "../utils/CallAuthModal";
 import bookingService from "../services/bookingService";
+import { StepPaymentPayOS } from "../components/StepPayment";
 
 
 const STEPS = ["Chọn suất chiếu", "Chọn ghế", "Chọn bắp/nước", "Khuyến mãi", "Xác nhận đơn", "Thanh toán"];
@@ -692,7 +694,7 @@ function SummaryRow({ label, value, bold, negative }) {
 function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBack }) {
     const { data: methods, isLoading } = usePaymentMethods();
     const [selectedMethod, setSelectedMethod] = useState(null);
-    const { mutate: initCheckout, isPending } = useInitCheckout(bookingCode);
+    const { mutate: createPayment, isPending } = useCreatePayment(bookingCode);
     const { user } = useAuth();
     const toast = useToast();
     const [emailOption, setEmailOption] = useState("my-email");
@@ -733,7 +735,7 @@ function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBac
 
         if (confirmed !== "Xác nhận") return;
 
-        initCheckout({ method: selectedMethod, email }, { onSuccess: onConfirmed });
+        createPayment({ method: selectedMethod, email }, { onSuccess: onConfirmed });
     };
 
     return (
@@ -819,15 +821,85 @@ function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBac
 
 // step 6
 function StepPayment({ booking }) {
-    return (
-        <div className="bg-base-100 border border-base-300 rounded-2xl p-10 flex flex-col items-center gap-3 text-center">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                <CreditCard size={28} className="text-primary" />
+    // const methodCode = booking?.payment?.method?.code?.toUpperCase();
+
+    if (!booking?.payment) {
+        return (
+            <div className="bg-base-100 border border-base-300 rounded-2xl p-10 flex flex-col items-center gap-3">
+                <Loader2 size={28} className="animate-spin text-primary" />
+                <p className="text-sm text-base-content/50">Đang tải thông tin thanh toán...</p>
             </div>
-            <p className="font-semibold">COMING SOON</p>
-            <p className="text-sm text-base-content/50 max-w-sm">
-                Đơn đặt vé <span className="font-mono font-medium">{booking?.booking_code}</span> đã sẵn sàng.
-            </p>
+        );
+    }
+
+    // if (methodCode === "MOMO") return <StepPaymentMoMo booking={booking} />;
+
+    return <StepPaymentPayOS booking={booking} />;
+}
+
+function BookingSuccess({ booking }) {
+    const navigate = useNavigate();
+    const seats = booking?.tickets?.map((t) => t.seat.seat_code).join(", ") ?? "";
+
+    return (
+        <div className="max-w-7xl mx-auto px-4 py-8">
+            <div className="flex flex-col items-center gap-6 py-12 text-center">
+                <div className="w-20 h-20 rounded-full bg-success/15 flex items-center justify-center">
+                    <CheckCircle2 size={44} className="text-success" />
+                </div>
+
+                <div className="space-y-1">
+                    <p className="text-xl font-bold">Đặt vé thành công!</p>
+                    <p className="text-base-content/60 text-sm text-center">
+                        Chúng tôi sẽ gửi vé điện tử đến email của bạn sau ít phút
+                        <br></br>
+                        Nếu bạn chưa nhận được vé, vui lòng liên hệ CSKH để được hỗ trợ
+                    </p>
+                </div>
+
+                <div className="bg-base-100 border border-base-300 rounded-2xl p-5 w-full max-w-sm text-left space-y-3">
+                    <div className="flex justify-between text-sm">
+                        <span className="text-base-content/60">Mã vé</span>
+                        <span className="font-medium">{booking?.booking_code}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-base-content/60">Phim</span>
+                        <span className="font-medium text-right max-w-[60%]">{booking?.movie?.title}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                        <span className="text-base-content/60">Suất chiếu</span>
+                        <span className="font-medium">
+                            {booking?.showtime?.start_time?.slice(0, 5)} - {formatShortWeekday(booking?.showtime?.show_date)}, {formatDate(booking?.showtime?.show_date)}
+                        </span>
+                    </div>
+                    {seats && (
+                        <div className="flex justify-between text-sm">
+                            <span className="text-base-content/60">Ghế</span>
+                            <span className="font-medium">{seats}</span>
+                        </div>
+                    )}
+                    <div className="divider my-0" />
+                    <div className="flex justify-between text-sm">
+                        <span className="text-base-content/60">Tổng tiền thanh toán</span>
+                        <span className="font-bold text-primary">{formatMoney(booking?.final_amount)}</span>
+                    </div>
+                </div>
+
+                <div className="flex gap-3 w-full max-w-sm">
+                    <button
+                        className="btn btn-outline flex-1"
+                        onClick={() => navigate("/movies")}
+                    >
+                        Trở về
+                    </button>
+                    <button
+                        className="btn btn-primary flex-1"
+                        onClick={() => {/* TODO: navigate to ticket detail */ }}
+                    >
+                        Xem vé
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }
@@ -943,9 +1015,8 @@ function OrderSummaryPanel({ selection, selectedSeats, cart, booking, step }) {
 }
 
 function getResumeStep(booking) {
-    const hasProducts = Array.isArray(booking.booking_products)
-        ? booking.booking_products.length > 0
-        : booking.product_amount > 0;
+    if (booking.payment) return 5;
+    const hasProducts = Array.isArray(booking.booking_products) ? booking.booking_products.length > 0 : booking.product_amount > 0;
     return hasProducts ? 3 : 2;
 }
 
@@ -957,16 +1028,18 @@ const Booking = () => {
     const [cart, setCart] = useState([]);
     const [email, setEmail] = useState("");
     const [bookingCode, setBookingCode] = useState(null);
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
 
     const { data: booking } = useBookingDetails(bookingCode);
+
+    const paymentSuccess = useBookingConfirmed(user?.email, bookingCode);
 
     const { data: holdingBookingsData, isLoading: checkingHolding } = useBookingsStatus(
         isAuthenticated && !bookingCode ? "HOLDING" : null
     );
 
     const { mutate: holdSeats, isPending: holding } = useHoldSeats();
-    const { mutate: cancelBooking } = useCancelBooking();
+    const { mutate: deleteBooking } = useDeleteBooking();
 
     useEffect(() => {
         if (!isAuthenticated || bookingCode || checkingHolding) return;
@@ -978,7 +1051,7 @@ const Booking = () => {
         const now = new Date();
 
         if (heldUntil <= now) {
-            bookingService.expireBooking(holdingBooking.booking_code).catch(() => { });
+            bookingService.deleteBooking(holdingBooking.booking_code).catch(() => { });
             return;
         }
 
@@ -1001,7 +1074,7 @@ const Booking = () => {
                     text: "Hủy đơn cũ",
                     style: "ghost",
                     onClick: () => {
-                        cancelBooking(holdingBooking.booking_code);
+                        deleteBooking(holdingBooking.booking_code);
                     },
                 },
                 {
@@ -1081,23 +1154,14 @@ const Booking = () => {
         )
     };
 
-    const { mutate: removePromoGlobal } = useRemovePromotion(bookingCode);
-    const { mutate: clearPtsGlobal } = useClearPoints(bookingCode);
-
-    const handleBackToProducts = () => {
-        if (booking?.discount_amount > 0) removePromoGlobal();
-        if (booking?.points_used > 0) clearPtsGlobal();
-        goTo(2);
-    };
-
-    const handleCancel = async () => {
+    const handleDelete = async () => {
         await MyAlert.alert("Hủy đặt vé", "Bạn có chắc chắn muốn hủy bỏ đơn đặt vé này? Các ghế đã chọn sẽ được giải phóng.",
             [
                 { text: "Không", style: "ghost" },
                 {
                     text: "Hủy đặt vé", style: "primary",
                     onClick: () => {
-                        cancelBooking(booking.booking_code, {
+                        deleteBooking(booking.booking_code, {
                             onSuccess: () => {
                                 setBookingCode(null);
                                 setSelectedSeats([]);
@@ -1113,7 +1177,16 @@ const Booking = () => {
         );
     };
 
-    const canCancel = step >= 2 && booking;
+    const canDelete = step >= 2 && booking;
+
+    if (paymentSuccess) {
+        return (
+            <div className="max-w-7xl mx-auto px-4 py-8">
+                <BookingStepper currentStep={step} maxUnlockedStep={maxUnlockedStep} onStepClick={goTo} />
+                <BookingSuccess booking={booking} />
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-8">
@@ -1152,7 +1225,7 @@ const Booking = () => {
                             booking={booking}
                             bookingCode={booking?.booking_code}
                             onContinue={() => advance(4)}
-                            onBack={handleBackToProducts}
+                            onBack={() => goTo(2)}
                         />
                     )}
                     {step === 4 && (
@@ -1178,9 +1251,9 @@ const Booking = () => {
                         booking={booking}
                         step={step}
                     />
-                    {canCancel && (
+                    {canDelete && (
                         <div className="flex justify-end mt-4">
-                            <button className="btn btn-error btn-outline btn-sm" onClick={handleCancel}>
+                            <button className="btn btn-error btn-outline btn-sm" onClick={handleDelete}>
                                 Hủy bỏ đặt vé
                             </button>
                         </div>

@@ -15,6 +15,7 @@ r.register(r'rooms', views.CinemaRoomViewSet, 'room')
 r.register(r'bookings', views.BookingsViewSet, 'booking')
 r.register(r'products', views.ProductViewSet, 'product')
 r.register(r'payment-methods', views.PaymentMethodViewSet, 'payment_method')
+r.register(r'payos/webhook', views.PayOSWebhookViewSet, 'payos-webhook')
 
 urlpatterns = [
     path('', include(r.urls)),

@@ -23,8 +23,7 @@ export function useMoviesPagination({ page, search, genres, status }) {
             queryFn: () => movieService.getByPage(nextParams),
             staleTime: 60 * 1000,
         });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasNextPage, page, search, JSON.stringify(genres), status]);
+    }, [hasNextPage, page, search, JSON.stringify(genres), status]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return query;
 }
