@@ -306,8 +306,7 @@ function SeatMap({ showtime, selectedSeats, setSelectedSeats }) {
         const evicted = selectedSeats.filter((s) => unavailable.has(s.id));
         if (evicted.length === 0) return;
         setSelectedSeats((prev) => prev.filter((s) => !unavailable.has(s.id)));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [booked, held]);
+    }, [booked, held]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const rows = useMemo(() => {
         if (!seats) return [];
@@ -328,7 +327,7 @@ function SeatMap({ showtime, selectedSeats, setSelectedSeats }) {
             next = selectedSeats.filter((s) => s.id !== seat.id);
         } else {
             if (selectedSeats.length >= MAX_SEATS) {
-                toast.warning("Đã đạt giới hạn", `Bạn chỉ được chọn tối đa ${MAX_SEATS} ghế`);
+                toast.warning("Số ghế đạt giới hạn", `Bạn chỉ được chọn tối đa ${MAX_SEATS} ghế`);
                 return;
             }
             next = [...selectedSeats, seat];
@@ -443,9 +442,25 @@ function StepSeats({ showtime, selectedSeats, setSelectedSeats, onContinue, onBa
 }
 
 // step 3
-function StepProducts({ bookingCode, cart, setCart, onContinue }) {
+function StepProducts({ booking, bookingCode, cart, setCart, onContinue }) {
     const { data: products, isLoading } = useProducts();
     const { mutate: setProducts, isPending } = useSetProducts(bookingCode);
+
+    useEffect(() => {
+        if (!booking?.products?.length || !products) return;
+        if (cart.length > 0) return;
+
+        const list = products?.results ?? products ?? [];
+        const restored = booking.products.map((bp) => {
+            const prod = list.find((p) => p.id === (typeof bp.product === "object" ? bp.product?.id : bp.product));
+            return {
+                product: prod?.id ?? bp.product,
+                quantity: bp.quantity,
+                _info: prod ?? { id: bp.product, name: bp.product_name ?? "Sản phẩm", price: bp.price ?? 0 },
+            };
+        });
+        setCart(restored);
+    }, [booking, products]); // eslint-disable-line 
 
     const list = products?.results ?? products ?? [];
 
@@ -708,11 +723,11 @@ function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBac
 
     const handleContinue = async () => {
         if (!selectedMethod) {
-            toast.warning("Chưa chọn phương thức", "Vui lòng chọn phương thức thanh toán");
+            toast.warning("Vui lòng chọn phương thức thanh toán");
             return;
         }
         if (!email.trim()) {
-            toast.warning("Thiếu email", "Vui lòng nhập email để nhận vé");
+            toast.warning("Vui lòng nhập email để nhận vé");
             return;
         }
 
@@ -1016,8 +1031,7 @@ function OrderSummaryPanel({ selection, selectedSeats, cart, booking, step }) {
 
 function getResumeStep(booking) {
     if (booking.payment) return 5;
-    const hasProducts = Array.isArray(booking.booking_products) ? booking.booking_products.length > 0 : booking.product_amount > 0;
-    return hasProducts ? 3 : 2;
+    return 2;
 }
 
 const Booking = () => {
@@ -1029,6 +1043,7 @@ const Booking = () => {
     const [email, setEmail] = useState("");
     const [bookingCode, setBookingCode] = useState(null);
     const { isAuthenticated, user } = useAuth();
+    const toast = useToast();
 
     const { data: booking } = useBookingDetails(bookingCode);
 
@@ -1092,9 +1107,9 @@ const Booking = () => {
                         if (holdingBooking.tickets) {
                             setSelectedSeats(holdingBooking.tickets.map((t) => t.seat).filter(Boolean));
                         }
-                        if (holdingBooking.booking_products) {
+                        if (holdingBooking.products) {
                             setCart(
-                                holdingBooking.booking_products.map((bp) => {
+                                holdingBooking.products.map((bp) => {
                                     const prod = typeof bp.product === "object" && bp.product !== null ? bp.product : null;
                                     return {
                                         product: prod ? prod.id : bp.product,
@@ -1114,8 +1129,7 @@ const Booking = () => {
                 },
             ]
         );
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [holdingBookingsData, checkingHolding]);
+    }, [holdingBookingsData, checkingHolding]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const goTo = (i) => {
         setStep(i);
@@ -1127,11 +1141,17 @@ const Booking = () => {
 
     const handleShowtimeContinue = () => advance(1);
 
-    const handleSeatsContinue = async () => {
+    const checkAuth = () => {
         if (!isAuthenticated) {
+            toast.info("Vui lòng đăng nhập để tiếp tục");
             callAuthModal();
-            return;
+            return false;
         }
+        return true
+    }
+
+    const handleSeatsContinue = async () => {
+        if (!checkAuth()) return;
         await MyAlert.alert("Bạn không thể đổi ghế sau khi tiếp tục",
             `Chúng tôi sẽ tiến hành giữ ghế cho bạn trong vòng ${SEAT_HOLD_MINUTES} phút
             Sau khi hết thời gian, đơn đặt vé này sẽ bị hủy bỏ nếu bạn chưa hoàn tất thanh toán`,
@@ -1154,8 +1174,34 @@ const Booking = () => {
         )
     };
 
+    const handleProductsContinue = () => {
+        if (!checkAuth()) return;
+        advance(3);
+    }
+
+    const handlePromotionContinue = () => {
+        if (!checkAuth()) return;
+        advance(4);
+    }
+
+    const handlePromotionBack = () => {
+        if (!checkAuth()) return;
+        goTo(2);
+    }
+
+    const handleConfirmContinue = () => {
+        if (!checkAuth()) return;
+        advance(5);
+    }
+
+    const handleConfirmBack = () => {
+        if (!checkAuth()) return;
+        goTo(3);
+    }
+
     const handleDelete = async () => {
-        await MyAlert.alert("Hủy đặt vé", "Bạn có chắc chắn muốn hủy bỏ đơn đặt vé này? Các ghế đã chọn sẽ được giải phóng.",
+        if (!checkAuth()) return;
+        await MyAlert.alert("Hủy đặt vé", "Bạn có chắc chắn muốn hủy bỏ đơn đặt vé này?",
             [
                 { text: "Không", style: "ghost" },
                 {
@@ -1163,7 +1209,6 @@ const Booking = () => {
                     onClick: () => {
                         deleteBooking(booking.booking_code, {
                             onSuccess: () => {
-                                setBookingCode(null);
                                 setSelectedSeats([]);
                                 setCart([]);
                                 setStep(0);
@@ -1182,7 +1227,7 @@ const Booking = () => {
     if (paymentSuccess) {
         return (
             <div className="max-w-7xl mx-auto px-4 py-8">
-                <BookingStepper currentStep={step} maxUnlockedStep={maxUnlockedStep} onStepClick={goTo} />
+                <BookingStepper currentStep={STEPS.length} maxUnlockedStep={maxUnlockedStep} onStepClick={goTo} />
                 <BookingSuccess booking={booking} />
             </div>
         );
@@ -1214,18 +1259,19 @@ const Booking = () => {
                     )}
                     {step === 2 && (
                         <StepProducts
+                            booking={booking}
                             bookingCode={booking?.booking_code}
                             cart={cart}
                             setCart={setCart}
-                            onContinue={() => advance(3)}
+                            onContinue={handleProductsContinue}
                         />
                     )}
                     {step === 3 && (
                         <StepPromotion
                             booking={booking}
                             bookingCode={booking?.booking_code}
-                            onContinue={() => advance(4)}
-                            onBack={() => goTo(2)}
+                            onContinue={handlePromotionContinue}
+                            onBack={handlePromotionBack}
                         />
                     )}
                     {step === 4 && (
@@ -1234,8 +1280,8 @@ const Booking = () => {
                             bookingCode={booking?.booking_code}
                             email={email}
                             setEmail={setEmail}
-                            onConfirmed={() => advance(5)}
-                            onBack={() => goTo(3)}
+                            onConfirmed={handleConfirmContinue}
+                            onBack={handleConfirmBack}
                         />
                     )}
                     {step === 5 && (

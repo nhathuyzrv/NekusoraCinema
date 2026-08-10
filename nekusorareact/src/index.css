@@ -75,6 +75,8 @@
 
 :root {
   background-color: var(--color-background-core);
+  scrollbar-width: none;
+  scroll-behavior: smooth;
 }
 
 @keyframes slideInRight {

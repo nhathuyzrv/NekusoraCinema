@@ -1,4 +1,3 @@
-from datetime import timedelta
 from functools import wraps
 
 from django.shortcuts import get_object_or_404
@@ -174,9 +173,9 @@ class PayOSPayment(PaymentStrategy):
                 **cls._base_payment_defaults(booking, method),
                 "contact_email": validated_data.get("email", ""),
                 "order_code": order_code,
-                "payment_link_id": getattr(response, "payment-link-id", ""),
-                "checkout_url": getattr(response, "checkout-url", ""),
-                "qr_code_url": getattr(response, "qr-code", ""),
+                "payment_link_id": getattr(response, "payment_link_id", ""),
+                "checkout_url": getattr(response, "checkout_url", ""),
+                "qr_code_url": getattr(response, "qr_code", ""),
                 "expired_at": booking.held_until,
                 "provider_response": response.model_dump() if hasattr(response, "model_dump") else vars(response),
             }

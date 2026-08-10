@@ -136,7 +136,7 @@ export function useDeleteBooking() {
     const toast = useToast();
     return useMutation({
         mutationFn: (bookingCode) => bookingService.deleteBooking(bookingCode),
-        onSuccess: () => toast.success("Hủy đặt vé thành công", "Bây giờ bạn có thể đặt vé mới rồi"),
+        onSuccess: () => toast.success("Hủy đặt vé thành công"),
         onError: (err) => {
             const msg = err.response?.data?.message || Object.values(err.response?.data) || "Đã có lỗi xảy ra, vui lòng thử lại";
             toast.error("Hủy đặt vé thất bại", msg);

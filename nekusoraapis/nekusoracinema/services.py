@@ -17,7 +17,7 @@ from django.db import models
 
 # Seat hold
 redis_client = redis.Redis(host='127.0.0.1', port=6379, db=1, decode_responses=True, socket_keepalive=True, socket_connect_timeout=5)
-SEAT_HOLD_MINUTES = getattr(settings, 'SEAT_HOLD_MINUTES', 20)
+SEAT_HOLD_MINUTES = getattr(settings, 'SEAT_HOLD_MINUTES', 8)
 
 
 def _seat_hold_key(showtime_id, seat_id):
@@ -185,8 +185,8 @@ def set_products(booking, items):
             rows.append(BookingProduct(booking=booking, product=product, quantity=qty, unit_price=product.price, subtotal=subtotal))
             total += subtotal
 
-            BookingProduct.objects.bulk_create(rows)
-            booking.product_amount = total
+        BookingProduct.objects.bulk_create(rows)
+        booking.product_amount = total
 
         new_base = booking.seat_amount + booking.product_amount
 
@@ -362,7 +362,7 @@ def handle_payos_webhook(data):
         with transaction.atomic():
             payment.status = PaymentStatus.FAILED
             payment.cancelled_at = timezone.now()
-            payment.cancel_reason = 'Người dùng huỷ giao dịch'
+            payment.cancel_reason = 'Người dùng hủy giao dịch'
             payment.save(update_fields=['status', 'cancelled_at', 'cancel_reason'])
 
     return booking
@@ -373,11 +373,9 @@ def broadcast_booking_confirmed(booking):
     if not channel_layer:
         return
 
-    safe_id = hashlib.md5(booking.customer.email.encode()).hexdigest()
-
     group_channel = async_to_sync(channel_layer.group_send)
-    group_channel(f"user_{safe_id}", {
-        "type": "booking_confirmed",
+    group_channel(f"user_{booking.customer.id}", {
+        "type": "send_booking_notification",
         "booking_code": booking.booking_code,
     })
 
@@ -401,5 +399,5 @@ def cancel_payos_payment_link(payment):
 
     payment.status = PaymentStatus.FAILED
     payment.cancelled_at = timezone.now()
-    payment.cancel_reason = 'Người dùng huỷ đặt vé'
+    payment.cancel_reason = 'Người dùng hủy đặt vé'
     payment.save(update_fields=['status', 'cancelled_at', 'cancel_reason'])

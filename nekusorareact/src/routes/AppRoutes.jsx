@@ -9,6 +9,7 @@ import Profile from "../pages/Profile";
 // import History from "../pages/History";
 import NotFound from "../pages/NotFound";
 import Forbidden from "../pages/Forbidden";
+import PayOSResult from "../pages/PayOSResult";
 
 // import AdminDashboard from "../pages/admin/Dashboard";
 // import ManageMovies from "../pages/admin/ManageMovies";
@@ -22,6 +23,8 @@ const AppRoutes = () => {
                 <Route path="movies" element={<Movies />} />
                 <Route path="movies/:slug" element={<MovieDetails />} />
                 <Route path="booking" element={<Booking />} />
+                <Route path="booking/payos/result" element={<PayOSResult />} />
+                <Route path="booking/payos/cancel" element={<PayOSResult />} />
 
                 <Route element={<ProtectedRoutes roles={["CUSTOMER"]} />}>
                     <Route path="profile" element={<Profile />} />

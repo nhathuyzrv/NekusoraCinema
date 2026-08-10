@@ -69,18 +69,14 @@ class SeatConsumer(AsyncWebsocketConsumer):
 
 
 class UserConsumer(AsyncWebsocketConsumer):
-
     async def connect(self):
-        self.user_email = self.scope["url_route"]["kwargs"]["user_email"]
+        self.user = self.scope["user"]
 
-        user = self.scope.get("user")
-        if not user or not user.is_authenticated or user.email != self.user_email:
+        if not self.user.is_authenticated:
             await self.close()
             return
 
-        safe_email = hashlib.md5(self.user_email.encode()).hexdigest()
-        self.group_name = f"user_{safe_email}"
-
+        self.group_name = f"user_{self.user.id}"
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()
 
@@ -88,7 +84,7 @@ class UserConsumer(AsyncWebsocketConsumer):
         if hasattr(self, "group_name"):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
-    async def booking_confirmed(self, event):
+    async def send_booking_notification(self, event):
         await self.send(text_data=json.dumps({
             "type": "booking_confirmed",
             "booking_code": event["booking_code"],

@@ -1,4 +1,4 @@
-import Apis, { endpoints } from "../configs/Apis";
+import Apis, { authApis, endpoints } from "../configs/Apis";
 
 const authService = {
     login: ({ username, password }) =>
@@ -34,6 +34,10 @@ const authService = {
             JSON.stringify({ mode, ...data }),
             { headers: { "Content-Type": "application/json" } }
         ).then(res => res.data),
+
+    getWsTicket: () =>
+        authApis.post(endpoints.wsTicket)
+            .then(res => res.data),
 };
 
 export default authService;

@@ -3,5 +3,5 @@ from nekusoracinema import consumers
 
 websocket_urlpatterns = [
     re_path(r"^ws/showtimes/(?P<showtime_id>\d+)/seats/?$", consumers.SeatConsumer.as_asgi()), # noqa
-    re_path(r"ws/user/(?P<user_email>[^/]+)/", consumers.UserConsumer.as_asgi()), # noqa
+    re_path(r"^ws/user/", consumers.UserConsumer.as_asgi()), # noqa
 ]

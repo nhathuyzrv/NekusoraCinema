@@ -91,6 +91,14 @@ class AuthViewSet(viewsets.ViewSet):
         cache.delete(f"verified:{mode.mode_key}:{email}")
         return mode.complete(email, request.data)
 
+    @action(methods=['post'], url_path='ws-ticket', detail=False, permission_classes=[permissions.IsAuthenticated])
+    def get_ws_ticket(self, request):
+        ticket = utils.generate_ws_code_str()
+        user = request.user
+        cache.set(f"ws_ticket:{ticket}", user.pk, timeout=5)
+
+        return Response({'ticket': ticket}, status=status.HTTP_200_OK)
+
 
 class GenreViewSet(viewsets.ViewSet, generics.ListAPIView):
     queryset = Genre.objects.filter(active=True)
@@ -354,6 +362,19 @@ class BookingsViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveA
 
         payment = payment_strategy.create(booking, method, s.validated_data)
         return Response(serializers.PaymentSerializer(payment).data, status=status.HTTP_201_CREATED)
+
+
+class PaymentViewSet(viewsets.ViewSet, generics.ListAPIView):
+    queryset = Payment.objects.filter(active=True).order_by('-created_at')
+    serializer_class = serializers.PaymentSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        query = self.queryset.select_related("booking").filter(booking__customer=self.request.user)
+        q_order_code = self.request.query_params.get("orderCode")
+        if q_order_code:
+            query = query.filter(order_code=q_order_code)
+        return query
 
 
 class PayOSWebhookViewSet(viewsets.ViewSet):

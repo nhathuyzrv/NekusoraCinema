@@ -238,7 +238,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Payment
-        fields = ['id', 'method', 'amount', 'status', 'transaction_ref', 'paid_at', 'checkout_url', 'qr_code_url', 'deeplink', 'expired_at', 'cancelled_at', 'created_at', 'provider_response']
+        fields = ['id', 'order_code', 'method', 'amount', 'status', 'transaction_ref', 'paid_at', 'checkout_url', 'qr_code_url', 'deeplink', 'expired_at', 'cancelled_at', 'created_at', 'provider_response']
 
 
 class BookingSerializer(serializers.ModelSerializer):

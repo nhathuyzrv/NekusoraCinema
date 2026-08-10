@@ -10,6 +10,7 @@ export const endpoints = {
     sendOTP: "/auth/send-otp/",
     verifyOTP: "/auth/verify-otp/",
     authComplete: "/auth/complete/",
+    wsTicket: "/auth/ws-ticket/",
 
     // Thể loại phim
     genres: "/genres/",
@@ -61,6 +62,7 @@ export const endpoints = {
 
     // Thanh toán
     paymentMethods: "/payment-methods/",
+    payments: "/payments/",
 };
 
 const BASE_URL = 'http://127.0.0.1:8000/';

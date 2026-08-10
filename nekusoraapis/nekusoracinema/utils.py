@@ -1,7 +1,7 @@
-import base64
 import io
 import random
 import string
+import uuid
 
 import barcode
 from barcode.writer import ImageWriter
@@ -26,3 +26,7 @@ def generate_barcode_bytes(booking_code):
     })
     buffer.seek(0)
     return buffer.getvalue()
+
+
+def generate_ws_code_str():
+    return str(uuid.uuid4())

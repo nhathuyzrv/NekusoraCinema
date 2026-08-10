@@ -122,7 +122,7 @@ const Profile = () => {
         const hasNewAvatar = avatarFile !== null;
 
         if (Object.keys(diff).length === 0 && !hasNewAvatar) {
-            toast.info("Thông báo", "Không có thông tin nào thay đổi");
+            toast.info("Không có thông tin nào thay đổi");
             return;
         }
 
