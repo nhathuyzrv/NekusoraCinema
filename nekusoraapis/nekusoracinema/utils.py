@@ -2,7 +2,7 @@ import io
 import random
 import string
 import uuid
-
+from datetime import datetime
 import barcode
 from barcode.writer import ImageWriter
 
@@ -30,3 +30,7 @@ def generate_barcode_bytes(booking_code):
 
 def generate_ws_code_str():
     return str(uuid.uuid4())
+
+
+def get_current_time():
+    return datetime.now().time().replace(microsecond=0)

@@ -14,12 +14,8 @@ import { formatDate, formatShortWeekday } from "../utils/DateTime";
 import { callAuthModal } from "../utils/CallAuthModal";
 import bookingService from "../services/bookingService";
 import { StepPaymentPayOS } from "../components/StepPayment";
+import Configs from "../configs/Configs";
 
-
-const STEPS = ["Chọn suất chiếu", "Chọn ghế", "Chọn bắp/nước", "Khuyến mãi", "Xác nhận đơn", "Thanh toán"];
-const MAX_SEATS = 8;
-const SEAT_HOLD_MINUTES = 8;
-const POINTS_TO_VND = 500;
 
 function todayStr() {
     return new Date().toISOString().split("T")[0];
@@ -39,13 +35,13 @@ function BookingStepper({ currentStep, maxUnlockedStep, onStepClick }) {
 
     return (
         <div className="w-full mb-10 flex justify-center px-4">
-            {STEPS.map((label, i) => {
+            {Configs.STEPS.map((label, i) => {
                 const isDone = i < currentStep;
                 const isActive = i === currentStep;
                 const clickable = isDone && canGoBack(currentStep);
 
                 return (
-                    <div key={label} className={`flex items-center min-w-fit ${i < STEPS.length - 1 ? "flex-1" : "flex-none"}`}>
+                    <div key={label} className={`flex items-center min-w-fit ${i < Configs.STEPS.length - 1 ? "flex-1" : "flex-none"}`}>
                         <button
                             type="button"
                             disabled={!clickable}
@@ -64,7 +60,7 @@ function BookingStepper({ currentStep, maxUnlockedStep, onStepClick }) {
                                 {label}
                             </span>
                         </button>
-                        {i < STEPS.length - 1 && (
+                        {i < Configs.STEPS.length - 1 && (
                             <div className={`h-1 flex-1 mx-1 mb-4 ${isDone ? "bg-primary" : "bg-base-300"}`} />
                         )}
                     </div>
@@ -190,7 +186,7 @@ function StepShowtime({ selection, setSelection, onContinue }) {
                     Chọn suất chiếu
                     {showtime && (
                         <span className="badge badge-primary badge-sm ml-2">
-                            {showtime.start_time?.slice(0, 5)} — {formatShortWeekday(showtime.show_date)},{formatDate(showtime.show_date)} — {showtime.branch.name}
+                            {showtime.start_time?.slice(0, 5)} - {formatShortWeekday(showtime.show_date)},{formatDate(showtime.show_date)} - {showtime.branch.name}
                         </span>
                     )}
                 </div>
@@ -326,8 +322,8 @@ function SeatMap({ showtime, selectedSeats, setSelectedSeats }) {
         if (isSelected) {
             next = selectedSeats.filter((s) => s.id !== seat.id);
         } else {
-            if (selectedSeats.length >= MAX_SEATS) {
-                toast.warning("Số ghế đạt giới hạn", `Bạn chỉ được chọn tối đa ${MAX_SEATS} ghế`);
+            if (selectedSeats.length >= Configs.MAX_SEATS) {
+                toast.warning("Số ghế đạt giới hạn", `Bạn chỉ được chọn tối đa ${Configs.MAX_SEATS} ghế`);
                 return;
             }
             next = [...selectedSeats, seat];
@@ -416,7 +412,7 @@ function StepSeats({ showtime, selectedSeats, setSelectedSeats, onContinue, onBa
 
             <div className="flex items-center justify-between text-sm px-1">
                 <span className="text-base-content/60">
-                    Đã chọn <span className={`font-semibold ${selectedSeats.length === 0 || selectedSeats.length === MAX_SEATS ? "text-error" : "text-info"}`}>{selectedSeats.length}</span> / {MAX_SEATS} ghế
+                    Đã chọn <span className={`font-semibold ${selectedSeats.length === 0 || selectedSeats.length === Configs.MAX_SEATS ? "text-error" : "text-info"}`}>{selectedSeats.length}</span> / {Configs.MAX_SEATS} ghế
                 </span>
                 {selectedSeats.length > 0 && (
                     <span className="font-medium">
@@ -548,16 +544,27 @@ function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
     const { mutate: clearPts, isPending: clearingPts } = useClearPoints(bookingCode);
 
     const appliedPromo = booking?.promotion;
+    console.log(appliedPromo);
     const subtotal = parseFloat(booking?.seat_amount ?? 0) + parseFloat(booking?.product_amount ?? 0);
-    const maxPointsByAmount = Math.floor(Math.max(subtotal - parseFloat(booking?.discount_amount ?? 0), 0) / POINTS_TO_VND);
+    const maxPointsByAmount = Math.floor(Math.max(subtotal - parseFloat(booking?.discount_amount ?? 0) - Configs.MIN_SUBTOTAL_THRESHOLD, 0) / Configs.POINTS_TO_VND);
     const maxPoints = Math.min(user?.loyalty_points ?? 0, maxPointsByAmount);
 
     const handleApplyCode = () => {
         if (!code.trim()) return;
         applyPromo(code.trim(), {
-            onSuccess: () => {
+            onSuccess: (newBooking) => {
                 setCode("");
                 toast.success("Áp dụng mã thành công", `Bạn đã áp dụng mã khuyến mãi ${code.toUpperCase()}`)
+
+                if (newBooking?.points_used > 0) {
+                    const base = parseFloat(newBooking.seat_amount ?? 0) + parseFloat(newBooking.product_amount ?? 0);
+                    const newDiscount = parseFloat(newBooking.discount_amount ?? 0);
+                    const maxPointsAmount = Math.max(base - newDiscount - Configs.MIN_SUBTOTAL_THRESHOLD, 0);
+                    const pointsUsedAmount = parseFloat(newBooking.points_used_amount ?? 0);
+                    if (pointsUsedAmount > maxPointsAmount) {
+                        clearPts();
+                    }
+                }
             }
         });
     };
@@ -569,7 +576,7 @@ function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
         }
         redeemPts(pointsInput, {
             onSuccess: () => {
-                toast.success("Quy đổi điểm thành công", `Bạn được giảm ${formatMoney(pointsInput * POINTS_TO_VND)}`)
+                toast.success("Quy đổi điểm thành công", `Bạn được giảm ${formatMoney(pointsInput * Configs.POINTS_TO_VND)}`)
             }
         });
     };
@@ -624,8 +631,9 @@ function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
                             <Flame size={16} className="text-primary" /> Quy đổi điểm thành viên
                         </p>
                         <p className="text-xs text-base-content/50 mb-3">
-                            Bạn đang có <span className="font-semibold text-primary">{user?.loyalty_points.toLocaleString('vi-VN') ?? 0}</span> điểm
-                            (2 điểm = 1.000đ)
+                            Bạn đang có <span className="font-semibold text-primary">{user?.loyalty_points.toLocaleString('vi-VN') ?? 0}</span> điểm (2 điểm = 1.000đ)
+                            <br></br>
+                            Bạn có thể quy đổi tối đa {maxPoints} điểm
                         </p>
                         {booking?.points_used > 0 ? (
                             <div className="flex items-center justify-between bg-success/10 border border-success/30 rounded-lg px-3 py-2">
@@ -1153,7 +1161,7 @@ const Booking = () => {
     const handleSeatsContinue = async () => {
         if (!checkAuth()) return;
         await MyAlert.alert("Bạn không thể đổi ghế sau khi tiếp tục",
-            `Chúng tôi sẽ tiến hành giữ ghế cho bạn trong vòng ${SEAT_HOLD_MINUTES} phút
+            `Chúng tôi sẽ tiến hành giữ ghế cho bạn trong vòng ${Configs.SEAT_HOLD_MINUTES} phút
             Sau khi hết thời gian, đơn đặt vé này sẽ bị hủy bỏ nếu bạn chưa hoàn tất thanh toán`,
             [
                 { text: "Chờ chút", style: "ghost" },
@@ -1227,7 +1235,7 @@ const Booking = () => {
     if (paymentSuccess) {
         return (
             <div className="max-w-7xl mx-auto px-4 py-8">
-                <BookingStepper currentStep={STEPS.length} maxUnlockedStep={maxUnlockedStep} onStepClick={goTo} />
+                <BookingStepper currentStep={Configs.STEPS.length} maxUnlockedStep={maxUnlockedStep} onStepClick={goTo} />
                 <BookingSuccess booking={booking} />
             </div>
         );

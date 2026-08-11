@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ratingService from "../services/ratingService";
 import { useToast } from "./useToast";
+import { useAuth } from "./useAuth";
 
 export function useRatingsPagination({ movieId }) {
     return useInfiniteQuery({
@@ -13,9 +14,12 @@ export function useRatingsPagination({ movieId }) {
 }
 
 export function useMyRating({ movieId }) {
+    const { isAuthenticated } = useAuth();
+
     return useQuery({
         queryKey: ["ratings", movieId, "my"],
         queryFn: () => ratingService.getMyRating(movieId),
+        enabled: isAuthenticated,
         staleTime: Infinity,
         retry: false,
     })

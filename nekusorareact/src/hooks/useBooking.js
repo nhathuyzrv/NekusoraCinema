@@ -68,6 +68,7 @@ export function useBookingDetails(bookingCode) {
         queryKey: ["booking", bookingCode],
         queryFn: () => bookingService.getBooking(bookingCode),
         enabled: !!bookingCode,
+        staleTime: 1000 * 30,
     });
 }
 

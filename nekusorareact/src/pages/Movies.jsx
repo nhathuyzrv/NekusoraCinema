@@ -4,8 +4,8 @@ import { Search, Star, ChevronLeft, ChevronRight, Play, X } from "lucide-react";
 import { useMoviesPagination } from "../hooks/useMovies";
 import { useGenres } from "../hooks/useGenres";
 import { getYtbEmbedUrl } from "../utils/EmbededUrl";
+import Configs from "../configs/Configs";
 
-const PAGE_SIZE = 8;
 
 function TrailerModal({ movie, onClose }) {
     const embedUrl = getYtbEmbedUrl(movie.trailer_url);
@@ -58,16 +58,8 @@ function TrailerModal({ movie, onClose }) {
     );
 }
 
-const AGE_BADGE = {
-    P: { label: "P", cls: "badge-success" },
-    K: { label: "K", cls: "badge-accent" },
-    T13: { label: "T13", cls: "badge-info" },
-    T16: { label: "T16", cls: "badge-warning" },
-    T18: { label: "T18", cls: "badge-error" },
-};
-
 function AgeRatingBadge({ rating }) {
-    const b = AGE_BADGE[rating] ?? { label: rating, cls: "badge-neutral" };
+    const b = Configs.AGE_BADGE[rating] ?? { label: rating, cls: "badge-neutral" };
     return (
         <span className={`badge badge-sm w-8 h-8 font-bold ${b.cls}`}>
             {b.label}
@@ -173,7 +165,7 @@ const Movies = () => {
 
     const movies = movieData?.results ?? [];
     const totalCount = movieData?.count ?? 0;
-    const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+    const totalPages = Math.max(1, Math.ceil(totalCount / Configs.MOVIE_PAGE_SIZE));
 
     const toggleGenre = (id) => {
         setGenres((prev) =>
@@ -256,7 +248,7 @@ const Movies = () => {
 
             {movieIsPending ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                    {Array.from({ length: Configs.MOVIE_PAGE_SIZE }).map((_, i) => (
                         <div key={i} className="flex flex-col gap-2">
                             <div className="skeleton w-full aspect-2/3 rounded-box" />
                             <div className="skeleton h-4 w-3/4 rounded" />

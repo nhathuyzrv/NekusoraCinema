@@ -39,7 +39,7 @@ def get_user_from_ticket(ticket):
     return AnonymousUser()
 
 
-class TicketAuthMiddleware(BaseMiddleware):
+class WebSocketAuthMiddleware(BaseMiddleware):
     async def __call__(self, scope, receive, send):
         qs = scope.get("query_string", b"").decode("utf-8")
         query_params = parse_qs(qs)

@@ -1,5 +1,4 @@
-from datetime import date
-
+from datetime import date, datetime
 from django.core.cache import cache
 from django.db.models import Prefetch
 from django.db.models.aggregates import Avg, Count
@@ -174,13 +173,18 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
 
     @action(methods=['get'], url_path='showtimes', detail=True)
     def movie_showtimes_view(self, request, pk):
+        today = date.today()
         movie = self.get_object()
-        showtimes = (movie.movie_showtimes.filter(active=True, status__in=[ShowtimeStatus.SCHEDULED, ShowtimeStatus.COMPLETED]).order_by('start_time')
+        showtimes = (movie.movie_showtimes.filter(active=True, show_date__gte=today, status__in=[ShowtimeStatus.SCHEDULED, ShowtimeStatus.COMPLETED]).order_by('start_time')
                      .select_related('screening_format', 'room__branch__location'))
 
         q_date = request.query_params.get('date')
         if q_date:
             showtimes = showtimes.filter(show_date=q_date)
+            if q_date == str(today):
+                current_time = utils.get_current_time()
+                print(current_time)
+                showtimes = showtimes.filter(start_time__gte=current_time)
 
         q_location = request.query_params.get('location')
         if q_location:

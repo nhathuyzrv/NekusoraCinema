@@ -11,18 +11,11 @@ import { useMovieShowtimes } from "../hooks/useShowtimes";
 import DOMPurify from 'dompurify';
 import parse from 'html-react-parser';
 import MyAlert from "../configs/MyAlert";
+import Configs from "../configs/Configs";
 
-
-const AGE_BADGE = {
-    P: { label: "P", cls: "badge-success" },
-    K: { label: "K", cls: "badge-accent" },
-    T13: { label: "T13", cls: "badge-info" },
-    T16: { label: "T16", cls: "badge-warning" },
-    T18: { label: "T18", cls: "badge-error" },
-};
 
 function AgeBadge({ rating }) {
-    const b = AGE_BADGE[rating] ?? { label: rating, cls: "badge-neutral" };
+    const b = Configs.AGE_BADGE[rating] ?? { label: rating, cls: "badge-neutral" };
     return (
         <span className={`badge badge-sm font-bold ${b.cls} px-2.5 py-3.5`}>{b.label}</span>
     );
@@ -347,8 +340,6 @@ function groupShowtimes(showtimes) {
 }
 
 function formatTime(t) { return t?.slice(0, 5) ?? ""; }
-
-// ─── ShowtimesPanel ───────────────────────────────────────────────────────────
 
 function ShowtimesPanel({ movieId }) {
     const DATE_TABS = buildDateTabs();

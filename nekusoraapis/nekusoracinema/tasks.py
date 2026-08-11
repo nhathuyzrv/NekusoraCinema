@@ -81,4 +81,4 @@ def auto_expire_booking(booking_id):
     except Booking.DoesNotExist:
         return
 
-    services.delete_booking(booking, 'EXPIRED')
+    services.delete_booking(booking, BookingStatus.EXPIRED)

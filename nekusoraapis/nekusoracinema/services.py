@@ -1,15 +1,13 @@
-import hashlib
-
 import redis
 from decimal import Decimal
-from datetime import timedelta
+from datetime import timedelta, date, datetime
 from nekusoraapis import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from nekusoracinema import tasks
+from nekusoracinema import tasks, utils
 from nekusoracinema.models import *
 from django.utils import timezone
 from django.db import models
@@ -18,6 +16,8 @@ from django.db import models
 # Seat hold
 redis_client = redis.Redis(host='127.0.0.1', port=6379, db=1, decode_responses=True, socket_keepalive=True, socket_connect_timeout=5)
 SEAT_HOLD_MINUTES = getattr(settings, 'SEAT_HOLD_MINUTES', 8)
+VALID_BOOKING_CUTOFF_DISTANCE = 15 # mins
+MIN_SUBTOTAL_THRESHOLD = 10000
 
 
 def _seat_hold_key(showtime_id, seat_id):
@@ -114,6 +114,10 @@ def create_holding_booking(user, showtime_id, seat_ids):
 
     showtime = get_object_or_404(Showtime, pk=showtime_id, active=True, status=ShowtimeStatus.SCHEDULED)
 
+    cutoff_time = (datetime.now() + timedelta(minutes=VALID_BOOKING_CUTOFF_DISTANCE)).time()
+    if showtime.show_date == date.today() and showtime.start_time <= cutoff_time:
+        raise ValidationError({'start_time': f"Hệ thống ngừng nhận đặt vé trực tuyến trước suất chiếu {VALID_BOOKING_CUTOFF_DISTANCE} phút, vui lòng liên hệ CSKH để được hỗ trợ"})
+
     success, result = hold_seats(showtime_id, seat_ids, user.pk, ttl=SEAT_HOLD_MINUTES * 60)
     if not success:
         broadcast_seat_update(showtime_id)
@@ -146,10 +150,10 @@ def create_holding_booking(user, showtime_id, seat_ids):
 
 def delete_booking(booking, delete_status):
     if booking.status != BookingStatus.HOLDING:
-        raise ValidationError('Đơn đặt vé không thể huỷ ở trạng thái hiện tại')
+        raise ValidationError('Đơn đặt vé không thể hủy ở trạng thái hiện tại')
 
     try:
-        cancel_payos_payment_link(booking.payment)
+        cancel_payos_payment_link(booking.payment, delete_status)
     except Payment.DoesNotExist:
         pass
 
@@ -238,12 +242,20 @@ def apply_promotion_code(booking, code):
     delete_booking_promotion(booking)
     BookingPromotion.objects.create(booking=booking, promotion=promo, discount_amount=discount)
     booking.discount_amount = discount
+
+    available_after_discount = base_amount - discount
+    max_points_amount = max(available_after_discount - MIN_SUBTOTAL_THRESHOLD, Decimal(0))
+    if booking.points_used_amount > max_points_amount:
+        booking.points_used = 0
+        booking.points_used_amount = Decimal(0)
+
     return recalculate(booking)
 
 
 def delete_booking_promotion(booking):
     try:
         booking.booking_promotion.delete()
+        booking.booking_promotion = None
     except BookingPromotion.DoesNotExist:
         pass
 
@@ -262,7 +274,7 @@ def redeem_points(booking, points):
         raise ValidationError({'points': f'Bạn không thể quy đổi quá {user.loyalty_points} điểm'})
 
     base_after_discount = booking.seat_amount + booking.product_amount - booking.discount_amount
-    max_points_amount = max(base_after_discount, Decimal(0))
+    max_points_amount = max(base_after_discount - MIN_SUBTOTAL_THRESHOLD, Decimal(0))
     requested_amount = Decimal(points) * POINTS_TO_VND
     if requested_amount > max_points_amount:
         max_allowed_points = int(max_points_amount // POINTS_TO_VND)
@@ -380,7 +392,7 @@ def broadcast_booking_confirmed(booking):
     })
 
 
-def cancel_payos_payment_link(payment):
+def cancel_payos_payment_link(payment, delete_status):
     if not payment or payment.status != PaymentStatus.PENDING or not payment.payment_link_id:
         return
 
@@ -397,7 +409,12 @@ def cancel_payos_payment_link(payment):
     except Exception:
         pass
 
+    CANCELLATION_REASON = {
+        BookingStatus.CANCELLED: 'Người dùng hủy đặt vé',
+        BookingStatus.EXPIRED: 'Vé hết hạn thanh toán',
+    }
+
     payment.status = PaymentStatus.FAILED
     payment.cancelled_at = timezone.now()
-    payment.cancel_reason = 'Người dùng hủy đặt vé'
+    payment.cancel_reason = CANCELLATION_REASON[delete_status]
     payment.save(update_fields=['status', 'cancelled_at', 'cancel_reason'])
