@@ -7,13 +7,13 @@ const NAV_COL = [
             { label: "Trang chủ", to: "/" },
             { label: "Phim đang chiếu", to: "/movies" },
             { label: "Phim sắp chiếu", to: "/movies?status=coming_soon" },
-            { label: "Đặt vé", to: "/booking" },
+            { label: "Đặt vé", to: "/order" },
         ],
     },
     {
         title: "Hỗ trợ",
         links: [
-            { label: "Hướng dẫn đặt vé", to: "/help/booking" },
+            { label: "Hướng dẫn đặt vé", to: "/help/order" },
             { label: "Câu hỏi thường gặp", to: "/help/faq" },
             { label: "Điều khoản dịch vụ", to: "/help/terms-of-service" },
             { label: "Chính sách bảo mật", to: "/help/privacy-policy" },

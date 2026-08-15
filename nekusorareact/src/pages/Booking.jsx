@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Check, CheckCircle2, ChevronLeft, MapPin, Film, Clock, Ticket as TicketIcon, Tag, CreditCard, Loader2, X, Plus, Minus, Flame } from "lucide-react";
 import { useLocations, useLocationMovies, useBookingMovieShowtimes, useRoomSeats, useProducts, usePaymentMethods, useHoldSeats, useSetProducts, useApplyPromotion, useRemovePromotion, useRedeemPoints, useClearPoints, useCreatePayment, useDeleteBooking, useBookingDetails } from "../hooks/useBooking";
 import { useSeatSocket, useBookingConfirmed } from "../hooks/useWebSockets";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import { useToast } from "../hooks/useToast";
 import LocalLoading from "../components/LocalLoading";
@@ -74,8 +74,16 @@ function BookingStepper({ currentStep, maxUnlockedStep, onStepClick }) {
 // step 1
 function StepShowtime({ selection, setSelection, onContinue }) {
     const { location, movie, showtime } = selection;
-    const [openPanel, setOpenPanel] = useState(0);
-    const [selectedDate, setSelectedDate] = useState(todayStr());
+    const [openPanel, setOpenPanel] = useState(() => {
+        if (selection.showtime) return 2;
+        if (selection.movie) return 1;
+        return 0;
+    });
+    const [selectedDate, setSelectedDate] = useState(
+        selection.showtime?.show_date ?? todayStr()
+    );
+
+    console.log(selection);
 
     const { data: locations, isLoading: loadingLocations } = useLocations();
     const { data: movieData, isLoading: loadingMovies } = useLocationMovies(location?.id);
@@ -124,19 +132,11 @@ function StepShowtime({ selection, setSelection, onContinue }) {
                 <div className="collapse-content">
                     <LocalLoading show={loadingLocations}>
                         <div className="flex flex-wrap gap-2 pt-2">
-                            {locations?.results?.map((loc) => (
+                            {locations?.map((loc) => (
                                 <button
                                     key={loc.id}
                                     onClick={() => pickLocation(loc)}
-                                    className={`btn btn-sm ${location?.id === loc.id ? "btn-primary" : "btn-outline"}`}
-                                >
-                                    {loc.name}
-                                </button>
-                            )) ?? locations?.map((loc) => (
-                                <button
-                                    key={loc.id}
-                                    onClick={() => pickLocation(loc)}
-                                    className={`btn btn-sm ${location?.id === loc.id ? "btn-primary" : "btn-outline"}`}
+                                    className={`btn btn-sm ${Number(location?.id) === Number(loc.id) ? "btn-primary" : "btn-outline"}`}
                                 >
                                     {loc.name}
                                 </button>
@@ -1063,6 +1063,7 @@ function getResumeStep(booking) {
 }
 
 const Booking = () => {
+    const routerLocation = useLocation();
     const [step, setStep] = useState(0);
     const [maxUnlockedStep, setMaxUnlockedStep] = useState(0);
     const [selection, setSelection] = useState({ location: null, movie: null, showtime: null });
@@ -1072,6 +1073,19 @@ const Booking = () => {
     const [bookingCode, setBookingCode] = useState(null);
     const { isAuthenticated, user } = useAuth();
     const toast = useToast();
+
+    useEffect(() => {
+        const { preselectedShowtime, preselectedMovie } = routerLocation.state ?? {};
+        if (!preselectedShowtime) return;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelection({
+            location: preselectedShowtime.location ?? null,
+            movie: preselectedMovie ?? null,
+            showtime: preselectedShowtime,
+        });
+        setStep(1);
+        setMaxUnlockedStep(1);
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const { data: booking } = useBookingDetails(bookingCode);
 

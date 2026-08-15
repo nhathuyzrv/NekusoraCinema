@@ -29,7 +29,7 @@ const AppRoutes = () => {
                 <Route path="" element={<Home />} />
                 <Route path="movies" element={<Movies />} />
                 <Route path="movies/:slug" element={<MovieDetails />} />
-                <Route path="help/booking" element={<HelperBooking />} />
+                <Route path="help/order" element={<HelperBooking />} />
                 <Route path="help/faq" element={<HelperFAQ />} />
                 <Route path="help/terms-of-service" element={<HelperTermsOfService />} />
                 <Route path="help/privacy-policy" element={<HelperPrivacyPolicy />} />

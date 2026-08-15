@@ -342,7 +342,8 @@ function groupShowtimes(showtimes) {
 
 function formatTime(t) { return t?.slice(0, 5) ?? ""; }
 
-function ShowtimesPanel({ movieId }) {
+function ShowtimesPanel({ movieId, movie }) {
+    const navigate = useNavigate();
     const DATE_TABS = buildDateTabs();
     const [selectedDate, setSelectedDate] = useState(DATE_TABS[0].dateStr);
     const [filterLocation, setFilterLocation] = useState("all");
@@ -360,18 +361,23 @@ function ShowtimesPanel({ movieId }) {
     const handleLocationChange = (val) => { setFilterLocation(val); setFilterBranch("all"); };
     const handleNavigateBooking = async (showtime) => {
         await MyAlert.alert("Chọn suất chiếu",
-            `Bạn muốn đặt vé cho suất chiếu lúc ${showtime.start_time} tại ${showtime.branch.name}?
+            `Bạn muốn đặt vé cho suất chiếu lúc ${showtime.start_time.slice(0, 5)} tại ${showtime.branch.name}?
             Chúng tôi sẽ chuyển hướng bạn đến sơ đồ ghế của suất chiếu này.`,
             [
                 { text: 'Hủy', style: 'ghost' },
                 {
                     text: 'Tôi muốn đặt', style: 'primary',
-                    onClick: async () => {
-
+                    onClick: () => {
+                        navigate("/order", {
+                            state: {
+                                preselectedShowtime: showtime,
+                                preselectedMovie: movie,
+                            }
+                        });
                     }
                 }
             ]
-        )
+        );
     }
 
     const filtered = showtimes.filter(s =>
@@ -636,7 +642,7 @@ const MovieDetails = () => {
                     {movie.status === "NOW_SHOWING" && (
                         <>
                             <div ref={showtimeRef} className="scroll-mt-20">
-                                <ShowtimesPanel ref={showtimeRef} movieId={movieId} isAuthenticated={isAuthenticated} />
+                                <ShowtimesPanel ref={showtimeRef} movieId={movieId} movie={movie} isAuthenticated={isAuthenticated} />
                             </div>
                         </>
                     )}
