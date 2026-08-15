@@ -6,10 +6,16 @@ import Movies from "../pages/Movies";
 import MovieDetails from "../pages/MovieDetails";
 import Booking from "../pages/Booking";
 import Profile from "../pages/Profile";
-// import History from "../pages/History";
-import NotFound from "../pages/NotFound";
-import Forbidden from "../pages/Forbidden";
+import MyBookings from "../pages/MyBookings";
+import NotFound from "../pages/Error/NotFound";
+import Forbidden from "../pages/Error/Forbidden";
 import PayOSResult from "../pages/PayOSResult";
+import BookingDetails from "../pages/BookingDetails";
+import Home from "../pages/Home";
+import HelperBooking from "../pages/Helper/HelperBooking";
+import HelperFAQ from "../pages/Helper/HelperFAQ";
+import HelperTermsOfService from "../pages/Helper/HelperTermsOfService";
+import HelperPrivacyPolicy from "../pages/Helper/HelperPrivacyPolicy";
 
 // import AdminDashboard from "../pages/admin/Dashboard";
 // import ManageMovies from "../pages/admin/ManageMovies";
@@ -20,16 +26,21 @@ const AppRoutes = () => {
     return (
         <Routes>
             <Route element={<Layout />}>
+                <Route path="" element={<Home />} />
                 <Route path="movies" element={<Movies />} />
                 <Route path="movies/:slug" element={<MovieDetails />} />
-                <Route path="booking" element={<Booking />} />
-                <Route path="booking/payos/result" element={<PayOSResult />} />
-                <Route path="booking/payos/cancel" element={<PayOSResult />} />
+                <Route path="help/booking" element={<HelperBooking />} />
+                <Route path="help/faq" element={<HelperFAQ />} />
+                <Route path="help/terms-of-service" element={<HelperTermsOfService />} />
+                <Route path="help/privacy-policy" element={<HelperPrivacyPolicy />} />
+                <Route path="order" element={<Booking />} />
+                <Route path="order/payos/result" element={<PayOSResult />} />
+                <Route path="order/payos/cancel" element={<PayOSResult />} />
 
                 <Route element={<ProtectedRoutes roles={["CUSTOMER"]} />}>
                     <Route path="profile" element={<Profile />} />
-                    {/* <Route path="bookings" element={<MyBookings/>}/> */}
-                    {/* <Route path="history" element={<History />} /> */}
+                    <Route path="bookings" element={<MyBookings />} />
+                    <Route path="bookings/:bookingCode" element={<BookingDetails />} />
                 </Route>
 
                 <Route element={<ProtectedRoutes roles={["STAFF", "MANAGER"]} />}>

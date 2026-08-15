@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
         queryKey: ["currentUser"],
         queryFn: fetchCurrentUser,
         retry: false,
-        staleTime: 1000 * 6,
+        staleTime: 1000 * 6 * 5,
     });
 
     const refreshUser = useCallback(() => {

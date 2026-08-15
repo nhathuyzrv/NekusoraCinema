@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { User, Mail, Phone, Calendar, Venus, Mars, Camera, Save, CircleUserRound, Flame } from "lucide-react";
+import { User, Mail, Phone, Calendar, Venus, Mars, Camera, CircleUserRound, Flame } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useUpdateUser } from "../hooks/useUpdateUser";
 import LocalLoading from "../components/LocalLoading";
@@ -326,13 +326,12 @@ const Profile = () => {
                                 )}
                             </div>
 
-                            <div className="pt-2 self-end">
+                            <div className="pt-2 w-full flex lg:justify-end">
                                 <button
                                     type="submit"
-                                    className="btn btn-primary flex-1"
+                                    className="btn btn-primary not-lg:w-full"
                                     disabled={isPending}
                                 >
-                                    <Save size={16} />
                                     Lưu thay đổi
                                 </button>
                             </div>

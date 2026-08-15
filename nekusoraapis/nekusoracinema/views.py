@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, timedelta
 from django.core.cache import cache
 from django.db.models import Prefetch
 from django.db.models.aggregates import Avg, Count
@@ -31,7 +31,7 @@ class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
 
 class AuthViewSet(viewsets.ViewSet):
 
-    def _get_mode(self, request):
+    def get_mode(self, request):
         key = request.data.get('mode', '').strip()
         mode = OTP_MODE.get(key)
         if not mode:
@@ -40,7 +40,7 @@ class AuthViewSet(viewsets.ViewSet):
 
     @action(methods=['post'], url_path='send-otp', detail=False)
     def auth_send_otp(self, request):
-        mode, err = self._get_mode(request)
+        mode, err = self.get_mode(request)
         if err:
             return err
 
@@ -53,13 +53,12 @@ class AuthViewSet(viewsets.ViewSet):
 
     @action(methods=['post'], url_path='verify-otp', detail=False)
     def auth_verify_otp(self, request):
-        mode, err = self._get_mode(request)
+        mode, err = self.get_mode(request)
         if err:
             return err
 
         email = request.data.get('email', '').strip().lower()
         otp_input = request.data.get('otp', '').strip()
-        print(email, otp_input)
         if not email or not otp_input:
             return Response({'message': 'Vui lòng cung cấp đầy đủ thông tin'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -74,7 +73,7 @@ class AuthViewSet(viewsets.ViewSet):
 
     @action(methods=['post'], url_path='complete', detail=False)
     def auth_complete(self, request):
-        mode, err = self._get_mode(request)
+        mode, err = self.get_mode(request)
         if err:
             return err
 
@@ -106,7 +105,6 @@ class GenreViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
     queryset = Movie.objects.filter(active=True)
-    pagination_class = paginators.MovieItemPaginator
 
     def get_permissions(self):
         if self.action in ['movie_ratings_view'] and self.request.method in ['POST']:
@@ -147,11 +145,16 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
         movie = self.get_object()
 
         if request.method == 'POST':
+            movie_booking = Booking.objects.filter(active=True, customer=request.user, showtime__movie=movie, is_checked_in=True).first()
+            if not movie_booking:
+                return Response({'message': 'Bạn cần có vé đã check-in của phim này mới có thể đánh giá'}, status=status.HTTP_400_BAD_REQUEST)
+
             s = serializers.RatingSerializer(data={
                 **request.data,
                 'movie': movie.pk,
                 'user': request.user.pk,
-            }, context={'request': request})
+                'verified_booking': movie_booking
+            })
             s.is_valid(raise_exception=True)
             rating = s.save()
             return Response(serializers.RatingSerializer(rating).data, status=status.HTTP_201_CREATED)
@@ -183,7 +186,6 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
             showtimes = showtimes.filter(show_date=q_date)
             if q_date == str(today):
                 current_time = utils.get_current_time()
-                print(current_time)
                 showtimes = showtimes.filter(start_time__gte=current_time)
 
         q_location = request.query_params.get('location')
@@ -278,8 +280,9 @@ class PaymentMethodViewSet(viewsets.ViewSet, generics.ListAPIView):
     serializer_class = serializers.PaymentMethodSerializer
 
 
-class BookingsViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView, generics.DestroyAPIView):
+class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView, generics.DestroyAPIView):
     queryset = Booking.objects.filter(active=True)
+    pagination_class = paginators.BookingItemPaginator
     lookup_field = 'booking_code'
     lookup_url_kwarg = 'pk'
 
@@ -294,7 +297,7 @@ class BookingsViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveA
         return serializers.BookingSerializer
 
     def get_queryset(self):
-        query = (self.queryset.filter(customer=self.request.user)
+        query = (self.queryset.filter(customer=self.request.user).order_by('-created_at')
                  .select_related('showtime__movie', 'showtime__room__branch__location', 'showtime__screening_format')
                  .prefetch_related('booking_tickets__seat', 'booking_products__product', 'booking_promotion__promotion', 'payment__method'))
 
@@ -302,6 +305,15 @@ class BookingsViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveA
             q_status = self.request.query_params.get('status')
             if q_status:
                 query = query.filter(status=q_status)
+
+            q_days = self.request.query_params.get('days')
+            if q_days:
+                since = utils.get_timezone_now() - timedelta(days=int(q_days))
+                query = query.filter(created_at__gte=since)
+
+            q_search = self.request.query_params.get('search')
+            if q_search:
+                query = query.filter(Q(showtime__movie__title__icontains=q_search) | Q(booking_code__icontains=q_search)).distinct()
 
         return query
 

@@ -6,7 +6,7 @@ from channels.db import database_sync_to_async
 from nekusoracinema.models import Ticket, TicketStatus
 
 
-def _seat_hold_key(showtime_id, seat_id):
+def seat_hold_key(showtime_id, seat_id):
     return f"seat_hold:{showtime_id}:{seat_id}"
 
 
@@ -60,7 +60,7 @@ class SeatConsumer(AsyncWebsocketConsumer):
         return list(Ticket.objects.filter(showtime_id=self.showtime_id, status=TicketStatus.BOOKED).values_list("seat_id", flat=True))
 
     async def get_held_seats(self):
-        pattern = _seat_hold_key(self.showtime_id, '*')
+        pattern = seat_hold_key(self.showtime_id, '*')
         try:
             keys = await self.redis.keys(pattern)
             return [int(k.rsplit(':', 1)[-1]) for k in keys]

@@ -20,7 +20,7 @@ VALID_BOOKING_CUTOFF_DISTANCE = 15 # mins
 MIN_SUBTOTAL_THRESHOLD = 10000
 
 
-def _seat_hold_key(showtime_id, seat_id):
+def seat_hold_key(showtime_id, seat_id):
     return f"seat_hold:{showtime_id}:{seat_id}"
 
 
@@ -30,7 +30,7 @@ def hold_seats(showtime_id, seat_ids, user_id, ttl=SEAT_HOLD_MINUTES * 60):
 
     with redis_client.pipeline() as pipe:
         for seat_id in seat_ids:
-            key = _seat_hold_key(showtime_id, seat_id)
+            key = seat_hold_key(showtime_id, seat_id)
             acquired = redis_client.set(key, str(user_id), nx=True, ex=ttl)
             if acquired:
                 held_now.append(seat_id)
@@ -39,7 +39,7 @@ def hold_seats(showtime_id, seat_ids, user_id, ttl=SEAT_HOLD_MINUTES * 60):
 
         if conflict:
             for seat_id in held_now:
-                pipe.delete(_seat_hold_key(showtime_id, seat_id))
+                pipe.delete(seat_hold_key(showtime_id, seat_id))
             pipe.execute()
             return False, conflict
 
@@ -49,14 +49,14 @@ def hold_seats(showtime_id, seat_ids, user_id, ttl=SEAT_HOLD_MINUTES * 60):
 def release_seats(showtime_id, seat_ids, user_id=None):
     with redis_client.pipeline() as pipe:
         for seat_id in seat_ids:
-            key = _seat_hold_key(showtime_id, seat_id)
+            key = seat_hold_key(showtime_id, seat_id)
             if user_id is None or redis_client.get(key) == str(user_id):
                 pipe.delete(key)
         pipe.execute()
 
 
 def get_held_seat_ids(showtime_id):
-    pattern = _seat_hold_key(showtime_id, '*')
+    pattern = seat_hold_key(showtime_id, '*')
     return [int(k.rsplit(':', 1)[-1]) for k in redis_client.scan_iter(pattern)]
 
 

@@ -36,8 +36,9 @@ export function useCreateRating({ movieId }) {
             queryClient.invalidateQueries({ queryKey: ["movie", movieId] });
             toast.success("Gửi đánh giá thành công", "Cảm ơn bạn đã đánh giá");
         },
-        onError: () => {
-            toast.error("Gửi đánh giá thất bại", "Đã có lỗi xảy ra, vui lòng thử lại sau");
+        onError: (err) => {
+            const msg = err.response?.data?.message || Object.values(err.response?.data) || "Đã có lỗi xảy ra, vui lòng thử lại";
+            toast.error("Gửi đánh giá thất bại", msg);
         },
     })
 }

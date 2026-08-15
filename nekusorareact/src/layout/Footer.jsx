@@ -15,8 +15,8 @@ const NAV_COL = [
         links: [
             { label: "Hướng dẫn đặt vé", to: "/help/booking" },
             { label: "Câu hỏi thường gặp", to: "/help/faq" },
-            { label: "Điều khoản dịch vụ", to: "/terms" },
-            { label: "Chính sách bảo mật", to: "/privacy" },
+            { label: "Điều khoản dịch vụ", to: "/help/terms-of-service" },
+            { label: "Chính sách bảo mật", to: "/help/privacy-policy" },
         ],
     },
 ];
@@ -65,7 +65,7 @@ const Footer = () => {
                                 Nekusora<span className="text-primary">Cinema</span>
                             </span>
                         </Link>
-                        <p className="text-sm text-base-content/60 leading-relaxed max-w-xs">
+                        <p className="text-sm text-base-content/60 leading-relaxed sm:max-w-xs">
                             Đặt vé xem phim nhanh chóng, tiện lợi. Trải nghiệm điện ảnh đỉnh cao tại hệ thống rạp chiếu phim hiện đại.
                         </p>
 

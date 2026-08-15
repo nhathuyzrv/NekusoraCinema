@@ -8,7 +8,7 @@ import { Flame, Ticket } from "lucide-react";
 const NAV_LINKS = [
     { to: "/", label: "Trang chủ", end: true },
     { to: "/movies", label: "Phim" },
-    { to: "/booking", label: "Đặt vé" },
+    { to: "/order", label: "Đặt vé" },
 ];
 
 const navLinkClass = ({ isActive }) => `btn btn-ghost btn-md rounded-field font-medium transition-colors ${isActive ? "text-primary font-semibold" : ""}`;
@@ -134,7 +134,7 @@ const Header = () => {
                     <div className="dropdown dropdown-end">
                         <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar" aria-label="Tài khoản">
                             {user?.avatar ? (
-                                <div className="w-8 rounded-full">
+                                <div className="w-8 rounded-full ring-2 ring-primary/30">
                                     <img src={user.avatar} alt={user.username} referrerPolicy="no-referrer" />
                                 </div>
                             ) : (
@@ -147,7 +147,7 @@ const Header = () => {
                                 <div>
                                     <p className="font-semibold text-sm text-base-content">
                                         {user?.first_name
-                                            ? `${user.first_name} ${user.last_name ?? ""}`.trim()
+                                            ? `${user.last_name} ${user.first_name ?? ""}`.trim()
                                             : user?.username}
                                     </p>
                                     <p className="text-xs text-base-content/60">{user?.email}</p>
@@ -170,14 +170,6 @@ const Header = () => {
                                         <Link to="/bookings">
                                             <Ticket size={16} />
                                             Vé của tôi
-                                        </Link>
-                                    </li>
-                                    <li>
-                                        <Link to="/history">
-                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 00-2 2v4a2 2 0 002 2h8a2 2 0 002-2v-4a2 2 0 00-2-2H6z" clipRule="evenodd" />
-                                            </svg>
-                                            Lịch sử giao dịch
                                         </Link>
                                     </li>
                                 </>

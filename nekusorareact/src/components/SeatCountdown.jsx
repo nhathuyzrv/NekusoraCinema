@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import MyAlert from '../configs/MyAlert';
 
-export const SeatCountdown = ({ heldUntil }) => {
+const SeatCountdown = ({ heldUntil }) => {
     const [timeLeft, setTimeLeft] = useState({ minutes: 0, seconds: 0 });
 
     useEffect(() => {
@@ -52,3 +52,5 @@ export const SeatCountdown = ({ heldUntil }) => {
         </span>
     );
 };
+
+export default SeatCountdown;

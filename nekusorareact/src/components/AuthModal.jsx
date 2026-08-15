@@ -362,14 +362,14 @@ function RegisterForm({ hook, onSwitch }) {
                 {errors.agree && <span className="text-error text-xs">{errors.agree}</span>}
             </div>
 
-            <button className="btn btn-primary w-full uppercase" type="submit" disabled={hook.loading}>Đăng ký</button>
+            <button className="btn btn-primary w-full uppercase" type="submit" disabled={!agree || hook.loading}>Đăng ký</button>
 
             <div className="divider my-1" />
             <div className="text-center space-y-2">
                 <p className="text-sm">Bạn đã có tài khoản?</p>
                 <button type="button" className="btn btn-outline btn-primary w-full" onClick={onSwitch} disabled={hook.loading}>Đăng nhập</button>
             </div>
-        </form>
+        </form >
     );
 }
 

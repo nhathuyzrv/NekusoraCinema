@@ -296,7 +296,7 @@ for name in ACTOR_NAMES:
 print(f"    -> {len(genres)} genre, {len(actors)} actor.")
 
 # 5. MOVIE + MOVIEACTOR
-print(">>> [4/10] Tạo Movie (dữ liệu phim có thật, phát hành 2026)...")
+print(">>> [4/10] Tạo Movie...")
 
 MOVIES = [
     dict(title="Doraemon: Nobita Và Lâu Đài Dưới Đáy Biển", director="Ayumu Watanabe",
@@ -435,6 +435,12 @@ MOVIES = [
                        "Thế nhưng em gái cô trở thành mục tiêu của một oán linh mang nỗi hận từ bi kịch hôn nhân, "
                        "buộc Risa phải trải qua năm cái chết để gặp lại năm người bạn ma cũ nhằm giải cứu em. "
                        "Đây là phần kết của loạt phim Danur đình đám từ Indonesia."),
+    dict(title="Uma Musume: Pretty Derby - Khởi Đầu Kỷ Nguyên Mới", director="Yamamoto Ken",
+             country="Nhật Bản", duration=108, age_rating=MovieAgeRating.P,
+             release_date=date(2026, 8, 7),
+             genres=["Hoạt hình"],
+             cast=[], desc="Jungle Pocket (hay còn được gọi là Pokke) là một Umamusume tự do, nhiệt huyết, quyết tâm bước vào "
+                           "đấu trường Twinkle Series sau khi được truyền cảm hứng từ màn thể hiện thần sầu của Fuji Kiseki."),
     dict(title="Ngày Tàn Của Phố Oak", director="David Robert Mitchell",
          country="Mỹ", duration=112, age_rating=MovieAgeRating.T16,
          release_date=date(2026, 8, 14),

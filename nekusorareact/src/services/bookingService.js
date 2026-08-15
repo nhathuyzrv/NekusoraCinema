@@ -1,10 +1,6 @@
 import Apis, { authApis, endpoints } from "../configs/Apis";
 
 const bookingService = {
-    getMyByStatus: (status) =>
-        authApis.get(endpoints.bookings + `?status=${status}`)
-            .then(res => res.data),
-
     getLocations: () =>
         Apis.get(endpoints.locations)
             .then(r => r.data),

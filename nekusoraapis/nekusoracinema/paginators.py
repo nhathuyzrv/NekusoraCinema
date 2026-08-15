@@ -6,3 +6,6 @@ class MovieItemPaginator(pagination.PageNumberPagination):
 
 class RatingItemPaginator(pagination.PageNumberPagination):
     page_size = 8
+
+class BookingItemPaginator(pagination.PageNumberPagination):
+    page_size = 5

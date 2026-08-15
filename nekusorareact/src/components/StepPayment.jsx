@@ -12,7 +12,7 @@ function InfoRow({ label, value }) {
     )
 }
 
-export function StepPaymentPayOS({ booking }) {
+const StepPaymentPayOS = ({ booking }) => {
     const payment = booking?.payment;
     const [timeLeft, setTimeLeft] = useState(null);
 
@@ -77,3 +77,5 @@ export function StepPaymentPayOS({ booking }) {
         </div>
     );
 }
+
+export default StepPaymentPayOS;

@@ -3,7 +3,7 @@ import { createContext, useCallback, useRef, useState } from "react";
 
 const ToastContext = createContext();
 const MAX_TOASTS = 3;
-const DURATION = 4000;
+const DURATION = 5000;
 
 export function ToastProvider({ children, headerHeight = 64 }) {
     const [toasts, setToasts] = useState([]);

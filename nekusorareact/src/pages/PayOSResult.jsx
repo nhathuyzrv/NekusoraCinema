@@ -10,7 +10,7 @@ const PayOSResult = () => {
         const cancel = searchParams.get("cancel");
         const orderCode = searchParams.get("orderCode");
 
-        navigate(`/booking?payos=${cancel === "true" ? "cancel" : "result"}&orderCode=${orderCode}&code=${code}`, { replace: true });
+        navigate(`/order?payos=${cancel === "true" ? "cancel" : "result"}&orderCode=${orderCode}&code=${code}`, { replace: true });
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     return null;

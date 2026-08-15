@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Clock, Calendar, Globe, Film, Users, Clapperboard, Send, MapPin } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import LocalLoading from "../components/LocalLoading";
@@ -12,6 +12,7 @@ import DOMPurify from 'dompurify';
 import parse from 'html-react-parser';
 import MyAlert from "../configs/MyAlert";
 import Configs from "../configs/Configs";
+import BackButton from "../components/BackButton";
 
 
 function AgeBadge({ rating }) {
@@ -501,6 +502,7 @@ function ShowtimesPanel({ movieId }) {
 
 const MovieDetails = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const { isAuthenticated } = useAuth();
     const movieId = location.state?.movieId;
     const [trailerActive, setTrailerActive] = useState(false);
@@ -538,6 +540,7 @@ const MovieDetails = () => {
 
     return (
         <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+            <BackButton label={"Phim"} onClick={() => navigate("/movies/")} />
 
             <div
                 className="relative w-full rounded-2xl overflow-hidden bg-black cursor-pointer group"
@@ -596,7 +599,7 @@ const MovieDetails = () => {
                                 <AgeBadge rating={movie.age_rating} />
                                 <StatusBadge status={movie.status} />
                             </div>
-                            <h1 className="text-2xl font-black leading-tight">{movie.title}</h1>
+                            <h1 className="text-2xl font-black">{movie.title}</h1>
                             <div className="space-y-2 text-sm">
                                 {[
                                     { icon: <Clock size={14} />, label: "Thời lượng", value: formatDuration(movie.duration) },

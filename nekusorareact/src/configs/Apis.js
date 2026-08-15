@@ -17,9 +17,8 @@ export const endpoints = {
 
     // Phim
     movies: "/movies/",
-    moviesPagination: ({ page = 1, search = "", genres = [], status = "" }) => {
+    moviesParams: ({ search = "", genres = [], status = "" }) => {
         const params = new URLSearchParams();
-        params.append("page", page);
         if (search) params.append("title", search);
         if (status) params.append("status", status);
         genres.forEach((g) => params.append("genre", g));
@@ -37,6 +36,14 @@ export const endpoints = {
     // Đặt vé
     bookings: "/bookings/",
     bookingDetails: (code) => `/bookings/${code}/`,
+    bookingsPagination: ({ page = 1, statusFilter, days, search = "" }) => {
+        const params = new URLSearchParams();
+        params.append("page", page);
+        if (statusFilter) params.append("status", statusFilter);
+        if (days) params.append("days", days);
+        if (search) params.append("search", search);
+        return `/bookings/?${params.toString()}`;
+    },
 
     // Vị trí & chi nhánh
     locations: "/locations/",

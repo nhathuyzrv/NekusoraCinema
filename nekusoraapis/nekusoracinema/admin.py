@@ -20,12 +20,12 @@ class ImageViewAdmin(admin.ModelAdmin):
             field_name = item.replace("view_", "")
             if field_name in self.image_fields:
                 def method(obj):
-                    return self._render_image(obj, field_name)
+                    return self.render_image(obj, field_name)
                 method.short_description = f"{field_name} preview"
                 return method
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{item}'")
 
-    def _render_image(self, obj, field_name):
+    def render_image(self, obj, field_name):
         image_attr = getattr(obj, field_name, None)
         if image_attr and hasattr(image_attr, 'url'):
             try:

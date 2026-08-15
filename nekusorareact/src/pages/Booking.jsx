@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Check, CheckCircle2, ChevronLeft, MapPin, Film, Clock, Ticket as TicketIcon, Tag, CreditCard, Loader2, X, Plus, Minus, Flame } from "lucide-react";
-import { useLocations, useLocationMovies, useBookingMovieShowtimes, useRoomSeats, useProducts, usePaymentMethods, useHoldSeats, useSetProducts, useApplyPromotion, useRemovePromotion, useRedeemPoints, useClearPoints, useCreatePayment, useDeleteBooking, useBookingDetails, useBookingsStatus } from "../hooks/useBooking";
+import { useLocations, useLocationMovies, useBookingMovieShowtimes, useRoomSeats, useProducts, usePaymentMethods, useHoldSeats, useSetProducts, useApplyPromotion, useRemovePromotion, useRedeemPoints, useClearPoints, useCreatePayment, useDeleteBooking, useBookingDetails } from "../hooks/useBooking";
 import { useSeatSocket, useBookingConfirmed } from "../hooks/useWebSockets";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -8,13 +8,14 @@ import { useToast } from "../hooks/useToast";
 import LocalLoading from "../components/LocalLoading";
 import GlobalLoading from "../components/GlobalLoading";
 import MyAlert from "../configs/MyAlert";
-import { SeatCountdown } from "../components/SeatCountdown";
+import SeatCountdown from "../components/SeatCountdown";
 import { formatMoney, formatSignedMoney } from "../utils/Money";
 import { formatDate, formatShortWeekday } from "../utils/DateTime";
 import { callAuthModal } from "../utils/CallAuthModal";
 import bookingService from "../services/bookingService";
-import { StepPaymentPayOS } from "../components/StepPayment";
+import StepPaymentPayOS from "../components/StepPayment";
 import Configs from "../configs/Configs";
+import { useHoldingBooking } from "../hooks/useMyBookings";
 
 
 function todayStr() {
@@ -34,7 +35,7 @@ function BookingStepper({ currentStep, maxUnlockedStep, onStepClick }) {
     const canGoBack = (i) => i < currentStep && [1, 3, 4].includes(currentStep) && i <= maxUnlockedStep;
 
     return (
-        <div className="w-full mb-10 flex justify-center px-4">
+        <div className="w-full mb-10 flex justify-center px-4 not-sm:hidden">
             {Configs.STEPS.map((label, i) => {
                 const isDone = i < currentStep;
                 const isActive = i === currentStep;
@@ -276,25 +277,31 @@ function StepShowtime({ selection, setSelection, onContinue }) {
 }
 
 // step 2
-function isValidSeatSelection(selectedInRow, seatsPerRow) {
-    if (selectedInRow.length === 0) return true;
-    const sorted = [...selectedInRow].sort((a, b) => a - b);
-    const min = sorted[0], max = sorted[sorted.length - 1];
+function isValidSeatSelection(rowSeats, selectedIds, unavailableIds) {
+    if (selectedIds.size === 0) return true;
 
-    if (min - 1 === 1) return false;
-    if (seatsPerRow - max === 1) return false;
-
-    for (let i = 0; i < sorted.length - 1; i++) {
-        const gap = sorted[i + 1] - sorted[i] - 1;
-        if (gap === 1) return false;
+    let emptyBlockSize = 0;
+    for (const seat of rowSeats) {
+        const isOccupied = selectedIds.has(seat.id) || unavailableIds.has(seat.id);
+        if (isOccupied) {
+            if (emptyBlockSize === 1) return false;
+            emptyBlockSize = 0;
+        } else {
+            emptyBlockSize++;
+        }
     }
+
     return true;
 }
 
-function SeatMap({ showtime, selectedSeats, setSelectedSeats }) {
+function SeatMap({ showtime, selectedSeats, setSelectedSeats, onRowsReady, onUnavailableReady }) {
     const { data: seats, isLoading } = useRoomSeats(showtime.room.id);
     const { booked, held } = useSeatSocket(showtime.id);
     const toast = useToast();
+
+    useEffect(() => {
+        onUnavailableReady?.(new Set([...booked, ...held]));
+    }, [booked, held]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         if (selectedSeats.length === 0) return;
@@ -314,6 +321,10 @@ function SeatMap({ showtime, selectedSeats, setSelectedSeats }) {
         return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([label, seatList]) => [label, seatList.sort((a, b) => a.seat_number - b.seat_number)]);
     }, [seats]);
 
+    useEffect(() => {
+        if (rows.length > 0) onRowsReady?.(rows);
+    }, [rows]); // eslint-disable-line react-hooks/exhaustive-deps
+
     const toggleSeat = (seat) => {
         if (booked.includes(seat.id) || held.includes(seat.id)) return;
 
@@ -327,15 +338,6 @@ function SeatMap({ showtime, selectedSeats, setSelectedSeats }) {
                 return;
             }
             next = [...selectedSeats, seat];
-        }
-
-        const rowSeats = rows.find(([label]) => label === seat.row_label)?.[1] ?? [];
-        const seatsPerRowCount = rowSeats.length;
-        const selectedInRow = next.filter((s) => s.row_label === seat.row_label).map((s) => s.seat_number);
-
-        if (!isValidSeatSelection(selectedInRow, seatsPerRowCount)) {
-            toast.warning("Không thể chọn hoặc bỏ chọn ghế này", "Vui lòng không chừa trống 1 ghế lẻ ở đầu, giữa hoặc cuối dãy ghế đã chọn");
-            return;
         }
 
         setSelectedSeats(next);
@@ -406,9 +408,27 @@ function SeatMap({ showtime, selectedSeats, setSelectedSeats }) {
 }
 
 function StepSeats({ showtime, selectedSeats, setSelectedSeats, onContinue, onBack }) {
+    const [rows, setRows] = useState([]);
+    const [unavailable, setUnavailable] = useState(new Set());
+    const toast = useToast();
+
+    const handleContinue = () => {
+        const selectedIds = new Set(selectedSeats.map((s) => s.id));
+        for (const [, seatList] of rows) {
+            if (!isValidSeatSelection(seatList, selectedIds, unavailable)) {
+                toast.warning(
+                    "Chọn ghế không hợp lệ",
+                    "Vui lòng không chừa trống 1 ghế lẻ ở đầu, giữa hoặc cuối dãy ghế đã chọn"
+                );
+                return;
+            }
+        }
+        onContinue();
+    };
+
     return (
         <div className="space-y-4">
-            <SeatMap showtime={showtime} selectedSeats={selectedSeats} setSelectedSeats={setSelectedSeats} />
+            <SeatMap showtime={showtime} selectedSeats={selectedSeats} setSelectedSeats={setSelectedSeats} onRowsReady={setRows} onUnavailableReady={setUnavailable} />
 
             <div className="flex items-center justify-between text-sm px-1">
                 <span className="text-base-content/60">
@@ -428,7 +448,7 @@ function StepSeats({ showtime, selectedSeats, setSelectedSeats, onContinue, onBa
                 <button
                     className="btn btn-primary flex-1"
                     disabled={selectedSeats.length === 0}
-                    onClick={onContinue}
+                    onClick={handleContinue}
                 >
                     Tiếp tục
                 </button>
@@ -913,11 +933,11 @@ function BookingSuccess({ booking }) {
                         className="btn btn-outline flex-1"
                         onClick={() => navigate("/movies")}
                     >
-                        Trở về
+                        Khám phá thêm
                     </button>
                     <button
                         className="btn btn-primary flex-1"
-                        onClick={() => {/* TODO: navigate to ticket detail */ }}
+                        onClick={() => navigate(`/bookings/${booking.booking_code}`)}
                     >
                         Xem vé
                     </button>
@@ -1057,16 +1077,14 @@ const Booking = () => {
 
     const paymentSuccess = useBookingConfirmed(user?.email, bookingCode);
 
-    const { data: holdingBookingsData, isLoading: checkingHolding } = useBookingsStatus(
-        isAuthenticated && !bookingCode ? "HOLDING" : null
-    );
+    const { data: holdingBookingsData, isPending: checkingHolding } = useHoldingBooking(isAuthenticated && !bookingCode);
 
     const { mutate: holdSeats, isPending: holding } = useHoldSeats();
     const { mutate: deleteBooking } = useDeleteBooking();
 
     useEffect(() => {
         if (!isAuthenticated || bookingCode || checkingHolding) return;
-        const holdingList = holdingBookingsData ?? [];
+        const holdingList = holdingBookingsData?.results ?? [];
         if (holdingList.length === 0) return;
 
         const holdingBooking = holdingList[0];

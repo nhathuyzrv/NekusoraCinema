@@ -12,6 +12,32 @@ const Configs = {
         T16: { label: "T16", cls: "badge-warning" },
         T18: { label: "T18", cls: "badge-error" },
     },
+    // Booking
+    BOOKING_PAGE_SIZE: 5,
+    BOOKING_STATUS_FILTERS: [
+        { label: "Đã xác nhận", value: "CONFIRMED" },
+        { label: "Chưa hoàn tất", value: "HOLDING" },
+        { label: "Đã huỷ", value: "CANCELLED" },
+        { label: "Đã hết hạn", value: "EXPIRED" },
+    ],
+    BOOKING_DAYS_FILTERS: [
+        { label: "1 tuần", value: "7" },
+        { label: "1 tháng", value: "30" },
+        { label: "3 tháng", value: "90" },
+        { label: "6 tháng", value: "180" },
+    ],
+    BOOKING_STATUS_BADGE: {
+        CONFIRMED: "badge-success",
+        CANCELLED: "badge-error",
+        EXPIRED: "badge-info",
+        HOLDING: "badge-warning",
+    },
+    BOOKING_STATUS_LABEL: {
+        HOLDING: "Chưa hoàn tất",
+        CONFIRMED: "Đã xác nhận",
+        CANCELLED: "Đã huỷ",
+        EXPIRED: "Đã hết hạn",
+    },
 };
 
 export default Configs;

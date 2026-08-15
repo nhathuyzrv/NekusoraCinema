@@ -2,6 +2,7 @@ from functools import wraps
 
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
 from nekusoraapis import settings
@@ -114,7 +115,7 @@ class PaymentStrategy:
         raise NotImplementedError
 
     @classmethod
-    def _base_payment_defaults(cls, booking, method):
+    def base_payment_defaults(cls, booking, method):
         return {
             "method": method,
             "amount": booking.final_amount,
@@ -170,7 +171,7 @@ class PayOSPayment(PaymentStrategy):
         payment, _ = Payment.objects.update_or_create(
             booking=booking,
             defaults={
-                **cls._base_payment_defaults(booking, method),
+                **cls.base_payment_defaults(booking, method),
                 "contact_email": validated_data.get("email", ""),
                 "order_code": order_code,
                 "payment_link_id": getattr(response, "payment_link_id", ""),
@@ -188,7 +189,7 @@ class MoMoPayment(PaymentStrategy):
 
     @classmethod
     def create(cls, booking, method, validated_data):
-        pass
+        raise ValidationError({'message': f'Phương thức thanh toán MOMO đang được cập nhật'})
         # import hashlib
         # import hmac
         # import requests

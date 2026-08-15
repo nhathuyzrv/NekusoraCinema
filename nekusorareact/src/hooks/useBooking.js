@@ -54,21 +54,11 @@ export function usePaymentMethods() {
     });
 }
 
-export function useBookingsStatus(status) {
-    return useQuery({
-        queryKey: ["bookings", "status", status],
-        queryFn: () => bookingService.getMyByStatus(status),
-        enabled: typeof status === "string" && status.length > 0,
-        staleTime: 0,
-    });
-}
-
 export function useBookingDetails(bookingCode) {
     return useQuery({
         queryKey: ["booking", bookingCode],
         queryFn: () => bookingService.getBooking(bookingCode),
         enabled: !!bookingCode,
-        staleTime: 1000 * 30,
     });
 }
 
