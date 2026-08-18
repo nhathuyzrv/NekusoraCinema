@@ -17,6 +17,14 @@ r.register(r'products', views.ProductViewSet, 'product')
 r.register(r'payment-methods', views.PaymentMethodViewSet, 'payment_method')
 r.register(r'payos/webhook', views.PayOSWebhookViewSet, 'payos-webhook')
 r.register(r'payments', views.PaymentViewSet, 'payment')
+r.register(r'manage/staffs', views.ManageStaffViewSet, 'mange_staff')
+r.register(r'manage/genres', views.ManageGenreViewSet, 'manage_genre')
+r.register(r'manage/movies', views.ManageMovieViewSet, 'manage_movie')
+r.register(r'manage/showtimes', views.ManageShowtimeViewSet, 'manage_showtime')
+r.register(r'manage/locations', views.ManageLocationViewSet, 'manage_location')
+r.register(r'manage/branches', views.ManageBranchViewSet, 'manage_branch')
+r.register(r'manage/rooms', views.ManageCinemaRoomViewSet, 'manage_room')
+r.register(r'manage/promotions', views.ManagePromotionViewSet, 'manage_promotion')
 
 urlpatterns = [
     path('', include(r.urls)),

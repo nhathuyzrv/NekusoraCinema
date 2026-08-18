@@ -10,6 +10,8 @@ from django.utils import timezone
 from slugify import slugify
 from django_enum import EnumField
 
+from nekusoracinema import utils
+
 
 class BaseModel(models.Model):
     active = models.BooleanField(default=True)
@@ -97,15 +99,8 @@ class PaymentStatus(Enum):
     REFUNDED = "REFUNDED"
 
 
-#TABLES
-#Tài khoản người dùng
+# TABLES
 class User(AbstractUser):
-    """
-        Tài khoản chung cho toàn hệ thống, phân biệt bằng trường `role`.
-        - CUSTOMER: khách hàng đặt vé
-        - STAFF   : nhân viên quầy / soát vé tại chi nhánh
-        - MANAGER : quản lý (quản lý phim, suất chiếu, khuyến mãi, nhân viên, báo cáo...)
-    """
     email = models.EmailField(unique=True, null=False, blank=False)
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
@@ -126,8 +121,6 @@ class User(AbstractUser):
 
 
 class StaffProfile(BaseModel):
-    """Thông tin nghiệp vụ riêng cho tài khoản Nhân viên / Quản lý."""
-
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="staff_profile")
     branch = models.ForeignKey("Branch", on_delete=models.SET_NULL, null=True, blank=True, related_name="staff_members")
     position = EnumField(StaffPosition)
@@ -137,10 +130,7 @@ class StaffProfile(BaseModel):
         return f"{self.user.username} - {self.position.value}"
 
 
-#Vị trí - Chi nhánh - Phòng chiếu - Ghế
 class Location(BaseModel):
-    """Khu vực/tỉnh-thành mà khách hàng chọn đầu tiên (vd: TP.HCM, Hà Nội)."""
-
     name = models.CharField(max_length=100, unique=True)
 
     class Meta:
@@ -151,8 +141,6 @@ class Location(BaseModel):
 
 
 class Branch(BaseModel):
-    """Rạp/chi nhánh cụ thể, thuộc một Location."""
-
     location = models.ForeignKey(Location, on_delete=models.PROTECT, related_name="branches")
     name = models.CharField(max_length=150)
     address = models.CharField(max_length=255)
@@ -168,20 +156,16 @@ class Branch(BaseModel):
 
 
 class ScreeningFormat(BaseModel):
-    """Loại hình chiếu / ngôn ngữ: 2D Lồng tiếng, 2D Phụ đề, 3D, IMAX..."""
-
-    code = models.CharField(max_length=20, unique=True)  # vd: 2D_LT, 2D_PD, 3D
-    name = models.CharField(max_length=100)  # vd: "2D Lồng tiếng"
+    code = models.CharField(max_length=20, unique=True)
+    name = models.CharField(max_length=100)
 
     def __str__(self):
         return self.name
 
 
 class CinemaRoom(BaseModel):
-    """Phòng chiếu thuộc một chi nhánh."""
-
     branch = models.ForeignKey(Branch, on_delete=models.CASCADE, related_name="rooms")
-    name = models.CharField(max_length=50)  # vd: "RẠP 1"
+    name = models.CharField(max_length=50)
     total_rows = models.PositiveSmallIntegerField(default=10)
     seats_per_row = models.PositiveSmallIntegerField(default=12)
 
@@ -193,12 +177,10 @@ class CinemaRoom(BaseModel):
 
 
 class Seat(BaseModel):
-    """Một ghế vật lý cố định trong phòng chiếu (không đổi theo suất chiếu)."""
-
     room = models.ForeignKey(CinemaRoom, on_delete=models.CASCADE, related_name="seats")
-    row_label = models.CharField(max_length=2)  # A, B, C... (tối đa 15 hàng)
-    seat_number = models.PositiveSmallIntegerField()  # 1..12
-    seat_code = models.CharField(max_length=10)  # vd: "A1" - sinh tự động = row_label+seat_number
+    row_label = models.CharField(max_length=2)
+    seat_number = models.PositiveSmallIntegerField()
+    seat_code = models.CharField(max_length=10)
 
     class Meta:
         unique_together = ("room", "row_label", "seat_number")
@@ -282,10 +264,7 @@ class Showtime(BaseModel):
     end_time = models.TimeField()
     price = models.DecimalField(max_digits=10, decimal_places=0)
     status = EnumField(ShowtimeStatus, default=ShowtimeStatus.SCHEDULED)
-    created_by = models.ForeignKey(
-        User, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name="created_showtimes",
-    )
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_showtimes")
 
     class Meta:
         unique_together = ("room", "show_date", "start_time")
@@ -296,7 +275,6 @@ class Showtime(BaseModel):
         return f"{self.movie.title} - {self.room} - {self.show_date} {self.start_time}"
 
 
-#SẢN PHẨM BẮP NƯỚC (ĐƠN LẺ / COMBO)
 class Product(BaseModel):
     name = models.CharField(max_length=150)
     description = models.TextField(blank=True)
@@ -317,7 +295,6 @@ class ComboItem(BaseModel):
         unique_together = ("combo", "item")
 
 
-#KHUYẾN MÃI
 class Promotion(BaseModel):
     code = models.CharField(max_length=30, unique=True)
     name = models.CharField(max_length=150)
@@ -328,7 +305,7 @@ class Promotion(BaseModel):
     max_discount_amount = models.DecimalField(max_digits=10, decimal_places=0, null=True, blank=True)
     start_date = models.DateTimeField()
     end_date = models.DateTimeField()
-    usage_limit = models.PositiveIntegerField(null=True, blank=True) #Để trống -> không giới hạn
+    usage_limit = models.PositiveIntegerField(null=True, blank=True)
     used_count = models.PositiveIntegerField(default=0)
     per_user_limit = models.PositiveIntegerField(default=1)
 
@@ -337,10 +314,6 @@ class Promotion(BaseModel):
 
 
 class PromotionUsage(BaseModel):
-    """
-    Ghi nhận mỗi lần 1 user dùng 1 promotion thành công (Booking CONFIRMED).
-    Chỉ tạo record này khi thanh toán thành công, không phải khi apply mã.
-    """
     promotion = models.ForeignKey(Promotion, on_delete=models.CASCADE, related_name="promotion_usages")
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_promotion_usages")
     booking = models.ForeignKey("Booking", on_delete=models.CASCADE, related_name="promotion_usage_records")
@@ -349,22 +322,11 @@ class PromotionUsage(BaseModel):
         indexes = [models.Index(fields=["promotion", "user"])]
 
 
-#ĐẶT VÉ (BOOKING)
-def generate_booking_code():
-    return uuid.uuid4().hex[:12].upper()
-
-
 class Booking(BaseModel):
-    """
-    Một đơn đặt vé cho MỘT suất chiếu (nhiều ghế/nhiều sản phẩm bên trong).
-    Đây cũng chính là "vé điện tử" tổng: booking_code dùng để sinh mã QR
-    khách xuất trình tại rạp để vào xem (cho cả nhóm nhiều người đi cùng vé).
-    """
-
     customer = models.ForeignKey(User, on_delete=models.CASCADE, related_name="customer_bookings")
     showtime = models.ForeignKey(Showtime, on_delete=models.PROTECT, related_name="showtime_bookings")
 
-    booking_code = models.CharField(max_length=20, unique=True, default=generate_booking_code)
+    booking_code = models.CharField(max_length=20, unique=True, default=utils.generate_booking_code)
     status = EnumField(BookingStatus, default=BookingStatus.HOLDING)
 
     seat_amount = models.DecimalField(max_digits=10, decimal_places=0, default=0)
@@ -391,14 +353,7 @@ class Booking(BaseModel):
 
 
 class Ticket(BaseModel):
-    """
-    Một vé = một ghế cụ thể trong một Booking.
-    Ràng buộc: 1 ghế của 1 suất chiếu chỉ được giữ/đặt bởi 1 vé đang HELD/BOOKED
-    tại một thời điểm (unique constraint có điều kiện bên dưới).
-    """
-
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="booking_tickets")
-    # Denormalize showtime để có thể ràng buộc unique (showtime, seat) ở mức DB.
     showtime = models.ForeignKey(Showtime, on_delete=models.CASCADE, related_name="showtime_tickets")
     seat = models.ForeignKey(Seat, on_delete=models.PROTECT, related_name="tickets")
     price = models.DecimalField(max_digits=10, decimal_places=0)
@@ -418,8 +373,6 @@ class Ticket(BaseModel):
 
 
 class BookingProduct(BaseModel):
-    """Sản phẩm bắp nước/combo được chọn trong một Booking (snapshot giá lúc đặt)."""
-
     booking = models.ForeignKey(Booking, on_delete=models.CASCADE, related_name="booking_products")
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
     quantity = models.PositiveSmallIntegerField(default=1)
@@ -428,8 +381,6 @@ class BookingProduct(BaseModel):
 
 
 class BookingPromotion(BaseModel):
-    """Khuyến mãi được áp dụng cho 1 Booking (chỉ được áp duụng 1 mã cho mỗi booking)."""
-
     booking = models.OneToOneField(Booking, on_delete=models.CASCADE, related_name="booking_promotion")
     promotion = models.ForeignKey(Promotion, on_delete=models.PROTECT)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=0)
@@ -439,8 +390,6 @@ class BookingPromotion(BaseModel):
 
 
 class PointTransaction(BaseModel):
-    """Lịch sử tích/dùng điểm thành viên."""
-
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_point_transactions")
     booking = models.ForeignKey(Booking, on_delete=models.SET_NULL, null=True, blank=True, related_name="booking_point_transactions")
     points = models.IntegerField(help_text="Dương = cộng điểm, Âm = trừ điểm")
@@ -448,7 +397,6 @@ class PointTransaction(BaseModel):
     description = models.CharField(max_length=255, blank=True)
 
 
-#THANH TOÁN
 class PaymentMethod(BaseModel):
     code = models.CharField(max_length=30, unique=True)
     name = models.CharField(max_length=100)
@@ -476,17 +424,7 @@ class Payment(BaseModel):
     contact_email = models.EmailField(null=True, blank=True)
 
 
-#ĐÁNH GIÁ PHIM (RATING)
 class Rating(BaseModel):
-    """
-    Đánh giá phim từ 1-10 sao.
-    Ràng buộc:
-      - unique_together(user, movie): mỗi người chỉ có 1 rating/phim (có thể sửa).
-      - verified_booking: tham chiếu đến 1 Booking đã CHECKED-IN của chính người
-        dùng cho phim này, dùng để xác thực "đã từng xem phim" trước khi cho rating
-        (kiểm tra logic ở tầng service/serializer).
-    """
-
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_ratings")
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="movie_ratings")
     verified_booking = models.ForeignKey(Booking, on_delete=models.SET_NULL, null=True, blank=True, help_text="Booking đã check-in dùng để chứng minh đủ điều kiện đánh giá.")

@@ -1,7 +1,10 @@
+from datetime import datetime, timedelta
+
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from django.core.exceptions import ValidationError
 
+from nekusoracinema import utils
 from nekusoracinema.models import *
 
 
@@ -31,11 +34,6 @@ class SimpleUserSerializer(UserLiteSerializer):
     class Meta:
         model = UserLiteSerializer.Meta.model
         fields = UserLiteSerializer.Meta.fields + ['email', 'role', 'gender', 'loyalty_points', 'date_of_birth', 'phone_number']
-        extra_kwargs = {
-            'role': {
-                'read_only': True,
-            }
-        }
 
 
 class UserSerializer(SimpleUserSerializer):
@@ -60,6 +58,11 @@ class UserSerializer(SimpleUserSerializer):
         user.username = user.email
         user.set_password(user.password)
         user.save()
+
+        if user.role in [UserRole.STAFF, UserRole.MANAGER]:
+            staff_profile = StaffProfile(user=user)
+            staff_profile.save()
+
         return user
 
 
@@ -75,6 +78,13 @@ class GenreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Genre
         fields = ['id', 'name', 'slug']
+
+
+class ManageGenreCreateUpdateSerializer(GenreSerializer):
+    class Meta:
+        model = GenreSerializer.Meta.model
+        fields = GenreSerializer.Meta.fields + ['updated_at']
+        read_only_fields = ['updated_at']
 
 
 class ActorSerializer(ImageURLMixin, serializers.ModelSerializer):
@@ -137,6 +147,13 @@ class BranchSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'location', 'address', 'phone_number', 'opening_time', 'closing_time']
 
 
+class ManageBranchUpdateSerializer(BranchSerializer):
+    class Meta:
+        model = BranchSerializer.Meta.model
+        fields = BranchSerializer.Meta.fields + ['updated_at']
+        read_only_fields = ['updated_at']
+
+
 class ScreeningFormatSerializer(serializers.ModelSerializer):
     class Meta:
         model = ScreeningFormat
@@ -147,6 +164,15 @@ class CinemaRoomSerializer(serializers.ModelSerializer):
     class Meta:
         model = CinemaRoom
         fields = ['id', 'name', 'branch', 'total_rows', 'seats_per_row']
+
+
+class ManageCinemaRoomCreateUpdateSerializer(serializers.ModelSerializer):
+    force_update = serializers.BooleanField(write_only=True, required=False, default=False)
+
+    class Meta:
+        model = CinemaRoom
+        fields = ['id', 'branch', 'name', 'total_rows', 'seats_per_row', 'active', 'updated_at', 'force_update']
+        read_only_fields = ['updated_at']
 
 
 class SeatSerializer(serializers.ModelSerializer):
@@ -219,6 +245,12 @@ class PromotionSerializer(serializers.ModelSerializer):
         return data
 
 
+class ManagePromotionCreateSerializer(PromotionSerializer):
+    class Meta:
+        model = PromotionSerializer.Meta.model
+        fields = PromotionSerializer.Meta.fields + ['start_date', 'end_date', 'usage_limit', 'per_user_limit', 'active']
+
+
 class BookingPromotionSerializer(serializers.ModelSerializer):
     promotion = PromotionSerializer(read_only=True)
 
@@ -282,3 +314,77 @@ class RedeemPointsInputSerializer(serializers.Serializer):
 class CreatePaymentInputSerializer(serializers.Serializer):
     method = serializers.IntegerField()
     email = serializers.EmailField()
+
+
+class StaffProfileSerializer(serializers.ModelSerializer):
+    user = UserSerializer(read_only=True)
+    branch = BranchSerializer(read_only=True)
+    class Meta:
+        model = StaffProfile
+        fields = ['id', 'user', 'branch', 'position', 'hire_date', 'active', 'updated_at']
+        read_only_fields = ['updated_at']
+
+
+class ManageMovieSerializer(ImageURLMixin, serializers.ModelSerializer):
+    image_fields = ['poster']
+    genres = GenreSerializer(many=True, read_only=True)
+    actors = ActorSerializer(many=True)
+
+    class Meta:
+        model = Movie
+        fields = ['id', 'title', 'poster', 'status', 'release_date', 'slug', 'updated_at', 'age_rating', 'duration', 'country', 'director', 'description', 'trailer_url', 'genres', 'actors']
+        read_only_fields = ['updated_at']
+
+
+class ManageShowtimeSerializer(serializers.ModelSerializer):
+    movie = ManageMovieSerializer(read_only=True)
+    room = CinemaRoomSerializer(read_only=True)
+    branch = BranchSerializer(source='room.branch', read_only=True)
+    screening_format = ScreeningFormatSerializer(read_only=True)
+    created_by = UserLiteSerializer(read_only=True)
+
+    class Meta:
+        model = Showtime
+        fields = ['id', 'movie', 'room', 'branch', 'screening_format', 'show_date', 'start_time', 'end_time', 'price', 'status', 'created_by', 'updated_at']
+
+
+class ManageShowtimeCreateUpdateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Showtime
+        fields = ['movie', 'room', 'screening_format', 'show_date', 'start_time', 'end_time', 'price', 'status']
+        read_only_fields = ['updated_at', 'end_time']
+
+    def validate(self, attrs):
+        movie = attrs.get('movie') or (self.instance.movie if self.instance else None)
+        room = attrs.get('room') or (self.instance.room if self.instance else None)
+        show_date = attrs.get('show_date') or (self.instance.show_date if self.instance else None)
+        start_time = attrs.get('start_time') or (self.instance.start_time if self.instance else None)
+
+        if movie and not movie.active:
+            raise serializers.ValidationError({'movie': 'Phim này đã ngừng hoạt động'})
+
+        if room and not room.active:
+            raise serializers.ValidationError({'room': 'Phòng chiếu này đã ngừng hoạt động'})
+
+        if movie and start_time:
+            today = utils.get_timezone_now().date()
+            start_dt = datetime.combine(today, start_time)
+            end_dt = start_dt + timedelta(minutes=movie.duration)
+
+            end_time = end_dt.time()
+            attrs['end_time'] = end_time
+        else:
+            end_time = getattr(self.instance, 'end_time', None)
+
+        if room and show_date and start_time and end_time:
+            query = Showtime.objects.filter(active=True, room=room, show_date=show_date, status__in=[ShowtimeStatus.SCHEDULED], start_time__lt=end_time, end_time__gt=start_time)
+
+            if self.instance:
+                query = query.exclude(pk=self.instance.pk)
+
+            if query.exists():
+                conflict = query.first()
+                raise serializers.ValidationError({'start_time': f'Khung giờ bị trùng với suất chiếu {conflict.start_time.strftime("%H:%M")}-{conflict.end_time.strftime("%H:%M")} của phim "{conflict.movie.title}" tại {room.name}'})
+
+        return attrs

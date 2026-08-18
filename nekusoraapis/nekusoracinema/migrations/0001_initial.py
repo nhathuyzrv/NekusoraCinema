@@ -8,7 +8,7 @@ import django.core.validators
 import django.db.models.deletion
 import django.utils.timezone
 import django_enum.fields
-import nekusoracinema.models
+import nekusoracinema.utils
 from django.conf import settings
 from django.db import migrations, models
 
@@ -148,7 +148,7 @@ class Migration(migrations.Migration):
                 ('active', models.BooleanField(default=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
-                ('booking_code', models.CharField(default=nekusoracinema.models.generate_booking_code, max_length=20, unique=True)),
+                ('booking_code', models.CharField(default=nekusoracinema.utils.generate_booking_code, max_length=20, unique=True)),
                 ('status', django_enum.fields.EnumCharField(choices=[('HOLDING', 'HOLDING'), ('CONFIRMED', 'CONFIRMED'), ('CANCELLED', 'CANCELLED'), ('EXPIRED', 'EXPIRED')], default='HOLDING', max_length=9)),
                 ('seat_amount', models.DecimalField(decimal_places=0, default=0, max_digits=10)),
                 ('product_amount', models.DecimalField(decimal_places=0, default=0, max_digits=10)),

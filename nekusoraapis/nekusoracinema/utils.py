@@ -7,6 +7,10 @@ from barcode.writer import ImageWriter
 from django.utils import timezone
 
 
+def generate_booking_code():
+    return uuid.uuid4().hex[:12].upper()
+
+
 def generate_otp(length=6):
     return ''.join(random.choices(string.digits, k=length))
 

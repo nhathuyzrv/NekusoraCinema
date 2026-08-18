@@ -1,5 +1,5 @@
 from rest_framework import permissions
-from nekusoracinema.models import UserRole
+from nekusoracinema.models import UserRole, StaffPosition
 
 
 class IsCustomer(permissions.BasePermission):
@@ -17,24 +17,44 @@ class IsStaff(permissions.BasePermission):
         return request.user and request.user.is_authenticated and request.user.role == UserRole.STAFF
 
 
+class IsCounterStaff(IsStaff):
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and hasattr(request.user, 'staff_profile') and request.user.staff_profile.position == StaffPosition.COUNTER_STAFF
+
+
+class IsCheckerStaff(IsStaff):
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and hasattr(request.user, 'staff_profile') and request.user.staff_profile.position == StaffPosition.CHECKER_STAFF
+
+
 class IsManager(permissions.BasePermission):
     def has_permission(self, request, view):
         return request.user and request.user.is_authenticated and request.user.role == UserRole.MANAGER
 
 
+class IsBranchManager(IsManager):
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and hasattr(request.user, 'staff_profile') and request.user.staff_profile.position == StaffPosition.BRANCH_MANAGER
+
+
+class IsSystemManager(IsManager):
+    def has_permission(self, request, view):
+        return super().has_permission(request, view) and hasattr(request.user, 'staff_profile') and request.user.staff_profile.position == StaffPosition.SYSTEM_MANAGER
+
+
 class DenyIsCustomer(IsCustomer):
     def has_permission(self, request, view):
-        return not IsCustomer.has_permission(self, request, view)
+        return not super().has_permission(request, view)
 
 
 class DenyIsStaff(IsStaff):
     def has_permission(self, request, view):
-        return not IsStaff.has_permission(self, request, view)
+        return not super().has_permission(request, view)
 
 
 class DenyIsManager(IsManager):
     def has_permission(self, request, view):
-        return not IsManager.has_permission(self, request, view)
+        return not super().has_permission(request, view)
 
 
 class RatingOwner(IsCustomer):

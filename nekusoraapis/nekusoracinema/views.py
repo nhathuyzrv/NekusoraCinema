@@ -5,11 +5,13 @@ from django.db.models.aggregates import Avg, Count
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, generics, parsers, permissions, status
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from nekusoracinema import serializers, paginators, perms, utils, tasks, services
+from nekusoracinema import serializers, paginators, perms, utils, tasks
 from nekusoracinema.models import *
 from nekusoracinema.patterns import OTP_MODE, require_holding_booking_not_expired, require_holding_booking, PAYMENT_STRATEGY
+from nekusoracinema.services import BookingService, CinemaRoomService, PromotionService
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -124,19 +126,20 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
             query = query.prefetch_related('genres','actors',
                                            Prefetch('movie_ratings', queryset=Rating.objects.filter(active=True)))
 
-        q_title = self.request.query_params.get('title')
-        if q_title:
-            query = query.filter(title__icontains=q_title)
+        if self.action in ['list']:
+            q_title = self.request.query_params.get('title')
+            if q_title:
+                query = query.filter(title__icontains=q_title)
 
-        q_status = self.request.query_params.get('status')
-        if q_status:
-            query = query.filter(status=q_status)
+            q_status = self.request.query_params.get('status')
+            if q_status:
+                query = query.filter(status=q_status)
 
-        q_genres = self.request.query_params.getlist('genre')
-        if q_genres:
-            query = (query.filter(genres__id__in=q_genres)
-                     .annotate(num_matches=Count('genres__id', distinct=True))
-                     .filter(num_matches=len(q_genres)))
+            q_genres = self.request.query_params.getlist('genre')
+            if q_genres:
+                query = (query.filter(genres__id__in=q_genres)
+                         .annotate(num_matches=Count('genres__id', distinct=True))
+                         .filter(num_matches=len(q_genres)))
 
         return query
 
@@ -176,7 +179,7 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
 
     @action(methods=['get'], url_path='showtimes', detail=True)
     def movie_showtimes_view(self, request, pk):
-        today = date.today()
+        today = utils.get_timezone_now().date()
         movie = self.get_object()
         showtimes = (movie.movie_showtimes.filter(active=True, show_date__gte=today, status__in=[ShowtimeStatus.SCHEDULED, ShowtimeStatus.COMPLETED]).order_by('start_time')
                      .select_related('screening_format', 'room__branch__location'))
@@ -215,7 +218,7 @@ class LocationViewSet(viewsets.ViewSet, generics.ListAPIView):
     @action(methods=['get'], url_path='movies', detail=True)
     def location_movies_view(self, request, pk):
         location = self.get_object()
-        today = date.today()
+        today = utils.get_timezone_now().date()
         movies = Movie.objects.filter(
             movie_showtimes__room__branch__location_id=location.pk,
             movie_showtimes__show_date__gte=today,
@@ -320,14 +323,14 @@ class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
     def create(self, request, *args, **kwargs):
         s = serializers.HoldSeatsInputSerializer(data=request.data)
         s.is_valid(raise_exception=True)
-        booking = services.create_holding_booking(request.user, s.validated_data['showtime'], s.validated_data['seats'])
+        booking = BookingService.create_holding_booking(request.user, s.validated_data['showtime'], s.validated_data['seats'])
 
         return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
 
     @require_holding_booking
     def destroy(self, request, pk=None, booking=None, *args, **kwargs):
         delete_status = BookingStatus.CANCELLED if booking.held_until >= timezone.now() else BookingStatus.EXPIRED
-        services.delete_booking(booking, delete_status)
+        BookingService.delete_booking(booking, delete_status)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(methods=['put'], url_path='products', detail=True)
@@ -336,18 +339,18 @@ class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
         s = serializers.SetProductsInputSerializer(data=request.data)
         s.is_valid(raise_exception=True)
 
-        booking = services.set_products(booking, s.validated_data['items'])
+        booking = BookingService.set_products(booking, s.validated_data['items'])
         return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_200_OK)
 
     @action(methods=['post', 'delete'], url_path='promotion', detail=True)
     @require_holding_booking_not_expired
     def promotion(self, request, pk=None, booking=None):
         if request.method == 'DELETE':
-            booking = services.remove_promotion(booking)
+            booking = BookingService.remove_promotion(booking)
         else:
             s = serializers.ApplyPromotionInputSerializer(data=request.data)
             s.is_valid(raise_exception=True)
-            booking = services.apply_promotion_code(booking, s.validated_data['code'])
+            booking = BookingService.apply_promotion(booking, s.validated_data['code'])
 
         return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_200_OK)
 
@@ -355,11 +358,11 @@ class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
     @require_holding_booking_not_expired
     def points(self, request, pk=None, booking=None):
         if request.method == 'DELETE':
-            booking = services.clear_points(booking)
+            booking = BookingService.clear_points(booking)
         else:
             s = serializers.RedeemPointsInputSerializer(data=request.data)
             s.is_valid(raise_exception=True)
-            booking = services.redeem_points(booking, s.validated_data['points'])
+            booking = BookingService.redeem_points(booking, s.validated_data['points'])
 
         return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_200_OK)
 
@@ -397,7 +400,181 @@ class PayOSWebhookViewSet(viewsets.ViewSet):
 
     def create(self, request):
         try:
-            services.handle_payos_webhook(data=request.data)
+            BookingService.handle_payos_webhook(data=request.data)
         except Exception:
             pass
         return Response(status=status.HTTP_200_OK)
+
+
+class ManageStaffViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
+    queryset = StaffProfile.objects.all().select_related('user', 'branch')
+    serializer_class = serializers.StaffProfileSerializer
+    permission_classes = [perms.IsBranchManager]
+
+    def get_queryset(self):
+        query = self.queryset
+
+        q_branch = self.request.query_params.get('branch')
+        if q_branch:
+            query = query.filter(branch_id=q_branch)
+
+        return query
+
+
+class ManageLocationViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
+    queryset = Location.objects.filter(active=True).order_by('name')
+    serializer_class = serializers.LocationSerializer
+    permission_classes = [perms.IsBranchManager]
+
+    @action(methods=['get', 'post'], url_path='branches', detail=True)
+    def manage_branches_view(self, request, pk=None):
+        location = self.get_object()
+
+        if request.method == 'POST':
+            s = serializers.BranchSerializer(data={
+                **request.data,
+                'location': location.pk
+            })
+            s.is_valid(raise_exception=True)
+            branch = s.save()
+            return Response(serializers.BranchSerializer(branch).data, status=status.HTTP_201_CREATED)
+
+        return Response(serializers.LocationSerializer(location).data, status=status.HTTP_200_OK)
+
+
+class ManageBranchViewSet(viewsets.ViewSet, generics.RetrieveUpdateAPIView):
+    queryset = Branch.objects.filter(active=True)
+    serializer_class = serializers.ManageBranchUpdateSerializer
+    permission_classes = [perms.IsBranchManager]
+
+    @action(methods=['get', 'post'], url_path='rooms', detail=True)
+    def manage_rooms_view(self, request, pk=None):
+        branch = self.get_object()
+
+        if request.method == 'POST':
+            s = serializers.ManageCinemaRoomCreateUpdateSerializer(data={
+                **request.data,
+                'branch': branch.pk
+            })
+            s.is_valid(raise_exception=True)
+            validated_data = s.validated_data
+            validated_data.pop('force_update', None)
+
+            room = CinemaRoomService.create_room(**validated_data)
+
+            return Response(serializers.CinemaRoomSerializer(room).data, status=status.HTTP_201_CREATED)
+
+        return Response(serializers.CinemaRoomSerializer(branch).data, status=status.HTTP_200_OK)
+
+
+class ManageCinemaRoomViewSet(viewsets.ViewSet, generics.RetrieveUpdateAPIView):
+    queryset = CinemaRoom.objects.all().order_by('branch')
+    serializer_class = serializers.ManageCinemaRoomCreateUpdateSerializer
+    permission_classes = [perms.IsBranchManager]
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        validated_data = serializer.validated_data
+        force_update = validated_data.pop('force_update', False)
+
+        updated_room = CinemaRoomService.update_room(room=instance, data=validated_data, force_update=force_update)
+
+        return Response(serializers.CinemaRoomSerializer(updated_room).data, status=status.HTTP_200_OK)
+
+
+class ManageGenreViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.UpdateAPIView):
+    queryset = Genre.objects.filter(active=True)
+    serializer_class = serializers.ManageGenreCreateUpdateSerializer
+    permission_classes = [perms.IsSystemManager]
+
+
+class ManageMovieViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
+    queryset = Movie.objects.filter(active=True)
+    permission_classes = [perms.IsSystemManager]
+    serializer_class = serializers.ManageMovieSerializer
+
+    def get_queryset(self):
+        query = self.queryset
+        if self.action in ['retrieve']:
+            query = query.prefetch_related('genres', 'actors')
+
+        if self.action in ['list']:
+            q_title = self.request.query_params.get('title')
+            if q_title:
+                query = query.filter(title__icontains=q_title)
+
+            q_status = self.request.query_params.get('status')
+            if q_status:
+                query = query.filter(status=q_status)
+
+        return query
+
+    @action(methods=['get', 'post'], url_path='showtimes', detail=True)
+    def manage_showtimes_view(self, request, pk=None):
+        movie = self.get_object()
+
+        if request.method == 'POST':
+            s = serializers.ManageShowtimeCreateUpdateSerializer(data={
+                **request.data,
+                'movie': movie.pk,
+            })
+            s.is_valid(raise_exception=True)
+            showtime = s.save(created_by=self.request.user)
+            return Response(serializers.ManageShowtimeSerializer(showtime).data, status=status.HTTP_201_CREATED)
+
+        showtimes = (movie.movie_showtimes.filter(active=True, show_date__gte=utils.get_timezone_now().date())
+                     .select_related('room__branch', 'screening_format', 'created_by'))
+
+        q_status = request.query_params.get('status')
+        if q_status:
+            showtimes = showtimes.filter(status=q_status)
+
+        q_date = request.query_params.get('date')
+        if q_date:
+            showtimes = showtimes.filter(show_date=q_date)
+
+        return Response(serializers.ManageShowtimeSerializer(showtimes, many=True).data, status=status.HTTP_200_OK)
+
+
+class ManageShowtimeViewSet(viewsets.ViewSet, generics.RetrieveUpdateDestroyAPIView):
+    queryset = Showtime.objects.filter(active=True)
+    permission_classes = [perms.IsSystemManager]
+    serializer_class = serializers.ManageShowtimeCreateUpdateSerializer
+
+    def perform_destroy(self, instance):
+        has_active_bookings = instance.showtime_bookings.filter(status__in=[BookingStatus.CONFIRMED, BookingStatus.HOLDING]).exists()
+        if has_active_bookings:
+            raise ValidationError({'detail': 'Không thể xoá suất chiếu đang có đơn đặt vé'})
+
+        instance.status = ShowtimeStatus.CANCELLED
+        instance.save(update_fields=['status'])
+
+
+class ManagePromotionViewSet(viewsets.ViewSet, generics.ListCreateAPIView):
+    queryset = Promotion.objects.filter(active=True).order_by('code')
+    permission_classes = [perms.IsSystemManager]
+    serializer_class = serializers.ManagePromotionCreateSerializer
+
+    def get_queryset(self):
+        query = self.queryset
+
+        q_discount_type = self.request.query_params.get('discount_type')
+        if q_discount_type:
+            query = query.filter(discount_type=q_discount_type)
+
+        return query
+
+    def create(self, request, *args, **kwargs):
+        s = self.get_serializer(data=request.data)
+        s.is_valid(raise_exception=True)
+
+        promotion = PromotionService.create_promotion(s.validated_data)
+
+        output_serializer = self.get_serializer(promotion)
+        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+
