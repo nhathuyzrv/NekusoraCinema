@@ -1241,7 +1241,7 @@ const Booking = () => {
 
     const handleDelete = async () => {
         if (!checkAuth()) return;
-        await MyAlert.alert("Hủy đặt vé", "Bạn có chắc chắn muốn hủy bỏ đơn đặt vé này?",
+        await MyAlert.alert("Hủy đặt vé", "Bạn có chắc chắn muốn hủy bỏ đơn đặt vé này? Sau khi hủy sẽ không thể hoàn tác",
             [
                 { text: "Không", style: "ghost" },
                 {
