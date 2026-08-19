@@ -388,3 +388,22 @@ class ManageShowtimeCreateUpdateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({'start_time': f'Khung giờ bị trùng với suất chiếu {conflict.start_time.strftime("%H:%M")}-{conflict.end_time.strftime("%H:%M")} của phim "{conflict.movie.title}" tại {room.name}'})
 
         return attrs
+
+
+class ManageProductSerializer(ImageURLMixin, serializers.ModelSerializer):
+    items = ProductItemInputSerializer(many=True, required=False, write_only=True)
+    combo_items = ComboItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Product
+        fields = ['id', 'name', 'description', 'image', 'price', 'product_type', 'active', 'combo_items', 'items', 'updated_at']
+        read_only_fields = ['updated_at']
+
+    def validate(self, attrs):
+        product_type = attrs.get('product_type', getattr(self.instance, 'product_type', ProductType.SINGLE))
+        items = attrs.get('items', None)
+
+        if product_type == ProductType.COMBO and not self.instance and not items:
+            raise serializers.ValidationError({'items': 'Vui lòng chọn ít nhất 1 sản phẩm đơn cho combo'})
+
+        return attrs

@@ -65,12 +65,7 @@ class SeatRedisService:
         if not channel_layer:
             return
 
-        booked = list(
-            Ticket.objects.filter(
-                showtime_id=showtime_id,
-                status=TicketStatus.BOOKED
-            ).values_list('seat_id', flat=True)
-        )
+        booked = list(Ticket.objects.filter(showtime_id=showtime_id, status=TicketStatus.BOOKED).values_list('seat_id', flat=True))
         held = cls.get_held_seat_ids(showtime_id)
 
         group_channel = async_to_sync(channel_layer.group_send)
@@ -319,7 +314,7 @@ class BookingService:
     @classmethod
     def apply_promotion(cls, booking, code):
         try:
-            promo = Promotion.objects.get(code__iexact=code.strip(), active=True)
+            promo = Promotion.objects.get(code__iexact=code.strip().upper(), active=True)
         except Promotion.DoesNotExist:
             raise ValidationError({'code': 'Mã khuyến mãi không hợp lệ'})
 
@@ -450,13 +445,13 @@ def generate_row_label(row_idx):
 class CinemaRoomService:
 
     @staticmethod
-    def check_active_showtimes(room: CinemaRoom):
+    def check_active_showtimes(room):
         today = utils.get_timezone_now().date()
         return Showtime.objects.filter(active=True, room=room, show_date__gte=today, status=ShowtimeStatus.SCHEDULED).exists()
 
     @staticmethod
     @transaction.atomic
-    def generate_seats(room: CinemaRoom):
+    def generate_seats(room):
         room.seats.all().delete()
 
         seats = []
@@ -477,7 +472,7 @@ class CinemaRoomService:
 
     @classmethod
     @transaction.atomic
-    def update_room(cls, room: CinemaRoom, data: dict, force_update=False):
+    def update_room(cls, room, data, force_update=False):
         new_total_rows = data.get('total_rows', room.total_rows)
         new_seats_per_row = data.get('seats_per_row', room.seats_per_row)
 
@@ -496,10 +491,64 @@ class CinemaRoomService:
         return room
 
 
+class ProductService:
+
+    @staticmethod
+    def save_combo_items(combo, items_data):
+        item_ids = [i['item'] for i in items_data]
+
+        single_products = {p.pk: p for p in Product.objects.filter(active=True, pk__in=item_ids, product_type=ProductType.SINGLE)}
+
+        combo_items_to_create = []
+        for entry in items_data:
+            item_id = entry['item']
+            quantity = entry.get('quantity', 1)
+
+            if item_id not in single_products:
+                raise ValidationError({'items': f'Sản phẩm đơn số {item_id} không tồn tại, đã ngừng kinh doanh hoặc không phải là sản phẩm đơn lẻ'})
+            if quantity <= 0:
+                raise ValidationError({'items': 'Số lượng sản phẩm thành phần phải lớn hơn 0'})
+
+            combo_items_to_create.append(ComboItem(combo=combo,item=single_products[item_id],quantity=quantity))
+
+        ComboItem.objects.bulk_create(combo_items_to_create)
+
+    @staticmethod
+    @transaction.atomic
+    def create_product(data):
+        data['product_type'] = ProductType.SINGLE
+        return Product.objects.create(**data)
+
+    @classmethod
+    @transaction.atomic
+    def create_combo(cls, combo_data, items_data):
+        if not items_data:
+            raise ValidationError({'items': 'Combo phải chứa ít nhất 1 sản phẩm đơn'})
+
+        combo_data['product_type'] = ProductType.COMBO
+        combo = Product.objects.create(**combo_data)
+
+        cls.save_combo_items(combo, items_data)
+        return combo
+
+    @classmethod
+    @transaction.atomic
+    def update_product(cls, product, data, items_data=None):
+        for attr, value in data.items():
+            setattr(product, attr, value)
+        product.save()
+
+        if product.product_type == ProductType.COMBO and items_data is not None:
+            product.combo_items.all().delete()
+            cls.save_combo_items(product, items_data)
+
+        return product
+
+
 class PromotionService:
 
     @staticmethod
-    def create_promotion(data: dict):
+    def create_promotion(data):
         start_date = data.get('start_date')
         end_date = data.get('end_date')
 

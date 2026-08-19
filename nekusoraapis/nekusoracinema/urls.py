@@ -24,6 +24,7 @@ r.register(r'manage/showtimes', views.ManageShowtimeViewSet, 'manage_showtime')
 r.register(r'manage/locations', views.ManageLocationViewSet, 'manage_location')
 r.register(r'manage/branches', views.ManageBranchViewSet, 'manage_branch')
 r.register(r'manage/rooms', views.ManageCinemaRoomViewSet, 'manage_room')
+r.register(r'manage/products', views.ManageProductViewSet, 'manage_product')
 r.register(r'manage/promotions', views.ManagePromotionViewSet, 'manage_promotion')
 
 urlpatterns = [

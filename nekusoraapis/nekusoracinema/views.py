@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from nekusoracinema import serializers, paginators, perms, utils, tasks
 from nekusoracinema.models import *
 from nekusoracinema.patterns import OTP_MODE, require_holding_booking_not_expired, require_holding_booking, PAYMENT_STRATEGY
-from nekusoracinema.services import BookingService, CinemaRoomService, PromotionService
+from nekusoracinema.services import BookingService, CinemaRoomService, PromotionService, ProductService
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -555,6 +555,55 @@ class ManageShowtimeViewSet(viewsets.ViewSet, generics.RetrieveUpdateDestroyAPIV
         instance.save(update_fields=['status'])
 
 
+class ManageProductViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
+    queryset = Product.objects.all().order_by('-id')
+    serializer_class = serializers.ManageProductSerializer
+    permission_classes = [perms.IsSystemManager]
+    pagination_class = paginators.ManageProductItemPaginator
+
+    def get_queryset(self):
+        query = self.queryset.prefetch_related('combo_items__item')
+
+        product_type = self.request.query_params.get('product_type')
+        if product_type:
+            query = query.filter(product_type=product_type)
+
+        active = self.request.query_params.get('active')
+        if active is not None:
+            query = query.filter(active=active)
+
+        return query
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        validated_data = serializer.validated_data
+        items_data = validated_data.pop('items', [])
+        product_type = validated_data.get('product_type', ProductType.SINGLE)
+
+        if product_type == ProductType.COMBO:
+            product = ProductService.create_combo(combo_data=validated_data, items_data=items_data)
+        else:
+            product = ProductService.create_product(data=validated_data)
+
+        return Response(self.get_serializer(product).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+
+        validated_data = serializer.validated_data
+        items_data = validated_data.pop('items', None)
+
+        updated_product = ProductService.update_product(product=instance, data=validated_data, items_data=items_data)
+
+        return Response(self.get_serializer(updated_product).data, status=status.HTTP_200_OK)
+
+
 class ManagePromotionViewSet(viewsets.ViewSet, generics.ListCreateAPIView):
     queryset = Promotion.objects.filter(active=True).order_by('code')
     permission_classes = [perms.IsSystemManager]
@@ -570,7 +619,11 @@ class ManagePromotionViewSet(viewsets.ViewSet, generics.ListCreateAPIView):
         return query
 
     def create(self, request, *args, **kwargs):
-        s = self.get_serializer(data=request.data)
+        code = request.data.get('code', '')
+        s = self.get_serializer(data={
+            **request.data,
+            'code': code.strip().upper(),
+        })
         s.is_valid(raise_exception=True)
 
         promotion = PromotionService.create_promotion(s.validated_data)

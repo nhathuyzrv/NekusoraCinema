@@ -9,3 +9,6 @@ class RatingItemPaginator(pagination.PageNumberPagination):
 
 class BookingItemPaginator(pagination.PageNumberPagination):
     page_size = 5
+
+class ManageProductItemPaginator(pagination.PageNumberPagination):
+    page_size = 10
