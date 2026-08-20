@@ -15,7 +15,7 @@ from nekusoracinema.services import BookingService, CinemaRoomService, Promotion
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
-    queryset = User.objects.filter(is_active=True)
+    queryset = User.objects.filter(is_active=True).prefetch_related('staff_profile')
     serializer_class = serializers.UserSerializer
     parser_classes = [parsers.MultiPartParser, parsers.JSONParser]
 
@@ -101,7 +101,7 @@ class AuthViewSet(viewsets.ViewSet):
 
 
 class GenreViewSet(viewsets.ViewSet, generics.ListAPIView):
-    queryset = Genre.objects.filter(active=True)
+    queryset = Genre.objects.filter(active=True).order_by('name')
     serializer_class = serializers.GenreSerializer
 
 
@@ -409,7 +409,16 @@ class PayOSWebhookViewSet(viewsets.ViewSet):
 class ManageStaffViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
     queryset = StaffProfile.objects.all().select_related('user', 'branch')
     serializer_class = serializers.StaffProfileSerializer
-    permission_classes = [perms.IsBranchManager]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return [perms.IsSystemManager()]
+        return [perms.IsManager()]
+
+    def get_serializer_class(self):
+        if self.action in ['create']:
+            return serializers.UserSerializer
+        return serializers.StaffProfileSerializer
 
     def get_queryset(self):
         query = self.queryset
@@ -418,13 +427,21 @@ class ManageStaffViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.
         if q_branch:
             query = query.filter(branch_id=q_branch)
 
+        q_position = self.request.query_params.get('position')
+        if q_position:
+            query = query.filter(position=q_position)
+
         return query
 
 
 class ManageLocationViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
     queryset = Location.objects.filter(active=True).order_by('name')
     serializer_class = serializers.LocationSerializer
-    permission_classes = [perms.IsBranchManager]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update'] or self.action in ['manage_branches_view'] and self.request.method == 'POST':
+            return [perms.IsBranchManager()]
+        return [perms.IsManager()]
 
     @action(methods=['get', 'post'], url_path='branches', detail=True)
     def manage_branches_view(self, request, pk=None):
@@ -439,13 +456,19 @@ class ManageLocationViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generi
             branch = s.save()
             return Response(serializers.BranchSerializer(branch).data, status=status.HTTP_201_CREATED)
 
-        return Response(serializers.LocationSerializer(location).data, status=status.HTTP_200_OK)
+        branches = location.branches.filter(active=True)
+
+        return Response(serializers.BranchSerializer(branches, many=True).data, status=status.HTTP_200_OK)
 
 
 class ManageBranchViewSet(viewsets.ViewSet, generics.RetrieveUpdateAPIView):
     queryset = Branch.objects.filter(active=True)
     serializer_class = serializers.ManageBranchUpdateSerializer
-    permission_classes = [perms.IsBranchManager]
+
+    def get_permissions(self):
+        if self.action in ['update', 'partial_update'] or self.action in ['manage_rooms_view'] and self.request.method == 'POST':
+            return [perms.IsBranchManager()]
+        return [perms.IsManager()]
 
     @action(methods=['get', 'post'], url_path='rooms', detail=True)
     def manage_rooms_view(self, request, pk=None):
@@ -464,7 +487,9 @@ class ManageBranchViewSet(viewsets.ViewSet, generics.RetrieveUpdateAPIView):
 
             return Response(serializers.CinemaRoomSerializer(room).data, status=status.HTTP_201_CREATED)
 
-        return Response(serializers.CinemaRoomSerializer(branch).data, status=status.HTTP_200_OK)
+        rooms = branch.rooms.filter(active=True)
+
+        return Response(serializers.CinemaRoomSerializer(rooms, many=True).data, status=status.HTTP_200_OK)
 
 
 class ManageCinemaRoomViewSet(viewsets.ViewSet, generics.RetrieveUpdateAPIView):
@@ -488,15 +513,33 @@ class ManageCinemaRoomViewSet(viewsets.ViewSet, generics.RetrieveUpdateAPIView):
 
 
 class ManageGenreViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.UpdateAPIView):
-    queryset = Genre.objects.filter(active=True)
+    queryset = Genre.objects.filter(active=True).order_by('pk')
     serializer_class = serializers.ManageGenreCreateUpdateSerializer
-    permission_classes = [perms.IsSystemManager]
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return [perms.IsSystemManager()]
+        return [perms.IsManager()]
+
+
+class ManageScreeningFormatViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.UpdateAPIView):
+    queryset = ScreeningFormat.objects.filter(active=True).order_by('pk')
+    serializer_class = serializers.ManageScreeningFormatCreateUpdateSerializer
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return [perms.IsSystemManager()]
+        return [perms.IsManager()]
 
 
 class ManageMovieViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
     queryset = Movie.objects.filter(active=True)
-    permission_classes = [perms.IsSystemManager]
     serializer_class = serializers.ManageMovieSerializer
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update'] or self.action in ['manage_showtimes_view'] and self.request.method == 'POST':
+            return [perms.IsSystemManager()]
+        return [perms.IsManager()]
 
     def get_queryset(self):
         query = self.queryset
@@ -534,6 +577,10 @@ class ManageMovieViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.
         if q_status:
             showtimes = showtimes.filter(status=q_status)
 
+        q_branch = request.query_params.get('branch')
+        if q_branch:
+            showtimes = showtimes.filter(room__branch__id=q_branch)
+
         q_date = request.query_params.get('date')
         if q_date:
             showtimes = showtimes.filter(show_date=q_date)
@@ -558,8 +605,11 @@ class ManageShowtimeViewSet(viewsets.ViewSet, generics.RetrieveUpdateDestroyAPIV
 class ManageProductViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
     queryset = Product.objects.all().order_by('-id')
     serializer_class = serializers.ManageProductSerializer
-    permission_classes = [perms.IsSystemManager]
-    pagination_class = paginators.ManageProductItemPaginator
+
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return [perms.IsSystemManager()]
+        return [perms.IsManager()]
 
     def get_queryset(self):
         query = self.queryset.prefetch_related('combo_items__item')
@@ -570,7 +620,7 @@ class ManageProductViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generic
 
         active = self.request.query_params.get('active')
         if active is not None:
-            query = query.filter(active=active)
+            query = query.filter(active=active.lower() == 'true')
 
         return query
 
@@ -606,8 +656,12 @@ class ManageProductViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generic
 
 class ManagePromotionViewSet(viewsets.ViewSet, generics.ListCreateAPIView):
     queryset = Promotion.objects.filter(active=True).order_by('code')
-    permission_classes = [perms.IsSystemManager]
     serializer_class = serializers.ManagePromotionCreateSerializer
+
+    def get_permissions(self):
+        if self.action in ['create']:
+            return [perms.IsSystemManager()]
+        return [perms.IsManager()]
 
     def get_queryset(self):
         query = self.queryset

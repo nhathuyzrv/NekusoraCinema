@@ -14,12 +14,17 @@ export function formatDate(dateStr) {
     return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
+export function formatDateTime(datetimeStr) {
+    if (!datetimeStr) return "—";
+    const d = new Date(datetimeStr);
+    return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
 export function formatShortWeekday(dateStr) {
     if (!dateStr) return "—";
     const d = new Date(dateStr);
     return d.toLocaleDateString("vi-VN", { weekday: "short" })
 }
-
 
 export function formatTimeAgo(datetimeStr) {
     if (!datetimeStr) return "-"

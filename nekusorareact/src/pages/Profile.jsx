@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useUpdateUser } from "../hooks/useUpdateUser";
 import LocalLoading from "../components/LocalLoading";
 import { useToast } from "../hooks/useToast";
+import Configs from "../configs/Configs";
 
 function calcAge(dateStr) {
     if (!dateStr) return null;
@@ -63,7 +64,7 @@ function InfoRow({ icon, label, value }) {
 }
 
 const Profile = () => {
-    const { user } = useAuth();
+    const { user, hasRole } = useAuth();
     const [avatarFile, setAvatarFile] = useState(null);
     const [avatarPreview, setAvatarPreview] = useState(null);
     const { mutate, isPending } = useUpdateUser({
@@ -150,18 +151,21 @@ const Profile = () => {
                     <LocalLoading show={isPending}>
                         <div className="bg-base-100 border border-base-300 rounded-2xl p-6 flex flex-col items-center text-center gap-3">
                             <AvatarDisplay src={displayAvatar} name={fullName} size="lg" />
-                            <div>
+                            <div className="mt-2">
                                 <p className="text-lg font-bold">{fullName}</p>
                                 <p className="text-sm text-base-content/60">{user?.email}</p>
                             </div>
-                            <span className="badge badge-primary badge-outline text-xs">
-                                {user?.role === "CUSTOMER" ? "Thành viên"
-                                    : user?.role === "STAFF" ? "Nhân viên"
-                                        : "Quản lý"}
+                            <span className="mt-2 badge badge-soft badge-primary badge-outline text-xs">
+                                {Configs.USER_ROLE_LABELS[user?.role]}
                             </span>
+                            {hasRole("STAFF", "MANAGER") &&
+                                <span className="badge badge-soft badge-secondary badge-outline text-xs">
+                                    {Configs.STAFF_POSITION_LABELS[user?.staff_profile?.position]}
+                                </span>
+                            }
                         </div>
 
-                        <div className="bg-base-100 border border-base-300 rounded-2xl p-5 mt-4">
+                        {hasRole("CUSTOMER") && <div className="bg-base-100 border border-base-300 rounded-2xl p-5 mt-4">
                             <div className="flex items-center gap-2 mb-3">
                                 <Flame size={20} className="text-primary fill-primary" />
                                 <p className="font-semibold text-md">Điểm thành viên</p>
@@ -174,7 +178,7 @@ const Profile = () => {
                                 <p>Tích lũy: <span className="font-medium text-base-content/70">10.000 vnd = 1 pt</span></p>
                                 <p>Quy đổi: <span className="font-medium text-base-content/70">2 pts = 1.000 vnd</span></p>
                             </div>
-                        </div>
+                        </div>}
 
                         <div className="bg-base-100 border border-base-300 rounded-2xl p-5 mt-4">
                             <InfoRow icon={<Mail size={15} />} label="Email" value={user?.email} />

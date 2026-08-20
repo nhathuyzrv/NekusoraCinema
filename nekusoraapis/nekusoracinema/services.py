@@ -1,6 +1,6 @@
 import redis
 from decimal import Decimal
-from datetime import timedelta, date, datetime
+from datetime import timedelta, date
 from nekusoraapis import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -202,9 +202,9 @@ class BookingService:
 
         showtime = get_object_or_404(Showtime, pk=showtime_id, active=True, status=ShowtimeStatus.SCHEDULED)
 
-        cutoff_time = (datetime.now() + timedelta(minutes=cls.VALID_BOOKING_CUTOFF_DISTANCE)).time()
-        if showtime.show_date == date.today() and showtime.start_time <= cutoff_time:
-            raise ValidationError({'start_time': f"Hệ thống ngừng nhận đặt vé trực tuyến trước suất chiếu {cls.VALID_BOOKING_CUTOFF_DISTANCE} phút, vui lòng liên hệ CSKH để được hỗ trợ"})
+        cutoff_time = (utils.get_timezone_now() + timedelta(minutes=cls.VALID_BOOKING_CUTOFF_DISTANCE)).time()
+        if showtime.show_date == utils.get_timezone_now().date() and showtime.start_time <= cutoff_time:
+            raise ValidationError({'start_time': f"Hiện tại là {utils.get_timezone_now().time().strftime("%H:%M")}. Hệ thống ngừng nhận đặt vé trực tuyến trước suất chiếu {cls.VALID_BOOKING_CUTOFF_DISTANCE} phút, vui lòng liên hệ CSKH để được hỗ trợ"})
 
         success, result = SeatRedisService.hold_seats(showtime_id, seat_ids, user.pk, ttl=SEAT_HOLD_MINUTES * 60)
         if not success:

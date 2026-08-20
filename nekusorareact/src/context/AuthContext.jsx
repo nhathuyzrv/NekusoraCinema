@@ -67,6 +67,8 @@ export function AuthProvider({ children }) {
 
     const hasRole = useCallback((...roles) => user && roles.includes(user.role), [user]);
 
+    const hasStaffPosition = useCallback((...roles) => user.staff_profile && roles.includes(user.staff_profile.position), [user]);
+
     const isAuthenticated = !!user;
 
     return (
@@ -81,6 +83,7 @@ export function AuthProvider({ children }) {
                 logout,
                 clearError,
                 hasRole,
+                hasStaffPosition,
                 refreshUser,
             }}
         >

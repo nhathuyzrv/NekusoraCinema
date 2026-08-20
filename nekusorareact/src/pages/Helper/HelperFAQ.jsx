@@ -142,7 +142,7 @@ const FAQ_DATA = [
         items: [
             {
                 q: "Tôi liên hệ hỗ trợ bằng cách nào?",
-                a: "Bạn có thể liên hệ Nekusora Cinema qua: Hotline xxxx xxxx (8:00 – 22:00 mỗi ngày), email support.nekusoracinema@gmail.com, hoặc nhắn tin qua fanpage Facebook / Zalo chính thức của rạp.",
+                a: "Bạn có thể liên hệ Nekusora Cinema qua: Hotline xxxx xxxx (8:00 - 22:00 mỗi ngày), email support.nekusoracinema@gmail.com, hoặc nhắn tin qua fanpage Facebook / Zalo chính thức của rạp.",
             },
             {
                 q: "Tôi muốn tổ chức sự kiện hoặc chiếu phim riêng tại Nekusora có được không?",

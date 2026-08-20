@@ -1,4 +1,30 @@
 const Configs = {
+    USER_ROLES: {
+        ADMIN: "ADMIN",
+        CUSTOMER: "CUSTOMER",
+        STAFF: "STAFF",
+        MANAGER: "MANAGER",
+    },
+    USER_ROLE_LABELS: {
+        ADMIN: "Quản trị viên",
+        CUSTOMER: "Thành viên",
+        STAFF: "Nhân viên",
+        MANAGER: "Quản lý",
+    },
+
+    STAFF_POSITIONS: {
+        COUNTER_STAFF: "COUNTER_STAFF",
+        CHECKER_STAFF: "CHECKER_STAFF",
+        BRANCH_MANAGER: "BRANCH_MANAGER",
+        SYSTEM_MANAGER: "SYSTEM_MANAGER",
+    },
+    STAFF_POSITION_LABELS: {
+        COUNTER_STAFF: "Nhân viên quầy vé",
+        CHECKER_STAFF: "Nhân viên soát vé",
+        BRANCH_MANAGER: "Quản lý chi nhánh",
+        SYSTEM_MANAGER: "Quản lý hệ thống",
+    },
+
     STEPS: ["Chọn suất chiếu", "Chọn ghế", "Chọn bắp/nước", "Khuyến mãi", "Xác nhận đơn", "Thanh toán"],
     MAX_SEATS: 8,
     MIN_SUBTOTAL_THRESHOLD: 10000,

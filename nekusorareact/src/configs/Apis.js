@@ -2,7 +2,6 @@ import axios from "axios";
 import Token from "./Token";
 
 export const endpoints = {
-    // Auth
     login: "/o/token/",
     logout: "/o/revoke_token/",
     users: "/users/",
@@ -12,10 +11,8 @@ export const endpoints = {
     authComplete: "/auth/complete/",
     wsTicket: "/auth/ws-ticket/",
 
-    // Thể loại phim
     genres: "/genres/",
 
-    // Phim
     movies: "/movies/",
     moviesParams: ({ search = "", genres = [], status = "" }) => {
         const params = new URLSearchParams();
@@ -29,11 +26,9 @@ export const endpoints = {
     movieRatingsPagination: (id, page = 1) => `/movies/${id}/ratings/?page=${page}`,
     movieShowtimes: (id) => `/movies/${id}/showtimes/`,
 
-    // Suất chiếu
     showtimes: "/showtimes/",
     showtimeSeats: (id) => `/showtimes/${id}/seats/`,
 
-    // Đặt vé
     bookings: "/bookings/",
     bookingDetails: (code) => `/bookings/${code}/`,
     bookingsPagination: ({ page = 1, statusFilter, days, search = "" }) => {
@@ -45,31 +40,89 @@ export const endpoints = {
         return `/bookings/?${params.toString()}`;
     },
 
-    // Vị trí & chi nhánh
     locations: "/locations/",
     locationMovies: (locationId, page) => `/locations/${locationId}/movies/?page=${page}`,
     branches: "/branches/",
 
-    // Phòng & ghế
     rooms: "/rooms/",
     roomSeats: (roomId) => `/rooms/${roomId}/seats/`,
 
-    // Sản phẩm bắp nước
     products: "/products/",
 
-    // Khuyến mãi
     validatePromotion: "/promotions/validate/",
 
-    // Lịch sử giao dịch
     transactionHistory: "/bookings/history/",
 
-    // Rating
     ratings: "/ratings/",
     ratingDetails: (id) => `/ratings/${id}/`,
 
-    // Thanh toán
     paymentMethods: "/payment-methods/",
     payments: "/payments/",
+
+    screeningFormats: "/screening-formats/",
+
+    manageStaffs: "/manage/staffs/",
+    manageStaffDetail: (id) => `/manage/staffs/${id}/`,
+    manageStaffsParams: ({ branch = "", position = "" } = {}) => {
+        const params = new URLSearchParams();
+        if (branch) params.append("branch", branch);
+        if (position) params.append("position", position);
+        return `/manage/staffs/?${params.toString()}`;
+    },
+
+    manageGenres: "/manage/genres/",
+    manageGenreDetail: (id) => `/manage/genres/${id}/`,
+
+    manageScreeningFormats: "/manage/screenings/",
+    manageScreeningFormatDetail: (id) => `/manage/screenings/${id}/`,
+
+    manageMovies: "/manage/movies/",
+    manageMovieDetail: (id) => `/manage/movies/${id}/`,
+    manageMoviesParams: ({ search = "", status = "" } = {}) => {
+        const params = new URLSearchParams();
+        if (search) params.append("title", search);
+        if (status) params.append("status", status);
+        return `/manage/movies/?${params.toString()}`;
+    },
+    manageMovieShowtimes: (movieId) => `/manage/movies/${movieId}/showtimes/`,
+    manageMovieShowtimesParams: (movieId, { status = "", date = "", branch = "" } = {}) => {
+        const params = new URLSearchParams();
+        if (status) params.append("status", status);
+        if (date) params.append("date", date);
+        if (branch) params.append("branch", branch);
+        return `/manage/movies/${movieId}/showtimes/?${params.toString()}`;
+    },
+
+    manageShowtimes: "/manage/showtimes/",
+    manageShowtimeDetail: (id) => `/manage/showtimes/${id}/`,
+
+    manageLocations: "/manage/locations/",
+    manageLocationDetail: (id) => `/manage/locations/${id}/`,
+    manageLocationBranches: (locationId) => `/manage/locations/${locationId}/branches/`,
+
+    manageBranches: "/manage/branches/",
+    manageBranchDetail: (id) => `/manage/branches/${id}/`,
+    manageBranchRooms: (branchId) => `/manage/branches/${branchId}/rooms/`,
+
+    manageRooms: "/manage/rooms/",
+    manageRoomDetail: (id) => `/manage/rooms/${id}/`,
+
+    manageProducts: "/manage/products/",
+    manageProductDetail: (id) => `/manage/products/${id}/`,
+    manageProductsParams: ({ product_type = "", active = "" } = {}) => {
+        const params = new URLSearchParams();
+        if (product_type) params.append("product_type", product_type);
+        if (active !== "") params.append("active", active);
+        return `/manage/products/?${params.toString()}`;
+    },
+
+    managePromotions: "/manage/promotions/",
+    managePromotionDetail: (id) => `/manage/promotions/${id}/`,
+    managePromotionsParams: ({ discount_type = "" } = {}) => {
+        const params = new URLSearchParams();
+        if (discount_type) params.append("discount_type", discount_type);
+        return `/manage/promotions/?${params.toString()}`;
+    },
 };
 
 const BASE_URL = 'http://127.0.0.1:8000/';

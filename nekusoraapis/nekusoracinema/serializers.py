@@ -1,12 +1,9 @@
 from datetime import datetime, timedelta
-
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from django.core.exceptions import ValidationError
-
-from nekusoracinema import utils
 from nekusoracinema.models import *
-
+from django.db import transaction
 
 class ImageURLMixin:
     image_fields = ['image']
@@ -23,23 +20,34 @@ class ImageURLMixin:
 
 
 class UserLiteSerializer(ImageURLMixin, serializers.ModelSerializer):
+    image_fields = ['avatar']
+
     class Meta:
         model = User
         fields = ['avatar', 'first_name', 'last_name']
 
 
 class SimpleUserSerializer(UserLiteSerializer):
-    image_fields = ['avatar']
-
     class Meta:
         model = UserLiteSerializer.Meta.model
         fields = UserLiteSerializer.Meta.fields + ['email', 'role', 'gender', 'loyalty_points', 'date_of_birth', 'phone_number']
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.role.value in ['MANAGER', 'STAFF']:
+            staff_profile = getattr(instance, 'staff_profile', None)
+            if staff_profile:
+                data['staff_profile'] = SimpleStaffProfileSerializer(staff_profile, context=self.context).data
+
+        return data
+
 
 class UserSerializer(SimpleUserSerializer):
+    staff_profile = serializers.JSONField(write_only=True, required=False)
+
     class Meta:
         model = SimpleUserSerializer.Meta.model
-        fields = SimpleUserSerializer.Meta.fields + ['password']
+        fields = SimpleUserSerializer.Meta.fields + ['password', 'staff_profile']
         extra_kwargs = {
             'password': {
                 'write_only': True
@@ -54,14 +62,21 @@ class UserSerializer(SimpleUserSerializer):
         return value
 
     def create(self, validated_data):
-        user = User(**validated_data)
-        user.username = user.email
-        user.set_password(user.password)
-        user.save()
+        staff_profile = validated_data.pop('staff_profile', None)
 
-        if user.role in [UserRole.STAFF, UserRole.MANAGER]:
-            staff_profile = StaffProfile(user=user)
-            staff_profile.save()
+        with transaction.atomic():
+            user = User(**validated_data)
+            user.username = user.email
+            user.set_password(user.password)
+            user.save()
+
+            if user.role in [UserRole.STAFF, UserRole.MANAGER]:
+                if not staff_profile:
+                    raise serializers.ValidationError({'staff_profile': 'Thiếu thông tin tài khoản nhân viên'})
+
+                staff_profile_serializer = SimpleStaffProfileSerializer(data=staff_profile)
+                staff_profile_serializer.is_valid(raise_exception=True)
+                staff_profile_serializer.save(user=user)
 
         return user
 
@@ -158,6 +173,13 @@ class ScreeningFormatSerializer(serializers.ModelSerializer):
     class Meta:
         model = ScreeningFormat
         fields = ['id', 'code', 'name']
+
+
+class ManageScreeningFormatCreateUpdateSerializer(ScreeningFormatSerializer):
+    class Meta:
+        model = ScreeningFormatSerializer.Meta.model
+        fields = ScreeningFormatSerializer.Meta.fields + ['updated_at']
+        read_only_fields = ['updated_at']
 
 
 class CinemaRoomSerializer(serializers.ModelSerializer):
@@ -316,13 +338,49 @@ class CreatePaymentInputSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
 
-class StaffProfileSerializer(serializers.ModelSerializer):
+class SimpleStaffProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = StaffProfile
+        fields = ['id', 'branch', 'position', 'hire_date']
+
+
+POSITION_TO_ROLE = {
+    StaffPosition.COUNTER_STAFF: UserRole.STAFF,
+    StaffPosition.CHECKER_STAFF: UserRole.STAFF,
+    StaffPosition.BRANCH_MANAGER: UserRole.MANAGER,
+    StaffPosition.SYSTEM_MANAGER: UserRole.MANAGER,
+}
+MANAGER_POSITIONS = {StaffPosition.BRANCH_MANAGER.value, StaffPosition.SYSTEM_MANAGER.value}
+
+class StaffProfileSerializer(SimpleStaffProfileSerializer):
     user = UserSerializer(read_only=True)
     branch = BranchSerializer(read_only=True)
     class Meta:
-        model = StaffProfile
-        fields = ['id', 'user', 'branch', 'position', 'hire_date', 'active', 'updated_at']
+        model = SimpleStaffProfileSerializer.Meta.model
+        fields = SimpleStaffProfileSerializer.Meta.fields + ['user', 'active', 'updated_at']
         read_only_fields = ['updated_at']
+
+    def validate(self, attrs):
+        new_position = attrs.get('position')
+        if new_position and self.instance:
+            request = self.context.get('request')
+            current_position = self.instance.position
+            is_owner = request and request.user == self.instance.user
+
+            if not is_owner and current_position in MANAGER_POSITIONS:
+                raise serializers.ValidationError({'position': 'Bạn không thể thay đổi chức danh của quản lý khác'})
+
+
+        return attrs
+
+    def update(self, instance, validated_data):
+        new_position = validated_data.get('position')
+        if new_position and new_position != instance.position:
+            new_role = POSITION_TO_ROLE.get(StaffPosition(new_position))
+            if new_role:
+                instance.user.role = new_role.value
+                instance.user.save(update_fields=['role'])
+        return super().update(instance, validated_data)
 
 
 class ManageMovieSerializer(ImageURLMixin, serializers.ModelSerializer):
@@ -367,8 +425,11 @@ class ManageShowtimeCreateUpdateSerializer(serializers.ModelSerializer):
         if room and not room.active:
             raise serializers.ValidationError({'room': 'Phòng chiếu này đã ngừng hoạt động'})
 
+        today = utils.get_timezone_now().date()
+        if show_date <= today:
+            raise ValidationError({'show_date': 'Ngày chiếu phải sau ngày hôm nay'})
+
         if movie and start_time:
-            today = utils.get_timezone_now().date()
             start_dt = datetime.combine(today, start_time)
             end_dt = start_dt + timedelta(minutes=movie.duration)
 
@@ -381,6 +442,9 @@ class ManageShowtimeCreateUpdateSerializer(serializers.ModelSerializer):
             query = Showtime.objects.filter(active=True, room=room, show_date=show_date, status__in=[ShowtimeStatus.SCHEDULED], start_time__lt=end_time, end_time__gt=start_time)
 
             if self.instance:
+                has_active_bookings = self.instance.showtime_bookings.filter(status__in=[BookingStatus.CONFIRMED, BookingStatus.HOLDING]).exists()
+                if has_active_bookings:
+                    raise ValidationError({'detail': 'Không thể chỉnh sửa chiếu đang có đơn đặt vé'})
                 query = query.exclude(pk=self.instance.pk)
 
             if query.exists():

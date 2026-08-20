@@ -583,7 +583,7 @@ const MovieDetails = () => {
                 <div className="w-full lg:w-[70%] space-y-6">
 
                     <div className="flex gap-5">
-                        <div className="hover-3d shrink-0 relative" style={{ width: 280 }}>
+                        <div className="hover-3d shrink-0 relative w-50">
                             <img
                                 src={movie.poster}
                                 alt={movie.title}

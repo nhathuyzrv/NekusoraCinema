@@ -1,4 +1,3 @@
-import uuid
 from enum import Enum
 from ckeditor.fields import RichTextField
 from cloudinary.models import CloudinaryField

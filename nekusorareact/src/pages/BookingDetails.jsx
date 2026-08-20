@@ -152,7 +152,7 @@ const BookingDetails = () => {
                 <InfoRow
                     label="Giờ chiếu"
                     value={showtime?.start_time
-                        ? `${showtime.start_time.slice(0, 5)} – ${showtime.end_time?.slice(0, 5) ?? ""}`
+                        ? `${showtime.start_time.slice(0, 5)} - ${showtime.end_time?.slice(0, 5) ?? ""}`
                         : "-"}
                 />
                 <InfoRow label="Chi nhánh" value={showtime?.branch?.name} />
