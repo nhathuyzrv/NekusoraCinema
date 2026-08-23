@@ -5,15 +5,17 @@ import {
     useCreateLocation,
     useUpdateLocation,
     useManageLocationBranches,
-    useCreateBranchForLocation,
     useUpdateBranch,
     useManageBranchRooms,
-    useCreateRoomForBranch,
     useUpdateRoom,
+    useCreateBranch,
+    useCreateRoom,
 } from "../../hooks/useManagement";
 import { useToast } from "../../hooks/useToast";
 import { useAuth } from "../../hooks/useAuth";
 import Configs from "../../configs/Configs";
+import { useNavigate } from "react-router-dom";
+import BackButton from "../../components/BackButton";
 
 const LocationFormModal = ({ location, onClose }) => {
     const isEdit = !!location;
@@ -67,7 +69,7 @@ const LocationFormModal = ({ location, onClose }) => {
 
 const BranchFormModal = ({ locationId, locationName, branch, onClose }) => {
     const isEdit = !!branch;
-    const { mutate: createBranch, isPending: createBranchPending } = useCreateBranchForLocation(locationId);
+    const { mutate: createBranch, isPending: createBranchPending } = useCreateBranch(locationId);
     const { mutate: updateBranch, isPending: updateBranchPending } = useUpdateBranch();
     const toast = useToast();
 
@@ -149,7 +151,7 @@ const BranchFormModal = ({ locationId, locationName, branch, onClose }) => {
 
 const RoomFormModal = ({ branchId, branchName, room, onClose }) => {
     const isEdit = !!room;
-    const { mutate: createRoom, isPending: createRoomPending } = useCreateRoomForBranch(branchId);
+    const { mutate: createRoom, isPending: createRoomPending } = useCreateRoom(branchId);
     const { mutate: updateRoom, isPending: updateRoomPending } = useUpdateRoom();
     const toast = useToast();
 
@@ -346,6 +348,7 @@ const LocationBranchesPanel = ({ location }) => {
 };
 
 const ManageLocations = () => {
+    const navigate = useNavigate();
     const { hasStaffPosition } = useAuth();
     const { data: locations, isLoading } = useManageLocations();
     const [locationModal, setLocationModal] = useState(null);
@@ -355,55 +358,59 @@ const ManageLocations = () => {
     const list = locations?.results || locations || [];
 
     return (
-        <div className="card bg-base-100 border border-base-200">
-            <div className="card-body p-0">
-                <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-base-200">
-                    <h2 className="text-lg font-bold">Quản Lý Chi Nhánh & Phòng Chiếu</h2>
-                    {hasStaffPosition(Configs.STAFF_POSITIONS.BRANCH_MANAGER) &&
-                        <button className="btn btn-primary btn-sm gap-1" onClick={() => setShowAddLocation(true)}>
-                            <Plus size={16} /> Thêm khu vực
-                        </button>
-                    }
-                </div>
+        <>
+            <BackButton label={"Quản lý"} onClick={() => navigate("/manage/")} />
 
-                <div className="divide-y divide-base-200 px-5 py-3 space-y-3">
-                    {isLoading ? (
-                        <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
-                    ) : list.length === 0 ? (
-                        <div className="text-center py-10 text-base-content/40">
-                            Không có khu vực nào
-                        </div>
-                    ) : list.map((loc) => (
-                        <div key={loc.id} className="border border-base-200 rounded-xl overflow-hidden">
-                            <div className="flex items-center justify-between px-4 py-3 bg-base-200/20">
-                                <button
-                                    className="flex items-center gap-2 flex-1 text-left hover:text-primary transition-colors"
-                                    onClick={() => setExpandedLocation(expandedLocation === loc.id ? null : loc.id)}
-                                >
-                                    <MapPin size={16} className="text-primary shrink-0" />
-                                    <span className="font-bold">{loc.name}</span>
-                                    <ChevronDown size={14} className={`ml-auto shrink-0 transition-transform ${expandedLocation === loc.id ? "rotate-180" : ""}`} />
-                                </button>
-                                {hasStaffPosition(Configs.STAFF_POSITIONS.BRANCH_MANAGER) &&
-                                    <button className="btn btn-ghost btn-xs ml-2" onClick={() => setLocationModal(loc)}>
-                                        <Pencil size={13} />
-                                    </button>
-                                }
+            <div className="card bg-base-100 border border-base-200">
+                <div className="card-body p-0">
+                    <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-base-200">
+                        <h2 className="text-lg font-bold">Quản Lý Chi Nhánh & Phòng Chiếu</h2>
+                        {hasStaffPosition(Configs.STAFF_POSITIONS.BRANCH_MANAGER) &&
+                            <button className="btn btn-primary btn-sm gap-1" onClick={() => setShowAddLocation(true)}>
+                                <Plus size={16} /> Thêm khu vực
+                            </button>
+                        }
+                    </div>
+
+                    <div className="divide-y divide-base-200 px-5 py-3 space-y-3">
+                        {isLoading ? (
+                            <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
+                        ) : list.length === 0 ? (
+                            <div className="text-center py-10 text-base-content/40">
+                                Không có khu vực nào
                             </div>
-
-                            {expandedLocation === loc.id && (
-                                <div className="px-4 pb-4">
-                                    <LocationBranchesPanel location={loc} />
+                        ) : list.map((loc) => (
+                            <div key={loc.id} className="border border-base-200 rounded-xl overflow-hidden">
+                                <div className="flex items-center justify-between px-4 py-3 bg-base-200/20">
+                                    <button
+                                        className="flex items-center gap-2 flex-1 text-left hover:text-primary transition-colors"
+                                        onClick={() => setExpandedLocation(expandedLocation === loc.id ? null : loc.id)}
+                                    >
+                                        <MapPin size={16} className="text-primary shrink-0" />
+                                        <span className="font-bold">{loc.name}</span>
+                                        <ChevronDown size={14} className={`ml-auto shrink-0 transition-transform ${expandedLocation === loc.id ? "rotate-180" : ""}`} />
+                                    </button>
+                                    {hasStaffPosition(Configs.STAFF_POSITIONS.BRANCH_MANAGER) &&
+                                        <button className="btn btn-ghost btn-xs ml-2" onClick={() => setLocationModal(loc)}>
+                                            <Pencil size={13} />
+                                        </button>
+                                    }
                                 </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            </div>
 
-            {showAddLocation && <LocationFormModal location={null} onClose={() => setShowAddLocation(false)} />}
-            {locationModal && <LocationFormModal location={locationModal} onClose={() => setLocationModal(null)} />}
-        </div>
+                                {expandedLocation === loc.id && (
+                                    <div className="px-4 pb-4">
+                                        <LocationBranchesPanel location={loc} />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {showAddLocation && <LocationFormModal location={null} onClose={() => setShowAddLocation(false)} />}
+                {locationModal && <LocationFormModal location={locationModal} onClose={() => setLocationModal(null)} />}
+            </div>
+        </>
     );
 };
 

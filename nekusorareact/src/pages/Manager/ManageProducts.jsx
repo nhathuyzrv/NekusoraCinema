@@ -9,6 +9,8 @@ import {
 import { useToast } from "../../hooks/useToast";
 import Configs from "../../configs/Configs";
 import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import BackButton from "../../components/BackButton";
 
 const TYPE_LABELS = {
     SINGLE: { label: "Đơn lẻ" },
@@ -221,6 +223,7 @@ const ProductFormModal = ({ productId, defaultType, onClose }) => {
 };
 
 const ManageProducts = () => {
+    const navigate = useNavigate();
     const { hasStaffPosition } = useAuth();
     const [typeFilter, setTypeFilter] = useState("");
     const [activeFilter, setActiveFilter] = useState("");
@@ -251,99 +254,103 @@ const ManageProducts = () => {
     const closeModal = () => { setShowModal(false); setModalId(null); };
 
     return (
-        <div className="card bg-base-100 border border-base-200">
-            <div className="card-body p-0">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-base-200">
-                    <h2 className="text-lg font-bold">Quản Lý Sản Phẩm & Combo</h2>
-                    {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
-                        <div className="flex gap-2">
-                            <button className="btn btn-outline btn-sm gap-1" onClick={() => openCreate("SINGLE")}>
-                                <Plus size={14} /> Sản phẩm đơn
-                            </button>
-                            <button className="btn btn-primary btn-sm gap-1" onClick={() => openCreate("COMBO")}>
-                                <Plus size={14} /> Combo
-                            </button>
-                        </div>
-                    }
-                </div>
+        <>
+            <BackButton label={"Quản lý"} onClick={() => navigate("/manage/")} />
 
-                <div className="flex flex-wrap not-sm:flex-col gap-2 px-5 py-3 border-b border-base-200">
-                    <label className="input input-sm input-bordered flex items-center gap-2 flex-1 min-w-40 py-1.5 not-sm:w-full">
-                        <Search size={14} className="text-base-content/40" />
-                        <input placeholder="Tìm sản phẩm..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="grow" />
-                        {search && <button onClick={() => setSearchInput("")}><X size={12} /></button>}
-                    </label>
-                    <select className="select select-sm select-bordered not-sm:w-full" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-                        <option value="">Tất cả loại</option>
-                        <option value="SINGLE">Đơn lẻ</option>
-                        <option value="COMBO">Combo</option>
-                    </select>
-                    <select className="select select-sm select-bordered not-sm:w-full" value={activeFilter} onChange={(e) => setActiveFilter(e.target.value)}>
-                        <option value="">Tất cả trạng thái</option>
-                        <option value="true">Đang kinh doanh</option>
-                        <option value="false">Ngừng kinh doanh</option>
-                    </select>
-                </div>
+            <div className="card bg-base-100 border border-base-200">
+                <div className="card-body p-0">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-base-200">
+                        <h2 className="text-lg font-bold">Quản Lý Sản Phẩm & Combo</h2>
+                        {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
+                            <div className="flex gap-2">
+                                <button className="btn btn-outline btn-sm gap-1" onClick={() => openCreate("SINGLE")}>
+                                    <Plus size={14} /> Sản phẩm đơn
+                                </button>
+                                <button className="btn btn-primary btn-sm gap-1" onClick={() => openCreate("COMBO")}>
+                                    <Plus size={14} /> Combo
+                                </button>
+                            </div>
+                        }
+                    </div>
 
-                <div className="overflow-x-auto">
-                    <table className="table w-full">
-                        <thead>
-                            <tr className="border-b border-base-200">
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold w-14">Ảnh</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Tên sản phẩm</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden sm:table-cell">Loại</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Giá</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden md:table-cell">Trạng thái</th>
-                                {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
-                                    <th className="py-3 px-4 w-16"></th>
-                                }
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {isLoading ? (
-                                <tr><td colSpan={6} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></td></tr>
-                            ) : list.length === 0 ? (
-                                <tr><td colSpan={6} className="text-center py-10 text-base-content/40">
-                                    Không có sản phẩm nào
-                                </td></tr>
-                            ) : list.map((p) => (
-                                <tr key={p.id} className={`hover:bg-base-200/50 ${!p.active ? "opacity-40" : ""}`}>
-                                    <td className="py-2 px-4">
-                                        {p.image
-                                            ? <img src={p.image} alt={p.name} className="w-10 h-10 object-cover rounded-lg" />
-                                            : <div className="w-10 h-10 bg-base-300 rounded-lg flex items-center justify-center"><ShoppingBag size={14} className="opacity-30" /></div>
-                                        }
-                                    </td>
-                                    <td className="py-3 px-4">
-                                        <p className="font-semibold text-sm">{p.name}</p>
-                                        {p.description && <p className="text-xs text-base-content/50 line-clamp-1">{p.description}</p>}
-                                    </td>
-                                    <td className="py-3 px-4 hidden sm:table-cell">
-                                        <span>{TYPE_LABELS[p.product_type]?.label}</span>
-                                    </td>
-                                    <td className="py-3 px-4 text-sm font-mono">{Number(p.price).toLocaleString("vi-VN")}đ</td>
-                                    <td className="py-3 px-4 hidden md:table-cell">
-                                        {p.active
-                                            ? <span className="flex items-center gap-1 text-success text-xs">Kinh doanh</span>
-                                            : <span className="flex items-center gap-1 text-base-content/70 text-xs">Ngừng kinh doanh</span>
-                                        }
-                                    </td>
+                    <div className="flex flex-wrap not-sm:flex-col gap-2 px-5 py-3 border-b border-base-200">
+                        <label className="input input-sm input-bordered flex items-center gap-2 flex-1 min-w-40 py-1.5 not-sm:w-full">
+                            <Search size={14} className="text-base-content/40" />
+                            <input placeholder="Tìm sản phẩm..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="grow" />
+                            {search && <button onClick={() => setSearchInput("")}><X size={12} /></button>}
+                        </label>
+                        <select className="select select-sm select-bordered not-sm:w-full" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+                            <option value="">Tất cả loại</option>
+                            <option value="SINGLE">Đơn lẻ</option>
+                            <option value="COMBO">Combo</option>
+                        </select>
+                        <select className="select select-sm select-bordered not-sm:w-full" value={activeFilter} onChange={(e) => setActiveFilter(e.target.value)}>
+                            <option value="">Tất cả trạng thái</option>
+                            <option value="true">Đang kinh doanh</option>
+                            <option value="false">Ngừng kinh doanh</option>
+                        </select>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="table w-full">
+                            <thead>
+                                <tr className="border-b border-base-200">
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold w-14">Ảnh</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Tên sản phẩm</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden sm:table-cell">Loại</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Giá</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden md:table-cell">Trạng thái</th>
                                     {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
-                                        <td className="py-3 px-4">
-                                            <button className="btn btn-ghost btn-xs" onClick={() => openEdit(p.id)}>
-                                                <Pencil size={13} />
-                                            </button>
-                                        </td>
+                                        <th className="py-3 px-4 w-16"></th>
                                     }
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {isLoading ? (
+                                    <tr><td colSpan={6} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></td></tr>
+                                ) : list.length === 0 ? (
+                                    <tr><td colSpan={6} className="text-center py-10 text-base-content/40">
+                                        Không có sản phẩm nào
+                                    </td></tr>
+                                ) : list.map((p) => (
+                                    <tr key={p.id} className={`hover:bg-base-200/50 ${!p.active ? "opacity-40" : ""}`}>
+                                        <td className="py-2 px-4">
+                                            {p.image
+                                                ? <img src={p.image} alt={p.name} className="w-10 h-10 object-cover rounded-lg" />
+                                                : <div className="w-10 h-10 bg-base-300 rounded-lg flex items-center justify-center"><ShoppingBag size={14} className="opacity-30" /></div>
+                                            }
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <p className="font-semibold text-sm">{p.name}</p>
+                                            {p.description && <p className="text-xs text-base-content/50 line-clamp-1">{p.description}</p>}
+                                        </td>
+                                        <td className="py-3 px-4 hidden sm:table-cell">
+                                            <span>{TYPE_LABELS[p.product_type]?.label}</span>
+                                        </td>
+                                        <td className="py-3 px-4 text-sm font-mono">{Number(p.price).toLocaleString("vi-VN")}đ</td>
+                                        <td className="py-3 px-4 hidden md:table-cell">
+                                            {p.active
+                                                ? <span className="flex items-center gap-1 text-success text-xs">Kinh doanh</span>
+                                                : <span className="flex items-center gap-1 text-base-content/70 text-xs">Ngừng kinh doanh</span>
+                                            }
+                                        </td>
+                                        {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
+                                            <td className="py-3 px-4">
+                                                <button className="btn btn-ghost btn-xs" onClick={() => openEdit(p.id)}>
+                                                    <Pencil size={13} />
+                                                </button>
+                                            </td>
+                                        }
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
 
-            {showModal && <ProductFormModal productId={modalId} defaultType={defaultType} onClose={closeModal} />}
-        </div>
+                {showModal && <ProductFormModal productId={modalId} defaultType={defaultType} onClose={closeModal} />}
+            </div>
+        </>
     );
 };
 

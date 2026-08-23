@@ -10,10 +10,10 @@ class ImageURLMixin:
     def to_representation(self, instance):
         data = super().to_representation(instance)
         for field in getattr(self, 'image_fields', []):
-            image_attr = getattr(instance, field, None)
-            if image_attr and hasattr(image_attr, 'url'):
+            image = getattr(instance, field, None)
+            if image and hasattr(image, 'url'):
                 try:
-                    data[field] = image_attr.url
+                    data[field] = image.url
                 except ValueError:
                     data[field] = None
         return data
@@ -57,8 +57,8 @@ class UserSerializer(SimpleUserSerializer):
     def validate_password(self, value):
         try:
             validate_password(password=value)
-        except ValidationError as e:
-            raise serializers.ValidationError(list(e.messages))
+        except ValidationError as exc:
+            raise serializers.ValidationError(list(exc.messages))
         return value
 
     def create(self, validated_data):
@@ -74,9 +74,9 @@ class UserSerializer(SimpleUserSerializer):
                 if not staff_profile:
                     raise serializers.ValidationError({'staff_profile': 'Thiếu thông tin tài khoản nhân viên'})
 
-                staff_profile_serializer = SimpleStaffProfileSerializer(data=staff_profile)
-                staff_profile_serializer.is_valid(raise_exception=True)
-                staff_profile_serializer.save(user=user)
+                s = SimpleStaffProfileSerializer(data=staff_profile)
+                s.is_valid(raise_exception=True)
+                s.save(user=user)
 
         return user
 
@@ -350,7 +350,6 @@ POSITION_TO_ROLE = {
     StaffPosition.BRANCH_MANAGER: UserRole.MANAGER,
     StaffPosition.SYSTEM_MANAGER: UserRole.MANAGER,
 }
-MANAGER_POSITIONS = {StaffPosition.BRANCH_MANAGER.value, StaffPosition.SYSTEM_MANAGER.value}
 
 class StaffProfileSerializer(SimpleStaffProfileSerializer):
     user = UserSerializer(read_only=True)
@@ -361,24 +360,23 @@ class StaffProfileSerializer(SimpleStaffProfileSerializer):
         read_only_fields = ['updated_at']
 
     def validate(self, attrs):
-        new_position = attrs.get('position')
-        if new_position and self.instance:
+        updated_position = attrs.get('position')
+        if updated_position and self.instance:
             request = self.context.get('request')
-            current_position = self.instance.position
-            is_owner = request and request.user == self.instance.user
+            cur_position = self.instance.position
+            is_self = request and request.user == self.instance.user
 
-            if not is_owner and current_position in MANAGER_POSITIONS:
-                raise serializers.ValidationError({'position': 'Bạn không thể thay đổi chức danh của quản lý khác'})
-
+            if not is_self and cur_position in [StaffPosition.BRANCH_MANAGER, StaffPosition.SYSTEM_MANAGER]:
+                raise serializers.ValidationError({'position': 'Bạn không thể thay đổi thông tin của quản lý khác'})
 
         return attrs
 
     def update(self, instance, validated_data):
-        new_position = validated_data.get('position')
-        if new_position and new_position != instance.position:
-            new_role = POSITION_TO_ROLE.get(StaffPosition(new_position))
-            if new_role:
-                instance.user.role = new_role.value
+        updated_position = validated_data.get('position')
+        if updated_position and updated_position != instance.position:
+            mapped_role = POSITION_TO_ROLE.get(StaffPosition(updated_position))
+            if mapped_role:
+                instance.user.role = mapped_role.value
                 instance.user.save(update_fields=['role'])
         return super().update(instance, validated_data)
 
@@ -442,8 +440,8 @@ class ManageShowtimeCreateUpdateSerializer(serializers.ModelSerializer):
             query = Showtime.objects.filter(active=True, room=room, show_date=show_date, status__in=[ShowtimeStatus.SCHEDULED], start_time__lt=end_time, end_time__gt=start_time)
 
             if self.instance:
-                has_active_bookings = self.instance.showtime_bookings.filter(status__in=[BookingStatus.CONFIRMED, BookingStatus.HOLDING]).exists()
-                if has_active_bookings:
+                has_bookings = self.instance.showtime_bookings.filter(status__in=[BookingStatus.CONFIRMED, BookingStatus.HOLDING]).exists()
+                if has_bookings:
                     raise ValidationError({'detail': 'Không thể chỉnh sửa chiếu đang có đơn đặt vé'})
                 query = query.exclude(pk=self.instance.pk)
 
@@ -464,10 +462,10 @@ class ManageProductSerializer(ImageURLMixin, serializers.ModelSerializer):
         read_only_fields = ['updated_at']
 
     def validate(self, attrs):
-        product_type = attrs.get('product_type', getattr(self.instance, 'product_type', ProductType.SINGLE))
+        ptype = attrs.get('product_type', getattr(self.instance, 'product_type', ProductType.SINGLE))
         items = attrs.get('items', None)
 
-        if product_type == ProductType.COMBO and not self.instance and not items:
+        if ptype == ProductType.COMBO and not self.instance and not items:
             raise serializers.ValidationError({'items': 'Vui lòng chọn ít nhất 1 sản phẩm đơn cho combo'})
 
         return attrs

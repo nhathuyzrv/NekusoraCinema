@@ -355,7 +355,7 @@ function RegisterForm({ hook, onSwitch }) {
                 <label className="label cursor-pointer justify-start gap-2">
                     <input type="checkbox" className="checkbox checkbox-sm checkbox-primary"
                         checked={agree} onChange={() => setAgree(p => !p)} disabled={hook.loading} />
-                    <span className="label-text text-sm whitespace-normal">
+                    <span className="label-text text-xs sm:text-sm whitespace-normal">
                         Bằng việc đăng ký, tôi đồng ý với <Link to="/terms" className="font-semibold text-info/80 hover:underline hover:underline-offset-3">Điều khoản dịch vụ</Link> và <Link to="/privacy" className="font-medium text-info/80 hover:underline hover:underline-offset-3">Chính sách bảo mật</Link>
                     </span>
                 </label>
@@ -405,7 +405,7 @@ function StepEmail({ hook }) {
                     <Mail size={28} className="text-primary" />
                 </div>
                 <p className="text-sm text-base-content/60 text-center">
-                    Nhập địa chỉ email để nhận mã OTP
+                    Nhập địa chỉ email của tài khoản để nhận mã OTP
                 </p>
             </div>
             <ServerError msg={hook.error} />

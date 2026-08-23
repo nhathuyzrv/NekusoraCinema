@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Pencil, X, Loader2, Search } from "lucide-react";
 import {
     useManageStaffs,
@@ -13,6 +13,8 @@ import { formatDate } from "../../utils/DateTime";
 import Configs from "../../configs/Configs";
 import { useAuth } from "../../hooks/useAuth";
 import MyAlert from "../../configs/MyAlert";
+import { useNavigate } from "react-router-dom";
+import BackButton from "../../components/BackButton";
 
 const POSITION_CLS = {
     COUNTER_STAFF: "badge-info",
@@ -53,7 +55,7 @@ const StaffFormModal = ({ staff, onClose }) => {
     const { user: currentUser } = useAuth();
     const toast = useToast();
 
-    const [selectedLocation, setSelectedLocation] = useState(staff?.branch?.location?.id || "");
+    const [selectedLocation, setSelectedLocation] = useState(staff?.branch?.location || "");
     const [form, setForm] = useState(() => {
         if (isEdit) {
             return {
@@ -221,7 +223,7 @@ const StaffFormModal = ({ staff, onClose }) => {
 };
 
 const ManageStaffs = () => {
-    const { hasStaffPosition } = useAuth();
+    const navigate = useNavigate();
     const [search, setSearch] = useState("");
     const [searchInput, setSearchInput] = useState("");
     const [branchFilter, setBranchFilter] = useState("");
@@ -236,129 +238,119 @@ const ManageStaffs = () => {
         return () => clearTimeout(timer);
     }, [searchInput])
 
-    const staffParams = useMemo(
-        () => ({ branch: branchFilter, position: positionFilter }),
-        [branchFilter, positionFilter]
-    );
-    const { data: staffs, isLoading } = useManageStaffs(staffParams);
+    const { data: staffs, isLoading } = useManageStaffs({ search, branch: branchFilter, position: positionFilter });
     const { data: branches } = useBranches();
 
 
-    const list = (staffs?.results || staffs || []).filter((s) => {
-        if (!search) return true;
-        const fullName = `${s.user?.last_name} ${s.user?.first_name}`.toLowerCase();
-        return fullName.includes(search.toLowerCase()) || s.user?.email?.includes(search);
-    });
+    const list = staffs?.results || staffs || [];
 
     const openEdit = (staff) => { setEditStaff(staff); setShowModal(true); };
     const openCreate = () => { setEditStaff(null); setShowModal(true); };
     const closeModal = () => { setShowModal(false); setEditStaff(null); };
 
     return (
-        <div className="card bg-base-100 border border-base-200">
-            <div className="card-body p-0">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-base-200">
-                    <h2 className="text-lg font-bold">Quản lý nhân viên</h2>
-                    {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
+        <>
+            <BackButton label={"Quản lý"} onClick={() => navigate("/manage/")} />
+
+            <div className="card bg-base-100 border border-base-200">
+                <div className="card-body p-0">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-base-200">
+                        <h2 className="text-lg font-bold">Quản lý nhân viên</h2>
                         <button className="btn btn-primary btn-sm gap-1" onClick={openCreate}>
                             <Plus size={16} />
                         </button>
-                    }
-                </div>
+                    </div>
 
-                <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-base-200">
-                    <label className="input input-sm input-bordered flex items-center gap-2 flex-1 min-w-48 not-sm:w-full">
-                        <Search size={14} className="text-base-content/40" />
-                        <input placeholder="Tìm theo tên, email..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="grow" />
-                        {search && <button onClick={() => setSearchInput("")}><X size={12} /></button>}
-                    </label>
-                    <select className="select select-sm select-bordered not-sm:w-full" value={positionFilter} onChange={(e) => setPositionFilter(e.target.value)}>
-                        <option value="">Tất cả chức danh</option>
-                        {Object.entries(Configs.STAFF_POSITION_LABELS).map(([k, v]) => (
-                            <option key={k} value={k}>{v}</option>
-                        ))}
-                    </select>
-                    <select className="select select-sm select-bordered not-sm:w-full" value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
-                        <option value="">Tất cả chi nhánh</option>
-                        {(branches?.results || branches || []).map((b) => (
-                            <option key={b.id} value={b.id}>{b.name}</option>
-                        ))}
-                    </select>
-                </div>
+                    <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-base-200">
+                        <label className="input input-sm input-bordered flex items-center gap-2 flex-1 min-w-48 not-sm:w-full">
+                            <Search size={14} className="text-base-content/40" />
+                            <input placeholder="Tìm theo tên, email..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="grow" />
+                            {search && <button onClick={() => setSearchInput("")}><X size={12} /></button>}
+                        </label>
+                        <select className="select select-sm select-bordered not-sm:w-full" value={positionFilter} onChange={(e) => setPositionFilter(e.target.value)}>
+                            <option value="">Tất cả chức danh</option>
+                            {Object.entries(Configs.STAFF_POSITION_LABELS).map(([k, v]) => (
+                                <option key={k} value={k}>{v}</option>
+                            ))}
+                        </select>
+                        <select className="select select-sm select-bordered not-sm:w-full" value={branchFilter} onChange={(e) => setBranchFilter(e.target.value)}>
+                            <option value="">Tất cả chi nhánh</option>
+                            {(branches?.results || branches || []).map((b) => (
+                                <option key={b.id} value={b.id}>{b.name}</option>
+                            ))}
+                        </select>
+                    </div>
 
-                <div className="overflow-x-auto">
-                    <table className="table w-full">
-                        <thead>
-                            <tr className="border-b border-base-200">
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Nhân viên</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Chức danh</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden md:table-cell">Chi nhánh</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden lg:table-cell">Ngày vào làm</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Trạng thái</th>
-                                {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
+                    <div className="overflow-x-auto">
+                        <table className="table w-full">
+                            <thead>
+                                <tr className="border-b border-base-200">
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Nhân viên</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Chức danh</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden md:table-cell">Chi nhánh</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden lg:table-cell">Ngày vào làm</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Trạng thái</th>
                                     <th className="py-3 px-4 w-16"></th>
-                                }
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {isLoading ? (
-                                <tr><td colSpan={6} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></td></tr>
-                            ) : list.length === 0 ? (
-                                <tr><td colSpan={6} className="text-center py-10 text-base-content/40">
-                                    Không có nhân viên nào
-                                </td></tr>
-                            ) : list.map((s) => (
-                                <tr key={s.id} className={`hover:bg-base-200/50 ${!s.active ? "opacity-50" : ""}`}>
-                                    <td className="py-3 px-4">
-                                        <div className="flex items-center gap-3">
-                                            {s.user?.avatar ? (
-                                                <img src={s.user.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
-                                            ) : (
-                                                <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                                                    <span className="text-xs font-bold text-primary">
-                                                        {(s.user?.first_name || s.user?.email || "?")[0].toUpperCase()}
-                                                    </span>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {isLoading ? (
+                                    <tr><td colSpan={6} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></td></tr>
+                                ) : list.length === 0 ? (
+                                    <tr><td colSpan={6} className="text-center py-10 text-base-content/40">
+                                        Không có nhân viên nào
+                                    </td></tr>
+                                ) : list.map((s) => (
+                                    <tr key={s.id} className={`hover:bg-base-200/50 ${!s.active ? "opacity-50" : ""}`}>
+                                        <td className="py-3 px-4">
+                                            <div className="flex items-center gap-3">
+                                                {s.user?.avatar ? (
+                                                    <img src={s.user.avatar} alt="" className="w-8 h-8 rounded-full object-cover" />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                                                        <span className="text-xs font-bold text-primary">
+                                                            {(s.user?.first_name || s.user?.email || "?")[0].toUpperCase()}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <p className="font-semibold text-sm">
+                                                        {s.user?.last_name} {s.user?.first_name}
+                                                    </p>
+                                                    <p className="text-xs text-base-content/50">{s.user?.email}</p>
                                                 </div>
-                                            )}
-                                            <div>
-                                                <p className="font-semibold text-sm">
-                                                    {s.user?.last_name} {s.user?.first_name}
-                                                </p>
-                                                <p className="text-xs text-base-content/50">{s.user?.email}</p>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="py-3 px-4">
-                                        <span className={`badge badge-sm badge-soft ${POSITION_CLS[s.position]}`}>
-                                            {Configs.STAFF_POSITION_LABELS[s.position]}
-                                        </span>
-                                    </td>
-                                    <td className="py-3 px-4 text-sm hidden md:table-cell">
-                                        {s.branch?.name || <span className="text-base-content/40">Chưa phân công</span>}
-                                    </td>
-                                    <td className="py-3 px-4 text-sm hidden lg:table-cell">{formatDate(s.hire_date)}</td>
-                                    <td className="py-3 px-4">
-                                        {s.active
-                                            ? <span className="badge badge-sm badge-soft badge-success">Hoạt động</span>
-                                            : <span className="badge badge-sm badge-ghost">Vô hiệu</span>
-                                        }
-                                    </td>
-                                    {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <span className={`badge badge-xs sm:badge-sm badge-soft ${POSITION_CLS[s.position]}`}>
+                                                {Configs.STAFF_POSITION_LABELS[s.position]}
+                                            </span>
+                                        </td>
+                                        <td className="py-3 px-4 text-sm hidden md:table-cell">
+                                            {s.branch?.name || <span className="text-base-content/40">Chưa phân công</span>}
+                                        </td>
+                                        <td className="py-3 px-4 text-sm hidden lg:table-cell">{formatDate(s.hire_date)}</td>
+                                        <td className="py-3 px-4">
+                                            {s.active
+                                                ? <span className="badge badge-xs sm:badge-sm badge-soft badge-success">Hoạt động</span>
+                                                : <span className="badge badge-xs sm:badge-sm badge-ghost">Vô hiệu</span>
+                                            }
+                                        </td>
                                         <td className="py-3 px-4">
                                             <button className="btn btn-ghost btn-xs" onClick={() => openEdit(s)}>
                                                 <Pencil size={13} />
                                             </button>
                                         </td>
-                                    }
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
 
-            {showModal && <StaffFormModal staff={editStaff} onClose={closeModal} />}
-        </div>
+                {showModal && <StaffFormModal staff={editStaff} onClose={closeModal} />}
+            </div>
+        </>
     );
 };
 

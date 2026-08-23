@@ -63,8 +63,9 @@ export const endpoints = {
 
     manageStaffs: "/manage/staffs/",
     manageStaffDetail: (id) => `/manage/staffs/${id}/`,
-    manageStaffsParams: ({ branch = "", position = "" } = {}) => {
+    manageStaffsParams: ({ search = "", branch = "", position = "" } = {}) => {
         const params = new URLSearchParams();
+        if (search) params.append("search", search);
         if (branch) params.append("branch", branch);
         if (position) params.append("position", position);
         return `/manage/staffs/?${params.toString()}`;

@@ -162,7 +162,7 @@ const Home = () => {
                                 <p key={`eyebrow-${activeSlide}`} className="hero-fade-up text-xs font-semibold uppercase tracking-widest text-secondary mb-3">
                                     {currentSlide.genre}
                                 </p>
-                                <h1 key={`title-${activeSlide}`} className="hero-fade-up delay-100 font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-base-100 leading-tight mb-3">
+                                <h1 key={`title-${activeSlide}`} className="hero-fade-up delay-100 text-3xl sm:text-4xl lg:text-5xl font-bold text-base-100 leading-tight mb-3">
                                     {currentSlide.title}
                                 </h1>
                                 {currentSlide.note && (
@@ -253,7 +253,7 @@ const Home = () => {
                                 <MovieCardSkeleton key={i} />
                             ))
                             : nowShowing.length === 0
-                                ? <p className="col-span-4 text-center py-10 text-base-content/50">Chưa có phim đang chiếu.</p>
+                                ? <p className="col-span-4 text-center py-10 text-base-content/50">Chưa có phim đang chiếu</p>
                                 : nowShowing.map((m) => <MovieCardHome key={m.id} movie={m} />)
                         }
                     </div>
@@ -272,7 +272,7 @@ const Home = () => {
                                 </div>
                             ))
                             : comingSoon.length === 0
-                                ? <p className="text-base-content/50 py-10">Chưa có phim sắp chiếu.</p>
+                                ? <p className="text-base-content/50 py-10">Chưa có phim sắp chiếu</p>
                                 : comingSoon.map((m) => <ComingSoonCard key={m.id} movie={m} />)
                         }
                     </div>

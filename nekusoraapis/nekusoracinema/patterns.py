@@ -1,10 +1,10 @@
 from functools import wraps
-
+import hashlib
+import hmac
+import requests
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
-
 from nekusoraapis import settings
 from nekusoracinema import serializers
 from nekusoracinema.models import *
@@ -189,63 +189,58 @@ class MoMoPayment(PaymentStrategy):
 
     @classmethod
     def create(cls, booking, method, validated_data):
-        raise ValidationError({'message': f'Phương thức thanh toán MOMO đang được cập nhật'})
-        # import hashlib
-        # import hmac
-        # import requests
-        #
-        # endpoint = "https://payment.momo.vn/v2/gateway/api/create"
-        # partner_code = settings.MOMO_PARTNER_CODE
-        # access_key = settings.MOMO_ACCESS_KEY
-        # secret_key = settings.MOMO_SECRET_KEY
-        #
-        # request_id = f"{booking.booking_code}_{int(timezone.now().timestamp())}"
-        # order_id = request_id
-        # amount = str(int(booking.final_amount))
-        # order_info = f"Thanh toan ve xem phim {booking.booking_code}"
-        # redirect_url = validated_data.get("return_url", settings.MOMO_RETURN_URL)
-        # ipn_url = settings.MOMO_IPN_URL
-        # request_type = "captureWallet"
-        # extra_data = ""
-        #
-        # raw = (
-        #     f"accessKey={access_key}&amount={amount}&extraData={extra_data}"
-        #     f"&ipnUrl={ipn_url}&orderId={order_id}&orderInfo={order_info}"
-        #     f"&partnerCode={partner_code}&redirectUrl={redirect_url}"
-        #     f"&requestId={request_id}&requestType={request_type}"
-        # )
-        #
-        # signature = hmac.new(secret_key.encode(), raw.encode(), hashlib.sha256).hexdigest()
-        #
-        # payload = {
-        #     "partnerCode": partner_code,
-        #     "accessKey": access_key,
-        #     "requestId": request_id,
-        #     "amount": amount,
-        #     "orderId": order_id,
-        #     "orderInfo": order_info,
-        #     "redirectUrl": redirect_url,
-        #     "ipnUrl": ipn_url,
-        #     "extraData": extra_data,
-        #     "requestType": request_type,
-        #     "signature": signature,
-        #     "lang": "vi",
-        # }
-        #
-        # response = requests.post(endpoint, json=payload, timeout=10).json()
-        #
-        # payment, _ = Payment.objects.update_or_create(
-        #     booking=booking,
-        #     defaults={
-        #         **cls._base_payment_defaults(booking, method),
-        #         "checkout_url": response.get("payUrl", ""),
-        #         "deeplink": response.get("deeplink", ""),
-        #         "qr_code_url": response.get("qrCodeUrl", ""),
-        #         "expired_at": timezone.now() + timedelta(minutes=15),
-        #         "provider_response": response,
-        #     }
-        # )
-        # return payment
+        endpoint = settings.MOMO_BASE_URL
+        partner_code = settings.MOMO_PARTNER_CODE
+        access_key = settings.MOMO_ACCESS_KEY
+        secret_key = settings.MOMO_SECRET_KEY
+
+        request_id = f"{booking.booking_code}_{int(timezone.now().timestamp())}"
+        order_id = request_id
+        amount = str(int(booking.final_amount))
+        order_info = f"NEKUSORA {booking.booking_code}"
+        redirect_url = validated_data.get("return_url", settings.MOMO_RETURN_URL)
+        ipn_url = settings.MOMO_IPN_URL
+        request_type = "captureWallet"
+        extra_data = ""
+
+        raw = (
+            f"accessKey={access_key}&amount={amount}&extraData={extra_data}"
+            f"&ipnUrl={ipn_url}&orderId={order_id}&orderInfo={order_info}"
+            f"&partnerCode={partner_code}&redirectUrl={redirect_url}"
+            f"&requestId={request_id}&requestType={request_type}"
+        )
+
+        signature = hmac.new(secret_key.encode(), raw.encode(), hashlib.sha256).hexdigest()
+
+        payload = {
+            "partnerCode": partner_code,
+            "accessKey": access_key,
+            "requestId": request_id,
+            "amount": amount,
+            "orderId": order_id,
+            "orderInfo": order_info,
+            "redirectUrl": redirect_url,
+            "ipnUrl": ipn_url,
+            "extraData": extra_data,
+            "requestType": request_type,
+            "signature": signature,
+            "lang": "vi",
+        }
+
+        response = requests.post(endpoint, json=payload, timeout=10).json()
+
+        payment, _ = Payment.objects.update_or_create(
+            booking=booking,
+            defaults={
+                **cls._base_payment_defaults(booking, method),
+                "checkout_url": response.get("payUrl", ""),
+                "deeplink": response.get("deeplink", ""),
+                "qr_code_url": response.get("qrCodeUrl", ""),
+                "expired_at": booking.held_until,
+                "provider_response": response,
+            }
+        )
+        return payment
 
 
 PAYMENT_STRATEGY = {cls.method_code: cls for cls in [PayOSPayment, MoMoPayment]}

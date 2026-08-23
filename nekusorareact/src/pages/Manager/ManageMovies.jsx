@@ -11,6 +11,8 @@ import { useToast } from "../../hooks/useToast";
 import { formatDate } from "../../utils/DateTime";
 import Configs from "../../configs/Configs";
 import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import BackButton from "../../components/BackButton";
 
 const STATUS_LABELS = {
     COMING_SOON: { label: "Sắp chiếu" },
@@ -188,7 +190,7 @@ const MovieFormModal = ({ movieId, onClose }) => {
                             <div className="flex flex-wrap gap-2 mt-1">
                                 {(genres?.results || genres || []).map((g) => (
                                     <button key={g.id} type="button"
-                                        className={`badge badge-md cursor-pointer border transition-colors ${form.genre_ids.includes(g.id) ? "badge-primary" : "badge-ghost"}`}
+                                        className={`badge badge-sm sm:badge-md cursor-pointer border transition-colors ${form.genre_ids.includes(g.id) ? "badge-primary" : "badge-ghost"}`}
                                         onClick={() => toggleGenre(g.id)}>
                                         {g.name}
                                     </button>
@@ -221,6 +223,7 @@ const MovieFormModal = ({ movieId, onClose }) => {
 };
 
 const ManageMovies = () => {
+    const navigate = useNavigate();
     const { hasStaffPosition } = useAuth();
     const [search, setSearch] = useState("");
     const [searchInput, setSearchInput] = useState("");
@@ -244,85 +247,89 @@ const ManageMovies = () => {
     const list = movies?.results || movies || [];
 
     return (
-        <div className="card bg-base-100 border border-base-200">
-            <div className="card-body p-0">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-base-200">
-                    <h2 className="text-lg font-bold">Quản Lý Phim</h2>
-                    {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
-                        <button className="btn btn-primary btn-sm gap-1" onClick={openCreate}>
-                            <Plus size={16} />
-                        </button>
-                    }
-                </div>
+        <>
+            <BackButton label={"Quản lý"} onClick={() => navigate("/manage/")} />
 
-                <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-base-200">
-                    <label className="input input-sm input-bordered flex items-center gap-2 flex-1 min-w-48">
-                        <Search size={14} className="text-base-content/40" />
-                        <input placeholder="Tìm theo tên phim..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="grow" />
-                        {search && <button onClick={() => setSearchInput("")}><X size={12} /></button>}
-                    </label>
-                    <select className="select select-sm select-bordered not-sm:w-full" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                        <option value="">Tất cả trạng thái</option>
-                        {MOVIE_STATUS.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]?.label}</option>)}
-                    </select>
-                </div>
+            <div className="card bg-base-100 border border-base-200">
+                <div className="card-body p-0">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-base-200">
+                        <h2 className="text-lg font-bold">Quản Lý Phim</h2>
+                        {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
+                            <button className="btn btn-primary btn-sm gap-1" onClick={openCreate}>
+                                <Plus size={16} />
+                            </button>
+                        }
+                    </div>
 
-                <div className="overflow-x-auto">
-                    <table className="table w-full">
-                        <thead>
-                            <tr className="border-b border-base-200">
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold w-14">Poster</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Tên phim</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden sm:table-cell">Độ tuổi</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden md:table-cell">Ra mắt</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Trạng thái</th>
-                                {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
-                                    <th className="py-3 px-4 w-20"></th>
-                                }
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {isPending ? (
-                                <tr><td colSpan={6} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></td></tr>
-                            ) : list.length === 0 ? (
-                                <tr><td colSpan={6} className="text-center py-10 text-base-content/40">
-                                    Không có phim nào
-                                </td></tr>
-                            ) : list.map((m) => (
-                                <tr key={m.id} className="hover:bg-base-200/50">
-                                    <td className="py-2 px-4">
-                                        {m.poster
-                                            ? <img src={m.poster} alt={m.title} className="w-10 h-14 object-cover rounded" />
-                                            : <div className="w-10 h-14 bg-base-300 rounded flex items-center justify-center"><Film size={16} className="opacity-30" /></div>
-                                        }
-                                    </td>
-                                    <td className="py-3 px-4">
-                                        <p className="font-semibold text-sm">{m.title}</p>
-                                        <p className="text-xs text-base-content/50 hidden sm:block">{m.slug}</p>
-                                    </td>
-                                    <td className="py-3 px-4 hidden sm:table-cell">
-                                        <span className="badge badge-outline badge-sm">{m.age_rating}</span>
-                                    </td>
-                                    <td className="py-3 px-4 text-sm hidden md:table-cell">{formatDate(m.release_date)}</td>
-                                    <td className="py-3 px-4">
-                                        <span>{STATUS_LABELS[m.status]?.label}</span>
-                                    </td>
+                    <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-base-200">
+                        <label className="input input-sm input-bordered flex items-center gap-2 flex-1 min-w-48">
+                            <Search size={14} className="text-base-content/40" />
+                            <input placeholder="Tìm theo tên phim..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="grow" />
+                            {search && <button onClick={() => setSearchInput("")}><X size={12} /></button>}
+                        </label>
+                        <select className="select select-sm select-bordered not-sm:w-full" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                            <option value="">Tất cả trạng thái</option>
+                            {MOVIE_STATUS.map((s) => <option key={s} value={s}>{STATUS_LABELS[s]?.label}</option>)}
+                        </select>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="table w-full">
+                            <thead>
+                                <tr className="border-b border-base-200">
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold w-14">Poster</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Tên phim</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden sm:table-cell">Độ tuổi</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden md:table-cell">Ra mắt</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Trạng thái</th>
                                     {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
-                                        <td className="py-3 px-4">
-                                            <button className="btn btn-ghost btn-xs" onClick={() => openEdit(m.id)}>
-                                                <Pencil size={13} />
-                                            </button>
-                                        </td>
+                                        <th className="py-3 px-4 w-20"></th>
                                     }
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                {isPending ? (
+                                    <tr><td colSpan={6} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></td></tr>
+                                ) : list.length === 0 ? (
+                                    <tr><td colSpan={6} className="text-center py-10 text-base-content/40">
+                                        Không có phim nào
+                                    </td></tr>
+                                ) : list.map((m) => (
+                                    <tr key={m.id} className="hover:bg-base-200/50">
+                                        <td className="py-2 px-4">
+                                            {m.poster
+                                                ? <img src={m.poster} alt={m.title} className="w-10 h-14 object-cover rounded" />
+                                                : <div className="w-10 h-14 bg-base-300 rounded flex items-center justify-center"><Film size={16} className="opacity-30" /></div>
+                                            }
+                                        </td>
+                                        <td className="py-3 px-4">
+                                            <p className="font-semibold text-sm">{m.title}</p>
+                                            <p className="text-xs text-base-content/50 hidden sm:block">{m.slug}</p>
+                                        </td>
+                                        <td className="py-3 px-4 hidden sm:table-cell">
+                                            <span className="badge badge-outline badge-xs sm:badge-sm">{m.age_rating}</span>
+                                        </td>
+                                        <td className="py-3 px-4 text-sm hidden md:table-cell">{formatDate(m.release_date)}</td>
+                                        <td className="py-3 px-4">
+                                            <span>{STATUS_LABELS[m.status]?.label}</span>
+                                        </td>
+                                        {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
+                                            <td className="py-3 px-4">
+                                                <button className="btn btn-ghost btn-xs" onClick={() => openEdit(m.id)}>
+                                                    <Pencil size={13} />
+                                                </button>
+                                            </td>
+                                        }
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
 
-            {showModal && <MovieFormModal movieId={modalId} onClose={closeModal} />}
-        </div>
+                {showModal && <MovieFormModal movieId={modalId} onClose={closeModal} />}
+            </div>
+        </>
     );
 };
 

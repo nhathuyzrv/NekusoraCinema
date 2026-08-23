@@ -8,14 +8,15 @@ import {
     useDeleteShowtime,
     useManageScreeningFormats,
     useBranches,
+    useManageBranchRooms,
 } from "../../hooks/useManagement";
-import { useQuery } from "@tanstack/react-query";
-import managementService from "../../services/managementService";
 import { useToast } from "../../hooks/useToast";
 import { formatDate } from "../../utils/DateTime";
 import MyAlert from "../../configs/MyAlert";
 import Configs from "../../configs/Configs";
 import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import BackButton from "../../components/BackButton";
 
 const SHOWTIME_STATUS = {
     SCHEDULED: { label: "Đã lên lịch" },
@@ -28,12 +29,7 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
     const { data: formats } = useManageScreeningFormats();
     const { data: branches } = useBranches();
     const [selectedBranch, setSelectedBranch] = useState(showtimeData?.room?.branch || "");
-    console.log(showtimeData);
-    const { data: rooms } = useQuery({
-        queryKey: ["manage_branch_rooms", selectedBranch],
-        queryFn: () => managementService.getBranchRooms(selectedBranch),
-        enabled: !!selectedBranch,
-    });
+    const { data: rooms } = useManageBranchRooms(selectedBranch);
 
     const { mutate: createShowtime, isPending: createShowtimePending } = useCreateMovieShowtime(movieId);
     const { mutate: updateShowtime, isPending: updateShowtimePending } = useUpdateShowtime();
@@ -300,6 +296,7 @@ const MovieShowtimesPanel = ({ movie }) => {
 };
 
 const ManageShowtimes = () => {
+    const navigate = useNavigate();
     const [search, setSearch] = useState("");
     const [searchInput, setSearchInput] = useState("");
     const [statusFilter, setStatusFilter] = useState("");
@@ -316,60 +313,64 @@ const ManageShowtimes = () => {
     const list = movies?.results || movies || [];
 
     return (
-        <div className="card bg-base-100 border border-base-200">
-            <div className="card-body p-0">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-base-200">
-                    <h2 className="text-lg font-bold">Quản Lý Suất Chiếu</h2>
-                </div>
+        <>
+            <BackButton label={"Quản lý"} onClick={() => navigate("/manage/")} />
 
-                <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-base-200">
-                    <label className="input input-sm input-bordered flex items-center gap-2 flex-1 min-w-48">
-                        <Search size={14} className="text-base-content/40" />
-                        <input placeholder="Tìm theo tên phim..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="grow" />
-                        {search && <button onClick={() => setSearchInput("")}><X size={12} /></button>}
-                    </label>
-                    <select className="select select-sm select-bordered not-sm:w-full" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                        <option value="">Tất cả trạng thái phim</option>
-                        <option value="COMING_SOON">Sắp chiếu</option>
-                        <option value="NOW_SHOWING">Đang chiếu</option>
-                        <option value="ENDED">Ngừng chiếu</option>
-                    </select>
-                </div>
+            <div className="card bg-base-100 border border-base-200">
+                <div className="card-body p-0">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-base-200">
+                        <h2 className="text-lg font-bold">Quản Lý Suất Chiếu</h2>
+                    </div>
 
-                <div className="divide-y divide-base-200">
-                    {isPending ? (
-                        <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
-                    ) : list.length === 0 ? (
-                        <div className="text-center py-10 text-base-content/40">
-                            Không có phim nào
-                        </div>
-                    ) : list.map((movie) => (
-                        <div key={movie.id} className="px-5 py-3">
-                            <button
-                                className="w-full flex items-center justify-between gap-3 hover:text-primary transition-colors"
-                                onClick={() => setExpandedMovie(expandedMovie === movie.id ? null : movie.id)}
-                            >
-                                <div className="flex items-center gap-3">
-                                    {movie.poster
-                                        ? <img src={movie.poster} alt={movie.title} className="w-9 h-12 object-cover rounded shrink-0" />
-                                        : <div className="w-9 h-12 bg-base-300 rounded shrink-0" />
-                                    }
-                                    <div className="text-left">
-                                        <p className="font-semibold text-sm">{movie.title}</p>
-                                        <p className="text-xs text-base-content/50">{movie.age_rating} · {movie.status}</p>
+                    <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-base-200">
+                        <label className="input input-sm input-bordered flex items-center gap-2 flex-1 min-w-48">
+                            <Search size={14} className="text-base-content/40" />
+                            <input placeholder="Tìm theo tên phim..." value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="grow" />
+                            {search && <button onClick={() => setSearchInput("")}><X size={12} /></button>}
+                        </label>
+                        <select className="select select-sm select-bordered not-sm:w-full" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+                            <option value="">Tất cả trạng thái phim</option>
+                            <option value="COMING_SOON">Sắp chiếu</option>
+                            <option value="NOW_SHOWING">Đang chiếu</option>
+                            <option value="ENDED">Ngừng chiếu</option>
+                        </select>
+                    </div>
+
+                    <div className="divide-y divide-base-200">
+                        {isPending ? (
+                            <div className="flex justify-center py-10"><Loader2 className="animate-spin" /></div>
+                        ) : list.length === 0 ? (
+                            <div className="text-center py-10 text-base-content/40">
+                                Không có phim nào
+                            </div>
+                        ) : list.map((movie) => (
+                            <div key={movie.id} className="px-5 py-3">
+                                <button
+                                    className="w-full flex items-center justify-between gap-3 hover:text-primary transition-colors"
+                                    onClick={() => setExpandedMovie(expandedMovie === movie.id ? null : movie.id)}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        {movie.poster
+                                            ? <img src={movie.poster} alt={movie.title} className="w-9 h-12 object-cover rounded shrink-0" />
+                                            : <div className="w-9 h-12 bg-base-300 rounded shrink-0" />
+                                        }
+                                        <div className="text-left">
+                                            <p className="font-semibold text-sm">{movie.title}</p>
+                                            <p className="text-xs text-base-content/50">{movie.age_rating} · {movie.status}</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <ChevronDown size={16} className={`shrink-0 transition-transform ${expandedMovie === movie.id ? "rotate-180" : ""}`} />
-                            </button>
+                                    <ChevronDown size={16} className={`shrink-0 transition-transform ${expandedMovie === movie.id ? "rotate-180" : ""}`} />
+                                </button>
 
-                            {expandedMovie === movie.id && (
-                                <MovieShowtimesPanel movie={movie} />
-                            )}
-                        </div>
-                    ))}
+                                {expandedMovie === movie.id && (
+                                    <MovieShowtimesPanel movie={movie} />
+                                )}
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 };
 

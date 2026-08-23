@@ -78,20 +78,20 @@ const HelperTermsOfService = () => {
                             <div className="p-2 bg-base-200 rounded-lg"><strong>T18</strong>: Dành cho độ tuổi từ 18 trở lên</div>
                         </div>
                         <p className="text-error font-medium text-xs">
-                            * Nhân viên soát vé có quyền yêu cầu xuất trình CCCD trước khi vào phòng chiếu đối với một số phim yêu cầu về độ tuổi. Trong trường hợp đã thanh toán vé trước đó, rạp từ chối hoàn tiền nếu khán giả không đủ tuổi theo quy định.
+                            Nhân viên soát vé có quyền yêu cầu xuất trình CCCD trước khi vào phòng chiếu đối với một số phim yêu cầu về độ tuổi. Trong trường hợp đã thanh toán vé trước đó, rạp từ chối hoàn tiền nếu khán giả không đủ tuổi theo quy định.
                         </p>
                     </section>
 
                     <section id="quy-dinh-rap" className="card bg-base-100 border border-base-300 p-6 space-y-3 scroll-m-20">
                         <h2 className="text-lg font-bold text-base-content">5. Tiêu chuẩn Cộng đồng & Quy định tại Rạp</h2>
                         <p>
-                            Ngoài các quy định kể trên, khách hàng vui lòng tuân thủ các quy định tại nơi công cộng, giữ gìn văn hóa ứng xử văn minh và lịch sự trong suốt thời gian sử dụng dịch vụ tại rạp. Chúng tôi nghiêm cấm mọi hành vi vi phạm tiêu chuẩn cộng đồng, <strong>bao gồm nhưng không giới hạn</strong> như:
+                            Ngoài các quy định kể trên, khách hàng vui lòng tuân thủ các quy định tại nơi công cộng, giữ gìn văn hóa ứng xử văn minh và lịch sự trong suốt thời gian sử dụng dịch vụ tại rạp. Chúng tôi nghiêm cấm mọi hành vi vi phạm tiêu chuẩn cộng đồng, bao gồm nhưng không giới hạn như:
                         </p>
                         <ul className="list-disc pl-5 space-y-2">
                             <li>Gây mất trật tự, chen lấn, sử dụng ngôn từ kích động, xúc phạm hoặc làm ảnh hưởng đến trải nghiệm xem phim của những người xung quanh.</li>
-                            <li>Thực hiện các <strong>hành vi riêng tư quá đà, thiếu chuẩn mực hoặc gây phản cảm</strong> trong phòng chiếu cũng như khu vực chung.</li>
-                            <li>Tàng trữ, mang vào rạp các chất cấm, vũ khí, vật liệu cháy nổ, đồ ăn/thức uống có mùi từ bên ngoài.</li>
-                            <li><strong>Nghiêm cấm tuyệt đối các hành vi vi phạm pháp luật</strong>: Quay lén, ghi âm, phát sóng trực tiếp (livestream) hoặc sao chép nội dung phim dưới mọi hình thức.</li>
+                            <li>Thực hiện các hành vi riêng tư quá đà, thiếu chuẩn mực hoặc gây phản cảm trong phòng chiếu cũng như khu vực chung.</li>
+                            <li>Mang đồ ăn/thức uống có mùi từ bên ngoài vào trong rạp.</li>
+                            <li><strong>Nghiêm cấm hành vi</strong>: Quay lén, ghi âm, phát sóng trực tiếp (livestream) hoặc sao chép nội dung phim dưới mọi hình thức.</li>
                         </ul>
                     </section>
 

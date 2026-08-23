@@ -6,6 +6,8 @@ import { formatDateTime } from "../../utils/DateTime";
 import { formatMoney } from "../../utils/Money";
 import Configs from "../../configs/Configs";
 import { useAuth } from "../../hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import BackButton from "../../components/BackButton";
 
 const DISCOUNT_TYPE_LABELS = {
     PERCENT: { label: "Phần trăm (%)", icon: Percent, cls: "badge-info" },
@@ -146,6 +148,7 @@ const PromotionFormModal = ({ onClose }) => {
 };
 
 const ManagePromotions = () => {
+    const navigate = useNavigate();
     const { hasStaffPosition } = useAuth();
     const [discountTypeFilter, setDiscountTypeFilter] = useState("");
     const [showModal, setShowModal] = useState(false);
@@ -154,95 +157,99 @@ const ManagePromotions = () => {
     const list = promotions?.results || promotions || [];
 
     return (
-        <div className="card bg-base-100 border border-base-200">
-            <div className="card-body p-0">
-                <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-base-200">
-                    <h2 className="text-lg font-bold">Quản Lý Khuyến Mãi</h2>
-                    {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
-                        <button className="btn btn-primary btn-sm gap-1" onClick={() => setShowModal(true)}>
-                            <Plus size={16} />
-                        </button>
-                    }
+        <>
+            <BackButton label={"Quản lý"} onClick={() => navigate("/manage/")} />
+
+            <div className="card bg-base-100 border border-base-200">
+                <div className="card-body p-0">
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 pt-5 pb-4 border-b border-base-200">
+                        <h2 className="text-lg font-bold">Quản Lý Khuyến Mãi</h2>
+                        {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
+                            <button className="btn btn-primary btn-sm gap-1" onClick={() => setShowModal(true)}>
+                                <Plus size={16} />
+                            </button>
+                        }
+                    </div>
+
+                    <div className="flex gap-2 px-5 py-3 border-b border-base-200">
+                        <select className="select select-sm select-bordered not-sm:w-full" value={discountTypeFilter} onChange={(e) => setDiscountTypeFilter(e.target.value)}>
+                            <option value="">Tất cả loại</option>
+                            <option value="PERCENT">Giảm theo phần trăm</option>
+                            <option value="FIXED_AMOUNT">Giảm cố định</option>
+                        </select>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                        <table className="table w-full">
+                            <thead>
+                                <tr className="border-b border-base-200">
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Mã</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50">Trạng thái</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden sm:table-cell">Tên</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Loại</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Giá trị</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden md:table-cell">Hiệu lực</th>
+                                    <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden lg:table-cell">Đã dùng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {isLoading ? (
+                                    <tr><td colSpan={6} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></td></tr>
+                                ) : list.length === 0 ? (
+                                    <tr><td colSpan={6} className="text-center py-10 text-base-content/40">
+                                        Không có khuyến mãi nào
+                                    </td></tr>
+                                ) : list.map((promo) => {
+                                    const now = new Date();
+                                    const start = new Date(promo.start_date);
+                                    const end = new Date(promo.end_date);
+                                    const isAvailable = promo.active && now >= start && now <= end;
+                                    const isExpired = now > end;
+
+                                    return (
+                                        <tr key={promo.id} className="hover:bg-base-200/50">
+                                            <td className="py-3 px-4">
+                                                <span className="font-mono font-bold text-sm text-primary">{promo.code}</span>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm">
+                                                {!promo.active && <span className="badge badge-soft badge-error badge-xs">Không còn hiệu lực</span>}
+                                                {isAvailable && <span className="badge badge-soft badge-success badge-xs">Đang có hiệu lực</span>}
+                                                {isExpired && <span className="badge badge-ghost badge-xs">Hết hạn</span>}
+                                            </td>
+                                            <td className="py-3 px-4 text-sm hidden sm:table-cell">{promo.name}</td>
+                                            <td className="py-3 px-4">
+                                                <span className={`badge badge-xs sm:badge-sm badge-soft ${DISCOUNT_TYPE_LABELS[promo.discount_type]?.cls}`}>
+                                                    {promo.discount_type === "PERCENT" ? "%" : "đ"}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm">
+                                                {promo.discount_type === "PERCENT"
+                                                    ? `${promo.discount_value}%`
+                                                    : `${formatMoney(promo.discount_value)}`
+                                                }
+                                                {promo.max_discount_amount && (
+                                                    <p className="text-xs text-base-content/50">Tối đa {formatMoney(promo.max_discount_amount)}</p>
+                                                )}
+                                            </td>
+                                            <td className="py-3 px-4 text-xs hidden md:table-cell text-base-content/60">
+                                                <p>Từ {formatDateTime(promo.start_date)}</p>
+                                                <p>Đến {formatDateTime(promo.end_date)}</p>
+                                            </td>
+                                            <td className="py-3 px-4 text-sm hidden lg:table-cell">
+                                                {promo.used_count ?? 0}
+                                                {promo.usage_limit && <span className="text-base-content/50"> / {promo.usage_limit}</span>}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <div className="flex gap-2 px-5 py-3 border-b border-base-200">
-                    <select className="select select-sm select-bordered not-sm:w-full" value={discountTypeFilter} onChange={(e) => setDiscountTypeFilter(e.target.value)}>
-                        <option value="">Tất cả loại</option>
-                        <option value="PERCENT">Giảm theo phần trăm</option>
-                        <option value="FIXED_AMOUNT">Giảm cố định</option>
-                    </select>
-                </div>
-
-                <div className="overflow-x-auto">
-                    <table className="table w-full">
-                        <thead>
-                            <tr className="border-b border-base-200">
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Mã</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50">Trạng thái</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden sm:table-cell">Tên</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Loại</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold">Giá trị</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden md:table-cell">Hiệu lực</th>
-                                <th className="py-3 px-4 text-xs text-base-content/50 font-semibold hidden lg:table-cell">Đã dùng</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {isLoading ? (
-                                <tr><td colSpan={6} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></td></tr>
-                            ) : list.length === 0 ? (
-                                <tr><td colSpan={6} className="text-center py-10 text-base-content/40">
-                                    Không có khuyến mãi nào
-                                </td></tr>
-                            ) : list.map((promo) => {
-                                const now = new Date();
-                                const start = new Date(promo.start_date);
-                                const end = new Date(promo.end_date);
-                                const isAvailable = promo.active && now >= start && now <= end;
-                                const isExpired = now > end;
-
-                                return (
-                                    <tr key={promo.id} className="hover:bg-base-200/50">
-                                        <td className="py-3 px-4">
-                                            <span className="font-mono font-bold text-sm text-primary">{promo.code}</span>
-                                        </td>
-                                        <td className="py-3 px-4 text-sm">
-                                            {!promo.active && <span className="badge badge-soft badge-error badge-xs">Không còn hiệu lực</span>}
-                                            {isAvailable && <span className="badge badge-soft badge-success badge-xs">Đang có hiệu lực</span>}
-                                            {isExpired && <span className="badge badge-ghost badge-xs">Hết hạn</span>}
-                                        </td>
-                                        <td className="py-3 px-4 text-sm hidden sm:table-cell">{promo.name}</td>
-                                        <td className="py-3 px-4">
-                                            <span className={`badge badge-sm badge-soft ${DISCOUNT_TYPE_LABELS[promo.discount_type]?.cls}`}>
-                                                {promo.discount_type === "PERCENT" ? "%" : "đ"}
-                                            </span>
-                                        </td>
-                                        <td className="py-3 px-4 text-sm">
-                                            {promo.discount_type === "PERCENT"
-                                                ? `${promo.discount_value}%`
-                                                : `${formatMoney(promo.discount_value)}`
-                                            }
-                                            {promo.max_discount_amount && (
-                                                <p className="text-xs text-base-content/50">Tối đa {formatMoney(promo.max_discount_amount)}</p>
-                                            )}
-                                        </td>
-                                        <td className="py-3 px-4 text-xs hidden md:table-cell text-base-content/60">
-                                            <p>Từ {formatDateTime(promo.start_date)}</p>
-                                            <p>Đến {formatDateTime(promo.end_date)}</p>
-                                        </td>
-                                        <td className="py-3 px-4 text-sm hidden lg:table-cell">
-                                            {promo.used_count ?? 0}
-                                            {promo.usage_limit && <span className="text-base-content/50"> / {promo.usage_limit}</span>}
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                {showModal && <PromotionFormModal onClose={() => setShowModal(false)} />}
             </div>
-
-            {showModal && <PromotionFormModal onClose={() => setShowModal(false)} />}
-        </div>
+        </>
     );
 };
 

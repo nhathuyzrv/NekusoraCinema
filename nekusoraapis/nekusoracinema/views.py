@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import timedelta
 from django.core.cache import cache
 from django.db.models import Prefetch
 from django.db.models.aggregates import Avg, Count
@@ -93,7 +93,7 @@ class AuthViewSet(viewsets.ViewSet):
 
     @action(methods=['post'], url_path='ws-ticket', detail=False, permission_classes=[permissions.IsAuthenticated])
     def get_ws_ticket(self, request):
-        ticket = utils.generate_ws_code_str()
+        ticket = utils.generate_ws_ticket()
         user = request.user
         cache.set(f"ws_ticket:{ticket}", user.pk, timeout=5)
 
@@ -106,7 +106,6 @@ class GenreViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 
 class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
-    queryset = Movie.objects.filter(active=True)
 
     def get_permissions(self):
         if self.action in ['movie_ratings_view'] and self.request.method in ['POST']:
@@ -121,7 +120,7 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
         return serializers.SimpleMovieSerializer
 
     def get_queryset(self):
-        query = self.queryset.annotate(avg_rating=Avg('movie_ratings__score'), rating_count=Count('movie_ratings'))
+        query = Movie.objects.filter(active=True).annotate(avg_rating=Avg('movie_ratings__score'), rating_count=Count('movie_ratings'))
         if self.action in ['retrieve']:
             query = query.prefetch_related('genres','actors',
                                            Prefetch('movie_ratings', queryset=Rating.objects.filter(active=True)))
@@ -199,9 +198,11 @@ class MovieViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIV
 
 
 class RatingViewSet(viewsets.ViewSet, generics.UpdateAPIView):
-    queryset = Rating.objects.filter(active=True)
     serializer_class = serializers.RatingSerializer
     permission_classes = [perms.RatingOwner]
+
+    def get_queryset(self):
+        return Rating.objects.filter(active=True)
 
 
 class LocationViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -249,14 +250,13 @@ class ScreeningFormatViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 
 class CinemaRoomViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
-    queryset = CinemaRoom.objects.filter(active=True).order_by('branch')
     serializer_class = serializers.CinemaRoomSerializer
 
     def get_queryset(self):
-        query = self.queryset
+        query = CinemaRoom.objects.filter(active=True).order_by('branch')
         q_branch = self.request.query_params.get('branch')
         if q_branch:
-            query = self.queryset.filter(branch=q_branch)
+            query = query.filter(branch=q_branch)
 
         return query
 
@@ -284,7 +284,6 @@ class PaymentMethodViewSet(viewsets.ViewSet, generics.ListAPIView):
 
 
 class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView, generics.DestroyAPIView):
-    queryset = Booking.objects.filter(active=True)
     pagination_class = paginators.BookingItemPaginator
     lookup_field = 'booking_code'
     lookup_url_kwarg = 'pk'
@@ -300,7 +299,7 @@ class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
         return serializers.BookingSerializer
 
     def get_queryset(self):
-        query = (self.queryset.filter(customer=self.request.user).order_by('-created_at')
+        query = (Booking.objects.filter(active=True, customer=self.request.user).order_by('-created_at')
                  .select_related('showtime__movie', 'showtime__room__branch__location', 'showtime__screening_format')
                  .prefetch_related('booking_tickets__seat', 'booking_products__product', 'booking_promotion__promotion', 'payment__method'))
 
@@ -384,12 +383,11 @@ class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
 
 
 class PaymentViewSet(viewsets.ViewSet, generics.ListAPIView):
-    queryset = Payment.objects.filter(active=True).order_by('-created_at')
     serializer_class = serializers.PaymentSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        query = self.queryset.select_related("booking").filter(booking__customer=self.request.user)
+        query = Payment.objects.filter(active=True).order_by('-created_at').select_related("booking").filter(booking__customer=self.request.user)
         q_order_code = self.request.query_params.get("orderCode")
         if q_order_code:
             query = query.filter(order_code=q_order_code)
@@ -407,13 +405,8 @@ class PayOSWebhookViewSet(viewsets.ViewSet):
 
 
 class ManageStaffViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
-    queryset = StaffProfile.objects.all().select_related('user', 'branch')
     serializer_class = serializers.StaffProfileSerializer
-
-    def get_permissions(self):
-        if self.action in ['create', 'update', 'partial_update']:
-            return [perms.IsSystemManager()]
-        return [perms.IsManager()]
+    permission_classes = [perms.IsManager]
 
     def get_serializer_class(self):
         if self.action in ['create']:
@@ -421,7 +414,11 @@ class ManageStaffViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.
         return serializers.StaffProfileSerializer
 
     def get_queryset(self):
-        query = self.queryset
+        query = StaffProfile.objects.all().order_by('pk').select_related('user', 'branch')
+
+        q_search = self.request.query_params.get('search')
+        if q_search:
+            query = query.filter(Q(user__first_name__icontains=q_search) | Q(user__last_name__icontains=q_search) | Q(user__email__icontains=q_search))
 
         q_branch = self.request.query_params.get('branch')
         if q_branch:
@@ -435,8 +432,11 @@ class ManageStaffViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.
 
 
 class ManageLocationViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
-    queryset = Location.objects.filter(active=True).order_by('name')
     serializer_class = serializers.LocationSerializer
+
+    def get_queryset(self):
+        query = Location.objects.filter(active=True).order_by('name')
+        return query
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update'] or self.action in ['manage_branches_view'] and self.request.method == 'POST':
@@ -462,8 +462,11 @@ class ManageLocationViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generi
 
 
 class ManageBranchViewSet(viewsets.ViewSet, generics.RetrieveUpdateAPIView):
-    queryset = Branch.objects.filter(active=True)
     serializer_class = serializers.ManageBranchUpdateSerializer
+
+    def get_queryset(self):
+        query = Branch.objects.filter(active=True)
+        return query
 
     def get_permissions(self):
         if self.action in ['update', 'partial_update'] or self.action in ['manage_rooms_view'] and self.request.method == 'POST':
@@ -493,9 +496,12 @@ class ManageBranchViewSet(viewsets.ViewSet, generics.RetrieveUpdateAPIView):
 
 
 class ManageCinemaRoomViewSet(viewsets.ViewSet, generics.RetrieveUpdateAPIView):
-    queryset = CinemaRoom.objects.all().order_by('branch')
     serializer_class = serializers.ManageCinemaRoomCreateUpdateSerializer
     permission_classes = [perms.IsBranchManager]
+
+    def get_queryset(self):
+        query = CinemaRoom.objects.all().order_by('branch')
+        return query
 
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
@@ -513,8 +519,11 @@ class ManageCinemaRoomViewSet(viewsets.ViewSet, generics.RetrieveUpdateAPIView):
 
 
 class ManageGenreViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.UpdateAPIView):
-    queryset = Genre.objects.filter(active=True).order_by('pk')
     serializer_class = serializers.ManageGenreCreateUpdateSerializer
+
+    def get_queryset(self):
+        query = Genre.objects.filter(active=True).order_by('pk')
+        return query
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update']:
@@ -523,7 +532,6 @@ class ManageGenreViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.
 
 
 class ManageScreeningFormatViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.UpdateAPIView):
-    queryset = ScreeningFormat.objects.filter(active=True).order_by('pk')
     serializer_class = serializers.ManageScreeningFormatCreateUpdateSerializer
 
     def get_permissions(self):
@@ -531,9 +539,12 @@ class ManageScreeningFormatViewSet(viewsets.ViewSet, generics.ListCreateAPIView,
             return [perms.IsSystemManager()]
         return [perms.IsManager()]
 
+    def get_queryset(self):
+        query = ScreeningFormat.objects.filter(active=True).order_by('pk')
+        return query
+
 
 class ManageMovieViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
-    queryset = Movie.objects.filter(active=True)
     serializer_class = serializers.ManageMovieSerializer
 
     def get_permissions(self):
@@ -542,7 +553,7 @@ class ManageMovieViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.
         return [perms.IsManager()]
 
     def get_queryset(self):
-        query = self.queryset
+        query = Movie.objects.filter(active=True)
         if self.action in ['retrieve']:
             query = query.prefetch_related('genres', 'actors')
 
@@ -589,9 +600,12 @@ class ManageMovieViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.
 
 
 class ManageShowtimeViewSet(viewsets.ViewSet, generics.RetrieveUpdateDestroyAPIView):
-    queryset = Showtime.objects.filter(active=True)
     permission_classes = [perms.IsSystemManager]
     serializer_class = serializers.ManageShowtimeCreateUpdateSerializer
+
+    def get_queryset(self):
+        query = Showtime.objects.filter(active=True)
+        return query
 
     def perform_destroy(self, instance):
         has_active_bookings = instance.showtime_bookings.filter(status__in=[BookingStatus.CONFIRMED, BookingStatus.HOLDING]).exists()
@@ -603,7 +617,6 @@ class ManageShowtimeViewSet(viewsets.ViewSet, generics.RetrieveUpdateDestroyAPIV
 
 
 class ManageProductViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
-    queryset = Product.objects.all().order_by('-id')
     serializer_class = serializers.ManageProductSerializer
 
     def get_permissions(self):
@@ -612,7 +625,7 @@ class ManageProductViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generic
         return [perms.IsManager()]
 
     def get_queryset(self):
-        query = self.queryset.prefetch_related('combo_items__item')
+        query = Product.objects.all().order_by('-id').prefetch_related('combo_items__item')
 
         product_type = self.request.query_params.get('product_type')
         if product_type:
@@ -655,7 +668,6 @@ class ManageProductViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generic
 
 
 class ManagePromotionViewSet(viewsets.ViewSet, generics.ListCreateAPIView):
-    queryset = Promotion.objects.filter(active=True).order_by('code')
     serializer_class = serializers.ManagePromotionCreateSerializer
 
     def get_permissions(self):
@@ -664,7 +676,7 @@ class ManagePromotionViewSet(viewsets.ViewSet, generics.ListCreateAPIView):
         return [perms.IsManager()]
 
     def get_queryset(self):
-        query = self.queryset
+        query = Promotion.objects.filter(active=True).order_by('code')
 
         q_discount_type = self.request.query_params.get('discount_type')
         if q_discount_type:

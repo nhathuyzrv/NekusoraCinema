@@ -74,7 +74,7 @@ const Header = () => {
                 </div>
 
                 <Link to="/" className="flex items-center gap-2 select-none">
-                    <span className="text-lg font-black tracking-tight hidden sm:block">
+                    <span className="text-lg font-black tracking-tight block">
                         Nekusora<span className="text-primary">Cinema</span>
                     </span>
                 </Link>

@@ -32,7 +32,7 @@ def generate_barcode_bytes(booking_code):
     return buffer.getvalue()
 
 
-def generate_ws_code_str():
+def generate_ws_ticket():
     return str(uuid.uuid4())
 
 def get_timezone_now():

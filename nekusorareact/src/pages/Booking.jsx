@@ -30,7 +30,6 @@ function next5Days() {
     });
 }
 
-// progress bar
 function BookingStepper({ currentStep, maxUnlockedStep, onStepClick }) {
     const canGoBack = (i) => i < currentStep && [1, 3, 4].includes(currentStep) && i <= maxUnlockedStep;
 
@@ -71,7 +70,6 @@ function BookingStepper({ currentStep, maxUnlockedStep, onStepClick }) {
     );
 }
 
-// step 1
 function StepShowtime({ selection, setSelection, onContinue }) {
     const { location, movie, showtime } = selection;
     const [openPanel, setOpenPanel] = useState(() => {
@@ -82,8 +80,6 @@ function StepShowtime({ selection, setSelection, onContinue }) {
     const [selectedDate, setSelectedDate] = useState(
         selection.showtime?.show_date ?? todayStr()
     );
-
-    console.log(selection);
 
     const { data: locations, isLoading: loadingLocations } = useLocations();
     const { data: movieData, isLoading: loadingMovies } = useLocationMovies(location?.id);
@@ -276,7 +272,6 @@ function StepShowtime({ selection, setSelection, onContinue }) {
     );
 }
 
-// step 2
 function isValidSeatSelection(rowSeats, selectedIds, unavailableIds) {
     if (selectedIds.size === 0) return true;
 
@@ -457,7 +452,6 @@ function StepSeats({ showtime, selectedSeats, setSelectedSeats, onContinue, onBa
     );
 }
 
-// step 3
 function StepProducts({ booking, bookingCode, cart, setCart, onContinue }) {
     const { data: products, isLoading } = useProducts();
     const { mutate: setProducts, isPending } = useSetProducts(bookingCode);
@@ -551,7 +545,6 @@ function StepProducts({ booking, bookingCode, cart, setCart, onContinue }) {
     );
 }
 
-// step 4
 function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
     const [code, setCode] = useState("");
     const [pointsInput, setPointsInput] = useState(0);
@@ -564,7 +557,6 @@ function StepPromotion({ booking, bookingCode, onContinue, onBack }) {
     const { mutate: clearPts, isPending: clearingPts } = useClearPoints(bookingCode);
 
     const appliedPromo = booking?.promotion;
-    console.log(appliedPromo);
     const subtotal = parseFloat(booking?.seat_amount ?? 0) + parseFloat(booking?.product_amount ?? 0);
     const maxPointsByAmount = Math.floor(Math.max(subtotal - parseFloat(booking?.discount_amount ?? 0) - Configs.MIN_SUBTOTAL_THRESHOLD, 0) / Configs.POINTS_TO_VND);
     const maxPoints = Math.min(user?.loyalty_points ?? 0, maxPointsByAmount);
@@ -733,7 +725,6 @@ function SummaryRow({ label, value, bold, negative }) {
     );
 }
 
-// step 5
 function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBack }) {
     const { data: methods, isLoading } = usePaymentMethods();
     const [selectedMethod, setSelectedMethod] = useState(null);
@@ -862,10 +853,7 @@ function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBac
     );
 }
 
-// step 6
 function StepPayment({ booking }) {
-    // const methodCode = booking?.payment?.method?.code?.toUpperCase();
-
     if (!booking?.payment) {
         return (
             <div className="bg-base-100 border border-base-300 rounded-2xl p-10 flex flex-col items-center gap-3">
@@ -874,8 +862,6 @@ function StepPayment({ booking }) {
             </div>
         );
     }
-
-    // if (methodCode === "MOMO") return <StepPaymentMoMo booking={booking} />;
 
     return <StepPaymentPayOS booking={booking} />;
 }
@@ -947,7 +933,6 @@ function BookingSuccess({ booking }) {
     );
 }
 
-// order panel
 function OrderSummaryPanel({ selection, selectedSeats, cart, booking, step }) {
     const { movie, showtime } = selection;
     if (!movie) {

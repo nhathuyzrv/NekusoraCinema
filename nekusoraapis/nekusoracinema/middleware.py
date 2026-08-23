@@ -25,7 +25,7 @@ class OAuthClientInfectionMiddleware(MiddlewareMixin):
 
 
 @database_sync_to_async
-def get_user_from_ticket(ticket):
+def get_user_by_ticket(ticket):
     ticket_key = f"ws_ticket:{ticket}"
     user_id = cache.get(ticket_key)
 
@@ -47,7 +47,7 @@ class WebSocketAuthMiddleware(BaseMiddleware):
         ticket = query_params.get("ticket", [None])[0]
 
         if ticket:
-            scope["user"] = await get_user_from_ticket(ticket) # type:ignore
+            scope["user"] = await get_user_by_ticket(ticket) # type:ignore
         else:
             scope["user"] = AnonymousUser() # type:ignore
 

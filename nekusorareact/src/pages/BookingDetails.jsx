@@ -4,6 +4,7 @@ import { Film, Calendar, Ticket, Popcorn, Tag, CreditCard, Clock, CheckCircle, X
 import Barcode from "react-barcode";
 import { authApis, endpoints } from "../configs/Apis";
 import BackButton from "../components/BackButton";
+import Configs from "../configs/Configs";
 
 function formatMoney(n) {
     return n != null ? Number(n).toLocaleString("vi-VN") + "đ" : "-";
@@ -32,8 +33,6 @@ const STATUS_CONFIG = {
     EXPIRED: { label: "Đã hết hạn", icon: AlertCircle, cls: "text-info", badgeCls: "badge-info" },
     HOLDING: { label: "Chưa hoàn tât", icon: AlertCircle, cls: "text-warning", badgeCls: "badge-warning" },
 };
-
-const AGE_BADGE = { P: "badge-success", K: "badge-info", T13: "badge-warning", T16: "badge-orange", T18: "badge-error" };
 
 function Section({ title, icon: Icon, children }) {
     return (
@@ -125,7 +124,7 @@ const BookingDetails = () => {
                         <p className="font-bold text-base leading-snug">{movie?.title ?? "-"}</p>
                         <div className="flex flex-wrap gap-1.5">
                             {movie?.age_rating && (
-                                <span className={`badge badge-sm font-bold ${AGE_BADGE[movie.age_rating] ?? "badge-neutral"}`}>
+                                <span className={`badge badge-sm font-bold ${Configs.AGE_BADGE[movie.age_rating] ?? "badge-neutral"}`}>
                                     {movie.age_rating}
                                 </span>
                             )}

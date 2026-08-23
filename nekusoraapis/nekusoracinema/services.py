@@ -25,31 +25,31 @@ class SeatRedisService:
 
     @classmethod
     def hold_seats(cls, showtime_id, seat_ids, user_id, ttl=SEAT_HOLD_MINUTES * 60):
-        held_now = []
-        conflict = []
+        acquired_seats = []
+        conflicted = []
 
         with redis_client.pipeline() as pipe:
-            for seat_id in seat_ids:
-                key = cls.seat_hold_key(showtime_id, seat_id)
-                acquired = redis_client.set(key, str(user_id), nx=True, ex=ttl)
-                if acquired:
-                    held_now.append(seat_id)
+            for sid in seat_ids:
+                key = cls.seat_hold_key(showtime_id, sid)
+                ok = redis_client.set(key, str(user_id), nx=True, ex=ttl)
+                if ok:
+                    acquired_seats.append(sid)
                 elif redis_client.get(key) != str(user_id):
-                    conflict.append(seat_id)
+                    conflicted.append(sid)
 
-            if conflict:
-                for seat_id in held_now:
-                    pipe.delete(cls.seat_hold_key(showtime_id, seat_id))
+            if conflicted:
+                for sid in acquired_seats:
+                    pipe.delete(cls.seat_hold_key(showtime_id, sid))
                 pipe.execute()
-                return False, conflict
+                return False, conflicted
 
-        return True, held_now
+        return True, acquired_seats
 
     @classmethod
     def release_seats(cls, showtime_id, seat_ids, user_id=None):
         with redis_client.pipeline() as pipe:
-            for seat_id in seat_ids:
-                key = cls.seat_hold_key(showtime_id, seat_id)
+            for sid in seat_ids:
+                key = cls.seat_hold_key(showtime_id, sid)
                 if user_id is None or redis_client.get(key) == str(user_id):
                     pipe.delete(key)
             pipe.execute()
@@ -61,15 +61,15 @@ class SeatRedisService:
 
     @classmethod
     def broadcast_seat_update(cls, showtime_id):
-        channel_layer = get_channel_layer()
-        if not channel_layer:
+        layer = get_channel_layer()
+        if not layer:
             return
 
         booked = list(Ticket.objects.filter(showtime_id=showtime_id, status=TicketStatus.BOOKED).values_list('seat_id', flat=True))
         held = cls.get_held_seat_ids(showtime_id)
 
-        group_channel = async_to_sync(channel_layer.group_send)
-        group_channel(f"showtime_{showtime_id}", {
+        send_group = async_to_sync(layer.group_send)
+        send_group(f"showtime_{showtime_id}", {
             "type": "seat_update",
             "booked": booked,
             "held": held
@@ -95,12 +95,12 @@ class BookingNotificationService:
 
     @staticmethod
     def broadcast_booking_confirmed(booking):
-        channel_layer = get_channel_layer()
-        if not channel_layer:
+        layer = get_channel_layer()
+        if not layer:
             return
 
-        group_channel = async_to_sync(channel_layer.group_send)
-        group_channel(f"user_{booking.customer.id}", {
+        send_group = async_to_sync(layer.group_send)
+        send_group(f"user_{booking.customer.id}", {
             "type": "send_booking_notification",
             "booking_code": booking.booking_code,
         })
@@ -109,7 +109,7 @@ class BookingNotificationService:
 class PaymentGatewayService:
 
     @staticmethod
-    def cancel_payos_payment_link(payment, delete_status):
+    def cancel_payos_payment_link(payment, cancel_status):
         if not payment or payment.status != PaymentStatus.PENDING or not payment.payment_link_id:
             return
 
@@ -126,14 +126,14 @@ class PaymentGatewayService:
         except Exception:
             pass
 
-        CANCELLATION_REASON = {
+        REASON_MAP = {
             BookingStatus.CANCELLED: 'Người dùng hủy đặt vé',
             BookingStatus.EXPIRED: 'Vé hết hạn thanh toán',
         }
 
         payment.status = PaymentStatus.FAILED
         payment.cancelled_at = timezone.now()
-        payment.cancel_reason = CANCELLATION_REASON[delete_status]
+        payment.cancel_reason = REASON_MAP[cancel_status]
         payment.save(update_fields=['status', 'cancelled_at', 'cancel_reason'])
 
     @classmethod
@@ -191,8 +191,8 @@ class BookingService:
 
     @classmethod
     def create_holding_booking(cls, user, showtime_id, seat_ids):
-        existing_holding_bookings = Booking.objects.filter(active=True, customer=user, status=BookingStatus.HOLDING)
-        if existing_holding_bookings.exists():
+        holding_bk = Booking.objects.filter(active=True, customer=user, status=BookingStatus.HOLDING)
+        if holding_bk.exists():
             raise ValidationError({'booking': 'Bạn đang có một đơn đặt vé chưa hoàn tất, vui lòng hoàn tất hoặc hủy bỏ đơn trước đó nếu bạn muốn đặt đơn khác'})
 
         if not seat_ids:
@@ -202,9 +202,9 @@ class BookingService:
 
         showtime = get_object_or_404(Showtime, pk=showtime_id, active=True, status=ShowtimeStatus.SCHEDULED)
 
-        cutoff_time = (utils.get_timezone_now() + timedelta(minutes=cls.VALID_BOOKING_CUTOFF_DISTANCE)).time()
-        if showtime.show_date == utils.get_timezone_now().date() and showtime.start_time <= cutoff_time:
-            raise ValidationError({'start_time': f"Hiện tại là {utils.get_timezone_now().time().strftime("%H:%M")}. Hệ thống ngừng nhận đặt vé trực tuyến trước suất chiếu {cls.VALID_BOOKING_CUTOFF_DISTANCE} phút, vui lòng liên hệ CSKH để được hỗ trợ"})
+        cutoff = (utils.get_timezone_now() + timedelta(minutes=cls.VALID_BOOKING_CUTOFF_DISTANCE)).time()
+        if showtime.show_date == utils.get_timezone_now().date() and showtime.start_time <= cutoff:
+            raise ValidationError({'start_time': f"Hiện tại là {utils.get_timezone_now().time().strftime('%H:%M')}. Hệ thống ngừng nhận đặt vé trực tuyến trước suất chiếu {cls.VALID_BOOKING_CUTOFF_DISTANCE} phút, vui lòng liên hệ CSKH để được hỗ trợ"})
 
         success, result = SeatRedisService.hold_seats(showtime_id, seat_ids, user.pk, ttl=SEAT_HOLD_MINUTES * 60)
         if not success:
@@ -217,16 +217,16 @@ class BookingService:
                 if seats.count() != len(seat_ids):
                     raise ValidationError({'seats': 'Một số ghế không hợp lệ'})
 
-                seat_amount = showtime.price * len(seat_ids)
-                held_until = timezone.now() + timedelta(minutes=SEAT_HOLD_MINUTES)
+                seat_total = showtime.price * len(seat_ids)
+                expiry = timezone.now() + timedelta(minutes=SEAT_HOLD_MINUTES)
 
-                booking = Booking.objects.create(customer=user, showtime=showtime, seat_amount=seat_amount, final_amount=seat_amount, held_until=held_until)
+                booking = Booking.objects.create(customer=user, showtime=showtime, seat_amount=seat_total, final_amount=seat_total, held_until=expiry)
                 Ticket.objects.bulk_create([
                     Ticket(booking=booking, showtime=showtime, seat=seat, price=showtime.price)
                     for seat in seats
                 ])
 
-                tasks.auto_expire_booking.apply_async((booking.pk,), eta=held_until)
+                tasks.auto_expire_booking.apply_async((booking.pk,), eta=expiry)
 
         except Exception:
             SeatRedisService.release_seats(showtime_id, seat_ids, user.pk)
@@ -236,19 +236,19 @@ class BookingService:
         return booking
 
     @staticmethod
-    def delete_booking(booking, delete_status):
+    def delete_booking(booking, target_status):
         if booking.status != BookingStatus.HOLDING:
             raise ValidationError('Đơn đặt vé không thể hủy ở trạng thái hiện tại')
 
         try:
-            PaymentGatewayService.cancel_payos_payment_link(booking.payment, delete_status)
+            PaymentGatewayService.cancel_payos_payment_link(booking.payment, target_status)
         except Payment.DoesNotExist:
             pass
 
         seat_ids = list(booking.booking_tickets.values_list('seat_id', flat=True))
         SeatRedisService.release_seats(booking.showtime_id, seat_ids, booking.customer_id)
         booking.booking_tickets.update(status=TicketStatus.CANCELLED)
-        booking.status = delete_status
+        booking.status = target_status
         booking.save(update_fields=['status'])
 
         SeatRedisService.broadcast_seat_update(booking.showtime_id)
@@ -262,19 +262,19 @@ class BookingService:
             if not items:
                 booking.product_amount = Decimal(0)
             else:
-                product_ids = [i['product'] for i in items]
-                products = {p.pk: p for p in Product.objects.filter(pk__in=product_ids, active=True)}
+                pids = [i['product'] for i in items]
+                product_map = {p.pk: p for p in Product.objects.filter(pk__in=pids, active=True)}
 
             rows = []
             total = Decimal(0)
             for item in items:
-                product = products.get(item['product'])
-                if not product:
+                prod = product_map.get(item['product'])
+                if not prod:
                     raise ValidationError({'items': f"Sản phẩm #{item['product']} không hợp lệ"})
 
                 qty = item['quantity']
-                subtotal = product.price * qty
-                rows.append(BookingProduct(booking=booking, product=product, quantity=qty, unit_price=product.price, subtotal=subtotal))
+                subtotal = prod.price * qty
+                rows.append(BookingProduct(booking=booking, product=prod, quantity=qty, unit_price=prod.price, subtotal=subtotal))
                 total += subtotal
 
             BookingProduct.objects.bulk_create(rows)
@@ -289,15 +289,15 @@ class BookingService:
                     bp.delete()
                     booking.discount_amount = Decimal(0)
                 else:
-                    new_discount = PromotionCalculatorService.calculate_discount(promo, new_base)
-                    bp.discount_amount = new_discount
+                    updated_discount = PromotionCalculatorService.calculate_discount(promo, new_base)
+                    bp.discount_amount = updated_discount
                     bp.save(update_fields=['discount_amount'])
-                    booking.discount_amount = new_discount
+                    booking.discount_amount = updated_discount
             except BookingPromotion.DoesNotExist:
                 pass
 
-            available_after_discount = new_base - booking.discount_amount
-            if booking.points_used_amount > available_after_discount:
+            remaining = new_base - booking.discount_amount
+            if booking.points_used_amount > remaining:
                 booking.points_used = 0
                 booking.points_used_amount = Decimal(0)
 
@@ -324,10 +324,10 @@ class BookingService:
         if promo.usage_limit and promo.used_count >= promo.usage_limit:
             raise ValidationError({'code': 'Mã khuyến mãi đã hết lượt sử dụng'})
 
-        user_used_count = PromotionUsage.objects.filter(promotion=promo, user=booking.customer).count()
-        if user_used_count >= promo.per_user_limit:
-            limit_msg = ("1 lần" if promo.per_user_limit == 1 else f"tối đa {promo.per_user_limit} lần")
-            raise ValidationError({'code': f'Tài khoản của bạn chỉ được áp dụng mã này {limit_msg}'})
+        times_used = PromotionUsage.objects.filter(promotion=promo, user=booking.customer).count()
+        if times_used >= promo.per_user_limit:
+            limit_label = ("1 lần" if promo.per_user_limit == 1 else f"tối đa {promo.per_user_limit} lần")
+            raise ValidationError({'code': f'Tài khoản của bạn chỉ được áp dụng mã này {limit_label}'})
 
         base_amount = booking.seat_amount + booking.product_amount
         if base_amount < promo.min_order_amount:
@@ -339,9 +339,9 @@ class BookingService:
         BookingPromotion.objects.create(booking=booking, promotion=promo, discount_amount=discount)
         booking.discount_amount = discount
 
-        available_after_discount = base_amount - discount
-        max_points_amount = max(available_after_discount - cls.MIN_SUBTOTAL_THRESHOLD, Decimal(0))
-        if booking.points_used_amount > max_points_amount:
+        remaining = base_amount - discount
+        max_pts_amount = max(remaining - cls.MIN_SUBTOTAL_THRESHOLD, Decimal(0))
+        if booking.points_used_amount > max_pts_amount:
             booking.points_used = 0
             booking.points_used_amount = Decimal(0)
 
@@ -361,12 +361,12 @@ class BookingService:
         if points > user.loyalty_points:
             raise ValidationError({'points': f'Bạn không thể quy đổi quá {user.loyalty_points} điểm'})
 
-        base_after_discount = booking.seat_amount + booking.product_amount - booking.discount_amount
-        max_points_amount = max(base_after_discount - cls.MIN_SUBTOTAL_THRESHOLD, Decimal(0))
+        after_discount = booking.seat_amount + booking.product_amount - booking.discount_amount
+        max_pts_amount = max(after_discount - cls.MIN_SUBTOTAL_THRESHOLD, Decimal(0))
         requested_amount = Decimal(points) * cls.POINTS_TO_VND
-        if requested_amount > max_points_amount:
-            max_allowed_points = int(max_points_amount // cls.POINTS_TO_VND)
-            raise ValidationError({'points': f'Bạn chỉ có thể quy đổi tối đa {max_allowed_points} điểm cho đơn này'})
+        if requested_amount > max_pts_amount:
+            max_pts = int(max_pts_amount // cls.POINTS_TO_VND)
+            raise ValidationError({'points': f'Bạn chỉ có thể quy đổi tối đa {max_pts} điểm cho đơn này'})
 
         booking.points_used = points
         booking.points_used_amount = requested_amount
@@ -384,16 +384,16 @@ class BookingService:
             booking.status = BookingStatus.CONFIRMED
             booking.confirmed_at = timezone.now()
 
-            points_earned = int(booking.final_amount // cls.VND_TO_POINTS)
-            booking.points_earned = points_earned
+            earned = int(booking.final_amount // cls.VND_TO_POINTS)
+            booking.points_earned = earned
             booking.save(update_fields=['status', 'confirmed_at', 'points_earned'])
 
             booking.booking_tickets.filter(status=TicketStatus.HELD).update(status=TicketStatus.BOOKED)
 
             user = booking.customer
-            net_points = points_earned - booking.points_used
-            if net_points != 0:
-                user.loyalty_points = max(user.loyalty_points + net_points, 0)
+            net = earned - booking.points_used
+            if net != 0:
+                user.loyalty_points = max(user.loyalty_points + net, 0)
                 user.save(update_fields=['loyalty_points'])
 
             if booking.points_used > 0:
@@ -403,10 +403,10 @@ class BookingService:
                     transaction_type=PointTransactionType.REDEEM,
                     description=f'Quy đổi điểm cho đơn {booking.booking_code}'
                 )
-            if points_earned > 0:
+            if earned > 0:
                 PointTransaction.objects.create(
                     user=user, booking=booking,
-                    points=points_earned,
+                    points=earned,
                     transaction_type=PointTransactionType.EARN,
                     description=f'Tích điểm từ đơn {booking.booking_code}'
                 )
@@ -476,16 +476,16 @@ class CinemaRoomService:
         new_total_rows = data.get('total_rows', room.total_rows)
         new_seats_per_row = data.get('seats_per_row', room.seats_per_row)
 
-        is_capacity_changed = (new_total_rows != room.total_rows or new_seats_per_row != room.seats_per_row)
+        layout_changed = (new_total_rows != room.total_rows or new_seats_per_row != room.seats_per_row)
 
-        if is_capacity_changed and cls.check_active_showtimes(room) and not force_update:
+        if layout_changed and cls.check_active_showtimes(room) and not force_update:
             raise ValidationError({'warning': 'Phòng chiếu này hiện đang có các suất chiếu sắp diễn ra. Việc thay đổi bố trí phòng sẽ làm lại sơ đồ ghế.'})
 
-        for attr, value in data.items():
-            setattr(room, attr, value)
+        for attr, val in data.items():
+            setattr(room, attr, val)
         room.save()
 
-        if is_capacity_changed:
+        if layout_changed:
             cls.generate_seats(room)
 
         return room
@@ -495,23 +495,23 @@ class ProductService:
 
     @staticmethod
     def save_combo_items(combo, items_data):
-        item_ids = [i['item'] for i in items_data]
+        ids = [i['item'] for i in items_data]
 
-        single_products = {p.pk: p for p in Product.objects.filter(active=True, pk__in=item_ids, product_type=ProductType.SINGLE)}
+        single_map = {p.pk: p for p in Product.objects.filter(active=True, pk__in=ids, product_type=ProductType.SINGLE)}
 
-        combo_items_to_create = []
+        combo_items = []
         for entry in items_data:
-            item_id = entry['item']
-            quantity = entry.get('quantity', 1)
+            pid = entry['item']
+            qty = entry.get('quantity', 1)
 
-            if item_id not in single_products:
-                raise ValidationError({'items': f'Sản phẩm đơn số {item_id} không tồn tại, đã ngừng kinh doanh hoặc không phải là sản phẩm đơn lẻ'})
-            if quantity <= 0:
+            if pid not in single_map:
+                raise ValidationError({'items': f'Sản phẩm đơn số {pid} không tồn tại, đã ngừng kinh doanh hoặc không phải là sản phẩm đơn lẻ'})
+            if qty <= 0:
                 raise ValidationError({'items': 'Số lượng sản phẩm thành phần phải lớn hơn 0'})
 
-            combo_items_to_create.append(ComboItem(combo=combo,item=single_products[item_id],quantity=quantity))
+            combo_items.append(ComboItem(combo=combo, item=single_map[pid], quantity=qty))
 
-        ComboItem.objects.bulk_create(combo_items_to_create)
+        ComboItem.objects.bulk_create(combo_items)
 
     @staticmethod
     @transaction.atomic
@@ -534,8 +534,8 @@ class ProductService:
     @classmethod
     @transaction.atomic
     def update_product(cls, product, data, items_data=None):
-        for attr, value in data.items():
-            setattr(product, attr, value)
+        for attr, val in data.items():
+            setattr(product, attr, val)
         product.save()
 
         if product.product_type == ProductType.COMBO and items_data is not None:

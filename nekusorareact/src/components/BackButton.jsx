@@ -3,7 +3,7 @@ import { ArrowLeft } from "lucide-react";
 const BackButton = ({ label = 'Quay lại', onClick }) => {
     return (
         <button
-            className="btn btn-ghost btn-sm -ml-2"
+            className="not-sm:hidden btn btn-ghost btn-sm mb-2"
             onClick={onClick}
         >
             <ArrowLeft size={16} />

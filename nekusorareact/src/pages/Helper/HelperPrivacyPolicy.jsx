@@ -12,7 +12,7 @@ const HelperPrivacyPolicy = () => {
         <div className="max-w-6xl mx-auto px-4 py-10">
             <div className="text-center space-y-3 mb-10">
                 <div className="badge badge-primary badge-outline gap-2 text-xs font-semibold">
-                    Tuân thủ Nghị định 13/2023/NĐ-CP về Bảo vệ dữ liệu cá nhân
+                    Nekusora Cinema - Cập nhật lần cuối: 15/08/2026
                 </div>
                 <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">
                     Chính sách Bảo mật

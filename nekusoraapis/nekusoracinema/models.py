@@ -21,7 +21,6 @@ class BaseModel(models.Model):
         abstract = True
 
 
-# ENUMS
 class UserRole(Enum):
     ADMIN = "ADMIN"
     CUSTOMER = "CUSTOMER"
@@ -98,7 +97,6 @@ class PaymentStatus(Enum):
     REFUNDED = "REFUNDED"
 
 
-# TABLES
 class User(AbstractUser):
     email = models.EmailField(unique=True, null=False, blank=False)
     USERNAME_FIELD = "email"
@@ -341,7 +339,7 @@ class Booking(BaseModel):
 
     is_checked_in = models.BooleanField(default=False)
     checked_in_at = models.DateTimeField(null=True, blank=True)
-    checked_in_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="checked_in_bookings", help_text="Nhân viên soát vé đã quét mã")
+    checked_in_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="checked_in_bookings")
 
     class Meta:
         ordering = ["-created_at"]
@@ -391,7 +389,7 @@ class BookingPromotion(BaseModel):
 class PointTransaction(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_point_transactions")
     booking = models.ForeignKey(Booking, on_delete=models.SET_NULL, null=True, blank=True, related_name="booking_point_transactions")
-    points = models.IntegerField(help_text="Dương = cộng điểm, Âm = trừ điểm")
+    points = models.IntegerField()
     transaction_type = EnumField(PointTransactionType)
     description = models.CharField(max_length=255, blank=True)
 
@@ -426,7 +424,7 @@ class Payment(BaseModel):
 class Rating(BaseModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="user_ratings")
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, related_name="movie_ratings")
-    verified_booking = models.ForeignKey(Booking, on_delete=models.SET_NULL, null=True, blank=True, help_text="Booking đã check-in dùng để chứng minh đủ điều kiện đánh giá.")
+    verified_booking = models.ForeignKey(Booking, on_delete=models.SET_NULL, null=True, blank=True)
     score = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
     comment = models.TextField(blank=True)
 

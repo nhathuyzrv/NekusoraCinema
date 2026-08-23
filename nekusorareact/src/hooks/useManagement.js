@@ -6,6 +6,7 @@ export const useManageStaffs = (params) =>
     useQuery({
         queryKey: ["manage_staffs", params],
         queryFn: () => managementService.getStaffs(params),
+        staleTime: 1000 * 60,
     });
 
 export const useManageStaffDetail = (id) =>
@@ -13,7 +14,6 @@ export const useManageStaffDetail = (id) =>
         queryKey: ["manage_staffs", id],
         queryFn: () => managementService.getStaffDetail(id),
         enabled: !!id,
-        staleTime: 1000 * 60,
     });
 
 export const useCreateStaff = () => {
@@ -23,7 +23,7 @@ export const useCreateStaff = () => {
     return useMutation({
         mutationFn: (data) => managementService.createStaff(data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["manage_staffs"], refetchType: "all" });
+            queryClient.invalidateQueries({ queryKey: ["manage_staffs"] });
             toast.success("Đã thêm nhân viên mới");
         },
         onError: (err) => {
@@ -40,7 +40,7 @@ export const useUpdateStaff = () => {
     return useMutation({
         mutationFn: ({ id, data }) => managementService.updateStaff(id, data),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["manage_staffs"], refetchType: "all" });
+            queryClient.invalidateQueries({ queryKey: ["manage_staffs"] });
             toast.success("Đã cập nhật nhân viên");
         },
         onError: (err) => {
@@ -136,14 +136,14 @@ export const useManageMovies = (params) =>
     useQuery({
         queryKey: ["manage_movies", params],
         queryFn: () => managementService.getMovies(params),
+        staleTime: 1000 * 60,
     });
 
 export const useManageMovieDetail = (id) =>
     useQuery({
-        queryKey: ["manage_movie_detail", id],
+        queryKey: ["manage_movies", id],
         queryFn: () => managementService.getMovieDetail(id),
         enabled: !!id,
-        staleTime: 1000 * 60,
     });
 
 export const useCreateMovie = () => {
@@ -169,9 +169,8 @@ export const useUpdateMovie = () => {
 
     return useMutation({
         mutationFn: ({ id, data }) => managementService.updateMovie(id, data),
-        onSuccess: (_, { id }) => {
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["manage_movies"] });
-            queryClient.invalidateQueries({ queryKey: ["manage_movie_detail", id] });
             toast.success("Đã cập nhật phim");
         },
         onError: (err) => {
@@ -186,6 +185,7 @@ export const useManageMovieShowtimes = (movieId, params) =>
         queryKey: ["manage_movie_showtimes", movieId, params],
         queryFn: () => managementService.getMovieShowtimes(movieId, params),
         enabled: !!movieId,
+        staleTime: 1000 * 60,
     });
 
 export const useCreateMovieShowtime = (movieId) => {
@@ -210,7 +210,6 @@ export const useManageShowtimeDetail = (id) =>
         queryKey: ["manage_showtime_detail", id],
         queryFn: () => managementService.getShowtimeDetail(id),
         enabled: !!id,
-        staleTime: 1000 * 60,
     });
 
 export const useUpdateShowtime = () => {
@@ -259,7 +258,6 @@ export const useManageLocationDetail = (id) =>
         queryKey: ["manage_location_detail", id],
         queryFn: () => managementService.getLocationDetail(id),
         enabled: !!id,
-        staleTime: 1000 * 60,
     });
 
 export const useCreateLocation = () => {
@@ -301,14 +299,15 @@ export const useManageLocationBranches = (locationId) =>
         queryKey: ["manage_location_branches", locationId],
         queryFn: () => managementService.getLocationBranches(locationId),
         enabled: !!locationId,
+        staleTime: 1000 * 60,
     });
 
-export const useCreateBranchForLocation = (locationId) => {
+export const useCreateBranch = (locationId) => {
     const queryClient = useQueryClient();
     const toast = useToast();
 
     return useMutation({
-        mutationFn: (data) => managementService.createBranchForLocation(locationId, data),
+        mutationFn: (data) => managementService.createBranch(locationId, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["manage_location_branches", locationId] });
             toast.success("Đã thêm chi nhánh mới");
@@ -325,7 +324,6 @@ export const useManageBranchDetail = (id) =>
         queryKey: ["manage_branch_detail", id],
         queryFn: () => managementService.getBranchDetail(id),
         enabled: !!id,
-        staleTime: 1000 * 60,
     });
 
 export const useUpdateBranch = () => {
@@ -350,14 +348,15 @@ export const useManageBranchRooms = (branchId) =>
         queryKey: ["manage_branch_rooms", branchId],
         queryFn: () => managementService.getBranchRooms(branchId),
         enabled: !!branchId,
+        staleTime: 1000 * 60,
     });
 
-export const useCreateRoomForBranch = (branchId) => {
+export const useCreateRoom = (branchId) => {
     const queryClient = useQueryClient();
     const toast = useToast();
 
     return useMutation({
-        mutationFn: (data) => managementService.createRoomForBranch(branchId, data),
+        mutationFn: (data) => managementService.createRoom(branchId, data),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["manage_branch_rooms", branchId] });
             toast.success("Đã thêm phòng chiếu mới");
@@ -374,7 +373,6 @@ export const useManageRoomDetail = (id) =>
         queryKey: ["manage_room_detail", id],
         queryFn: () => managementService.getRoomDetail(id),
         enabled: !!id,
-        staleTime: 1000 * 60,
     });
 
 export const useUpdateRoom = () => {
@@ -398,6 +396,7 @@ export const useManageProducts = (params) =>
     useQuery({
         queryKey: ["manage_products", params],
         queryFn: () => managementService.getProducts(params),
+        staleTime: 1000 * 60,
     });
 
 export const useManageProductDetail = (id) =>
@@ -405,7 +404,6 @@ export const useManageProductDetail = (id) =>
         queryKey: ["manage_product_detail", id],
         queryFn: () => managementService.getProductDetail(id),
         enabled: !!id,
-        staleTime: 1000 * 60,
     });
 
 export const useCreateProduct = () => {
