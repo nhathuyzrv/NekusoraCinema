@@ -13,7 +13,7 @@ import { formatMoney, formatSignedMoney } from "../utils/Money";
 import { formatDate, formatShortWeekday } from "../utils/DateTime";
 import { callAuthModal } from "../utils/CallAuthModal";
 import bookingService from "../services/bookingService";
-import StepPaymentPayOS from "../components/StepPayment";
+import PaymentSelector from "../components/PaymentSelector";
 import Configs from "../configs/Configs";
 import { useHoldingBooking } from "../hooks/useMyBookings";
 
@@ -123,7 +123,7 @@ function StepShowtime({ selection, setSelection, onContinue }) {
                 <div className="collapse-title font-semibold flex items-center gap-2 cursor-pointer" onClick={() => setOpenPanel(0)}>
                     <MapPin size={16} className="text-primary" />
                     Chọn khu vực
-                    {location && <span className="badge badge-primary badge-sm ml-2">{location.name}</span>}
+                    {location && <span className="text-sm text-info font-medium">{location.name}</span>}
                 </div>
                 <div className="collapse-content">
                     <LocalLoading show={loadingLocations}>
@@ -149,7 +149,7 @@ function StepShowtime({ selection, setSelection, onContinue }) {
                 >
                     <Film size={16} className="text-primary" />
                     Chọn phim
-                    {movie && <span className="badge badge-primary badge-sm ml-2 truncate max-w-200">{movie.title}</span>}
+                    {movie && <span className="text-sm text-info font-medium">{movie.title}</span>}
                 </div>
                 <div className="collapse-content">
                     {!location ? (
@@ -182,7 +182,7 @@ function StepShowtime({ selection, setSelection, onContinue }) {
                     <Clock size={16} className="text-primary" />
                     Chọn suất chiếu
                     {showtime && (
-                        <span className="badge badge-primary badge-sm ml-2">
+                        <span className="text-sm text-info font-medium">
                             {showtime.start_time?.slice(0, 5)} - {formatShortWeekday(showtime.show_date)},{formatDate(showtime.show_date)} - {showtime.branch.name}
                         </span>
                     )}
@@ -853,7 +853,7 @@ function StepConfirm({ booking, bookingCode, email, setEmail, onConfirmed, onBac
     );
 }
 
-function StepPayment({ booking }) {
+function StepCheckout({ booking }) {
     if (!booking?.payment) {
         return (
             <div className="bg-base-100 border border-base-300 rounded-2xl p-10 flex flex-col items-center gap-3">
@@ -863,7 +863,9 @@ function StepPayment({ booking }) {
         );
     }
 
-    return <StepPaymentPayOS booking={booking} />;
+    const methodCode = booking?.payment?.method?.code?.toUpperCase();
+
+    return <PaymentSelector booking={booking} methodCode={methodCode} />
 }
 
 function BookingSuccess({ booking }) {
@@ -1310,7 +1312,7 @@ const Booking = () => {
                         />
                     )}
                     {step === 5 && (
-                        <StepPayment booking={booking} />
+                        <StepCheckout booking={booking} />
                     )}
                 </div>
 

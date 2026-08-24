@@ -1,6 +1,8 @@
+import hashlib
+import hmac
 import redis
 from decimal import Decimal
-from datetime import timedelta, date
+from datetime import timedelta
 from nekusoraapis import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -11,7 +13,8 @@ from nekusoracinema import tasks, utils
 from nekusoracinema.models import *
 from django.utils import timezone
 from django.db import models
-
+from payos import PayOS
+import requests
 
 redis_client = redis.Redis(host='127.0.0.1', port=6379, db=1, decode_responses=True, socket_keepalive=True, socket_connect_timeout=5)
 SEAT_HOLD_MINUTES = getattr(settings, 'SEAT_HOLD_MINUTES', 8)
@@ -114,13 +117,10 @@ class PaymentGatewayService:
             return
 
         try:
-            from payos import PayOS
-            from nekusoraapis import settings as app_settings
-
             client = PayOS(
-                client_id=app_settings.PAYOS_CLIENT_ID,
-                api_key=app_settings.PAYOS_API_KEY,
-                checksum_key=app_settings.PAYOS_CHECKSUM_KEY,
+                client_id=settings.PAYOS_CLIENT_ID,
+                api_key=settings.PAYOS_API_KEY,
+                checksum_key=settings.PAYOS_CHECKSUM_KEY,
             )
             client.payment_requests.cancel(payment.order_code)
         except Exception:
@@ -138,8 +138,6 @@ class PaymentGatewayService:
 
     @classmethod
     def handle_payos_webhook(cls, data, callback):
-        from payos import PayOS
-
         client = PayOS(
             client_id=settings.PAYOS_CLIENT_ID,
             api_key=settings.PAYOS_API_KEY,
@@ -171,6 +169,108 @@ class PaymentGatewayService:
                 payment.cancelled_at = timezone.now()
                 payment.cancel_reason = 'Người dùng hủy giao dịch'
                 payment.save(update_fields=['status', 'cancelled_at', 'cancel_reason'])
+
+        return booking
+
+    @staticmethod
+    def verify_momo_signature(data):
+        secret_key = settings.MOMO_SECRET_KEY
+        access_key = settings.MOMO_ACCESS_KEY
+
+        raw = (
+            f"accessKey={access_key}"
+            f"&amount={data.get('amount')}"
+            f"&extraData={data.get('extraData', '')}"
+            f"&message={data.get('message', '')}"
+            f"&orderId={data.get('orderId')}"
+            f"&orderInfo={data.get('orderInfo', '')}"
+            f"&orderType={data.get('orderType', '')}"
+            f"&partnerCode={data.get('partnerCode')}"
+            f"&payType={data.get('payType', '')}"
+            f"&requestId={data.get('requestId')}"
+            f"&responseTime={data.get('responseTime')}"
+            f"&resultCode={data.get('resultCode')}"
+            f"&transId={data.get('transId')}"
+        )
+
+        expected = hmac.new(secret_key.encode(), raw.encode(), hashlib.sha256).hexdigest()
+        return hmac.compare_digest(expected, data.get('signature', ''))
+
+    @classmethod
+    def handle_momo_ipn(cls, data, callback):
+        if not cls.verify_momo_signature(data):
+            raise ValidationError({'signature': 'Invalid signature'})
+
+        order_id = data.get('orderId', '')
+        result_code = int(data.get('resultCode', -1))
+
+        booking_code = order_id.split('_')[0] if '_' in order_id else order_id
+        payment = get_object_or_404(Payment, booking__booking_code=booking_code)
+        booking = payment.booking
+
+        if payment.status in (PaymentStatus.SUCCESS, PaymentStatus.FAILED, PaymentStatus.REFUNDED) or booking.status in (BookingStatus.CONFIRMED, BookingStatus.CANCELLED, BookingStatus.EXPIRED):
+            return booking
+
+        if result_code == 0:
+            payment.transaction_ref = str(data.get('transId', ''))
+            payment.save(update_fields=['transaction_ref'])
+            callback(booking=booking, payment=payment)
+        else:
+            with transaction.atomic():
+                payment.status = PaymentStatus.FAILED
+                payment.cancelled_at = timezone.now()
+                payment.cancel_reason = data.get('message', 'Giao dịch thất bại')
+                payment.save(update_fields=['status', 'cancelled_at', 'cancel_reason'])
+
+        return booking
+
+
+    @classmethod
+    def handle_paypal_capture(cls, data, callback):
+        order_id = data.get("token")
+        payer_id = data.get("PayerID")
+
+        if not order_id or not payer_id:
+            raise ValidationError({"token": "Missing token or PayerID"})
+
+        payment = get_object_or_404(Payment, payment_link_id=order_id)
+        booking = payment.booking
+
+        if payment.status in (PaymentStatus.SUCCESS, PaymentStatus.FAILED, PaymentStatus.REFUNDED) or booking.status in (BookingStatus.CONFIRMED, BookingStatus.CANCELLED, BookingStatus.EXPIRED):
+            return booking
+
+        token_response = requests.post(
+            f"{settings.PAYPAL_BASE_URL}/v1/oauth2/token",
+            headers={"Accept": "application/json"},
+            data={"grant_type": "client_credentials"},
+            auth=(settings.PAYPAL_CLIENT_ID, settings.PAYPAL_CLIENT_SECRET),
+            timeout=10,
+        )
+        token_response.raise_for_status()
+        access_token = token_response.json()["access_token"]
+
+        capture_response = requests.post(
+            f"{settings.PAYPAL_BASE_URL}/v2/checkout/orders/{order_id}/capture",
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {access_token}",
+            },
+            timeout=10,
+        ).json()
+
+        status = capture_response.get("status")
+
+        if status == "COMPLETED":
+            capture_id = capture_response.get("purchase_units", [{}])[0].get("payments", {}).get("captures", [{}])[0].get("id", "")
+            payment.transaction_ref = capture_id
+            payment.save(update_fields=["transaction_ref"])
+            callback(booking=booking, payment=payment)
+        else:
+            with transaction.atomic():
+                payment.status = PaymentStatus.FAILED
+                payment.cancelled_at = timezone.now()
+                payment.cancel_reason = f"PayPal status: {status}"
+                payment.save(update_fields=["status", "cancelled_at", "cancel_reason"])
 
         return booking
 
@@ -432,6 +532,14 @@ class BookingService:
     @classmethod
     def handle_payos_webhook(cls, data):
         return PaymentGatewayService.handle_payos_webhook(data=data, callback=cls.confirm_booking)
+
+    @classmethod
+    def handle_momo_ipn(cls, data):
+        return PaymentGatewayService.handle_momo_ipn(data=data, callback=cls.confirm_booking)
+
+    @classmethod
+    def handle_paypal_capture(cls, data):
+        return PaymentGatewayService.handle_paypal_capture(data=data, callback=cls.confirm_booking)
 
 
 def generate_row_label(row_idx):

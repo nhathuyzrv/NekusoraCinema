@@ -1,9 +1,11 @@
-import { authApis, endpoints } from "../configs/Apis";
+import Apis, { endpoints } from "../configs/Apis";
 
 const paymentService = {
-    getByOrderCode: (orderCode) =>
-        authApis.get(endpoints.payments + `?orderCode=${orderCode}`)
-            .then(res => res.data),
+    getPaymentMethods: () =>
+        Apis.get(endpoints.paymentMethods)
+            .then(r => r.data),
+    paypalCapture: (data) =>
+        Apis.post(endpoints.paypalCapture, data),
 };
 
 export default paymentService;

@@ -107,8 +107,8 @@ const Header = () => {
                 <ThemeToggle />
 
                 {isAuthenticated && hasRole("CUSTOMER") && (
-                    <div className="badge badge-primary badge-outline hidden sm:flex gap-1 bg-primary-content/90">
-                        <Flame size="16" className="text-primary fill-primary" />
+                    <div className="badge badge-primary badge-outline flex gap-1 bg-primary-content/90 not-sm:py-2">
+                        <Flame size="16" className="text-primary fill-primary not-sm:scale-70" />
                         {user?.loyalty_points.toLocaleString('vi-VN') ?? 0} pts
                     </div>
                 )}

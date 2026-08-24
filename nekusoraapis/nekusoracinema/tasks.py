@@ -8,9 +8,11 @@ from django.core.cache import cache
 from django.template.loader import render_to_string
 
 from nekusoraapis import settings
-from nekusoracinema import services, utils
+from nekusoracinema import utils
 from nekusoracinema.models import *
 from babel.numbers import format_decimal
+
+from nekusoracinema.services import BookingService
 
 
 @shared_task(bind=True, max_retries=3, default_retry_delay=10)
@@ -81,4 +83,4 @@ def auto_expire_booking(booking_id):
     except Booking.DoesNotExist:
         return
 
-    services.delete_booking(booking, BookingStatus.EXPIRED)
+    BookingService.delete_booking(booking, BookingStatus.EXPIRED)

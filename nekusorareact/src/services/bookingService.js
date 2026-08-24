@@ -42,9 +42,6 @@ const bookingService = {
         authApis.delete(endpoints.bookingDetails(bookingCode) + "points/")
             .then(r => r.data),
 
-    getPaymentMethods: () =>
-        Apis.get(endpoints.paymentMethods)
-            .then(r => r.data),
     createPayment: (bookingCode, method, email) =>
         authApis.post(endpoints.bookingDetails(bookingCode) + "payment/", { method, email })
             .then(r => r.data),

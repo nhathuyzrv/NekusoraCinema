@@ -375,23 +375,10 @@ class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
 
         payment_strategy = PAYMENT_STRATEGY.get(method.code)
         if not payment_strategy:
-            return Response({'message': f'Phương thức thanh toán "{method.name}" đang được cập nhật'},
-                            status=status.HTTP_400_BAD_REQUEST)
+            return Response({'message': f'Phương thức thanh toán "{method.name}" đang được cập nhật'}, status=status.HTTP_400_BAD_REQUEST)
 
         payment = payment_strategy.create(booking, method, s.validated_data)
         return Response(serializers.PaymentSerializer(payment).data, status=status.HTTP_201_CREATED)
-
-
-class PaymentViewSet(viewsets.ViewSet, generics.ListAPIView):
-    serializer_class = serializers.PaymentSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        query = Payment.objects.filter(active=True).order_by('-created_at').select_related("booking").filter(booking__customer=self.request.user)
-        q_order_code = self.request.query_params.get("orderCode")
-        if q_order_code:
-            query = query.filter(order_code=q_order_code)
-        return query
 
 
 class PayOSWebhookViewSet(viewsets.ViewSet):
@@ -399,6 +386,26 @@ class PayOSWebhookViewSet(viewsets.ViewSet):
     def create(self, request):
         try:
             BookingService.handle_payos_webhook(data=request.data)
+        except Exception:
+            pass
+        return Response(status=status.HTTP_200_OK)
+
+
+class MoMoIPNViewSet(viewsets.ViewSet):
+
+    def create(self, request):
+        try:
+            BookingService.handle_momo_ipn(data=request.data)
+        except Exception:
+            pass
+        return Response(status=status.HTTP_200_OK)
+
+
+class PayPalCaptureViewSet(viewsets.ViewSet):
+
+    def create(self, request):
+        try:
+            BookingService.handle_paypal_capture(data=request.data)
         except Exception:
             pass
         return Response(status=status.HTTP_200_OK)
@@ -696,4 +703,3 @@ class ManagePromotionViewSet(viewsets.ViewSet, generics.ListCreateAPIView):
 
         output_serializer = self.get_serializer(promotion)
         return Response(output_serializer.data, status=status.HTTP_201_CREATED)
-

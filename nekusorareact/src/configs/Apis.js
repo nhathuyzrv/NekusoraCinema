@@ -57,7 +57,7 @@ export const endpoints = {
     ratingDetails: (id) => `/ratings/${id}/`,
 
     paymentMethods: "/payment-methods/",
-    payments: "/payments/",
+    paypalCapture: "/paypal/capture/",
 
     screeningFormats: "/screening-formats/",
 

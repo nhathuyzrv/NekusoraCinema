@@ -9,7 +9,9 @@ import Profile from "../pages/Profile";
 import MyBookings from "../pages/MyBookings";
 import NotFound from "../pages/Error/NotFound";
 import Forbidden from "../pages/Error/Forbidden";
-import PayOSResult from "../pages/PayOSResult";
+import PayOSResult from "../pages/PaymentResult/PayOSResult";
+import MoMoResult from "../pages/PaymentResult/MomoResult";
+import PayPalResult from "../pages/PaymentResult/PayPalResult";
 import BookingDetails from "../pages/BookingDetails";
 import Home from "../pages/Home";
 import HelperBooking from "../pages/Helper/HelperBooking";
@@ -37,13 +39,22 @@ const AppRoutes = () => {
                 <Route path="profile" element={<Profile />} />
                 <Route path="movies" element={<Movies />} />
                 <Route path="movies/:slug" element={<MovieDetails />} />
-                <Route path="help/order" element={<HelperBooking />} />
-                <Route path="help/faq" element={<HelperFAQ />} />
-                <Route path="help/terms-of-service" element={<HelperTermsOfService />} />
-                <Route path="help/privacy-policy" element={<HelperPrivacyPolicy />} />
-                <Route path="order" element={<Booking />} />
-                <Route path="order/payos/result" element={<PayOSResult />} />
-                <Route path="order/payos/cancel" element={<PayOSResult />} />
+
+                <Route path="help">
+                    <Route path="order" element={<HelperBooking />} />
+                    <Route path="faq" element={<HelperFAQ />} />
+                    <Route path="terms-of-service" element={<HelperTermsOfService />} />
+                    <Route path="privacy-policy" element={<HelperPrivacyPolicy />} />
+                </Route>
+
+                <Route path="order">
+                    <Route index element={<Booking />} />
+                    <Route path="payos/result" element={<PayOSResult />} />
+                    <Route path="payos/cancel" element={<PayOSResult />} />
+                    <Route path="momo/result" element={<MoMoResult />} />
+                    <Route path="paypal/result" element={<PayPalResult />} />
+                    <Route path="paypal/cancel" element={<PayPalResult />} />
+                </Route>
 
                 <Route element={<ProtectedRoutes roles={["CUSTOMER"]} />}>
                     <Route path="bookings" element={<MyBookings />} />

@@ -162,11 +162,11 @@ const Home = () => {
                                 <p key={`eyebrow-${activeSlide}`} className="hero-fade-up text-xs font-semibold uppercase tracking-widest text-secondary mb-3">
                                     {currentSlide.genre}
                                 </p>
-                                <h1 key={`title-${activeSlide}`} className="hero-fade-up delay-100 text-3xl sm:text-4xl lg:text-5xl font-bold text-base-100 leading-tight mb-3">
+                                <h1 key={`title-${activeSlide}`} className="hero-fade-up delay-100 text-3xl sm:text-4xl lg:text-5xl font-bold text-[#f4e4dc] leading-tight mb-3">
                                     {currentSlide.title}
                                 </h1>
                                 {currentSlide.note && (
-                                    <p key={`note-${activeSlide}`} className="hero-fade-up delay-200 text-sm sm:text-base text-base-100/80 mb-6 line-clamp-2">
+                                    <p key={`note-${activeSlide}`} className="hero-fade-up delay-200 text-sm sm:text-base text-[#f4e4dc]/80 mb-6 line-clamp-2">
                                         {currentSlide.note}
                                     </p>
                                 )}
@@ -178,7 +178,7 @@ const Home = () => {
                                         <Ticket size={18} />
                                         Đặt vé ngay
                                     </button>
-                                    <a href="#now-showing" className="btn btn-outline border-2 text-base-100 hover:bg-base-100 hover:text-neutral gap-2">
+                                    <a href="#now-showing" className="btn btn-outline border-[#f4e4dc] border-2 text-[#f4e4dc] hover:bg-[#f4e4dc] hover:text-neutral gap-2">
                                         Xem lịch chiếu
                                         <ArrowRight size={18} />
                                     </a>
@@ -192,17 +192,17 @@ const Home = () => {
                     <>
                         <button
                             onClick={() => setActiveSlide((i) => (i - 1 + heroSlides.length) % heroSlides.length)}
-                            className="btn btn-circle btn-ghost text-base-100 absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 hidden sm:flex"
+                            className="btn btn-circle btn-ghost text-[#f4e4dc] absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 hidden sm:flex"
                             aria-label="Slide trước"
                         >
-                            <ChevronLeft />
+                            <ChevronLeft size={42} />
                         </button>
                         <button
                             onClick={() => setActiveSlide((i) => (i + 1) % heroSlides.length)}
-                            className="btn btn-circle btn-ghost text-base-100 absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 hidden sm:flex"
+                            className="btn btn-circle btn-ghost text-[#f4e4dc] absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 hidden sm:flex"
                             aria-label="Slide tiếp theo"
                         >
-                            <ChevronRight />
+                            <ChevronRight size={42} />
                         </button>
                     </>
                 )}

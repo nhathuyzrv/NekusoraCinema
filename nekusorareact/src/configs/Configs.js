@@ -38,7 +38,7 @@ const Configs = {
         T16: { label: "T16", cls: "badge-warning" },
         T18: { label: "T18", cls: "badge-error" },
     },
-    // Booking
+
     BOOKING_PAGE_SIZE: 5,
     BOOKING_STATUS_FILTERS: [
         { label: "Đã xác nhận", value: "CONFIRMED" },
@@ -64,6 +64,11 @@ const Configs = {
         CANCELLED: "Đã huỷ",
         EXPIRED: "Đã hết hạn",
     },
+
+    PAYMENT_METHODS: {
+        BANK_QR: "BANK_QR",
+        MOMO: "MOMO",
+    }
 };
 
 export default Configs;

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import bookingService from "../services/bookingService";
 import { useToast } from "./useToast";
 import showtimeService from "../services/showtimeService";
+import paymentService from "../services/paymentService";
 
 export function useLocations() {
     return useQuery({
@@ -49,7 +50,7 @@ export function useProducts() {
 export function usePaymentMethods() {
     return useQuery({
         queryKey: ["payment-methods"],
-        queryFn: bookingService.getPaymentMethods,
+        queryFn: paymentService.getPaymentMethods,
         staleTime: 1000 * 60 * 30,
     });
 }

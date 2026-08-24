@@ -220,6 +220,7 @@ for code, name in FORMATS:
 PAYMENT_METHODS = [
     ("BANK_QR", "Chuyển khoản / QR ngân hàng"),
     ("MOMO", "Ví MoMo"),
+    ("PAYPAL", "Ví PayPal"),
     ("ZALOPAY", "Ví ZaloPay"),
     ("VISA_MASTER", "Thẻ Visa/Mastercard"),
 ]
