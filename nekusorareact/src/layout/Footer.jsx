@@ -58,7 +58,7 @@ const Footer = () => {
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     aria-label={label}
-                                    className="btn btn-ghost btn-sm btn-circle text-base-content/60 hover:text-primary not-sm:text-neutral-content"
+                                    className="btn btn-ghost btn-sm btn-circle text-base-content/60 hover:text-primary not-sm:text-base-content"
                                 >
                                     {icon}
                                 </a>

@@ -71,11 +71,12 @@ const HelperTermsOfService = () => {
                         <p>
                             Nekusora Cinema áp dụng nghiêm ngặt quy định phân loại phim theo Luật Điện ảnh Việt Nam:
                         </p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center my-2">
-                            <div className="p-2 bg-base-200 rounded-lg"><strong>P</strong>: Phổ biến</div>
-                            <div className="p-2 bg-base-200 rounded-lg"><strong>T13</strong>: Dành cho độ tuổi từ 13 trở lên</div>
-                            <div className="p-2 bg-base-200 rounded-lg"><strong>T16</strong>: Dành cho độ tuổi từ 16 trở lên</div>
-                            <div className="p-2 bg-base-200 rounded-lg"><strong>T18</strong>: Dành cho độ tuổi từ 18 trở lên</div>
+                        <div className="flex flex-col gap-2 my-2">
+                            <div className="p-2 bg-base-200 rounded-lg px-4"><strong>P</strong>: Dành cho người xem ở mọi độ tuổi</div>
+                            <div className="p-2 bg-base-200 rounded-lg px-4"><strong>K</strong>: Dành cho người xem dưới 13 tuổi và có người giám hộ đi kèm</div>
+                            <div className="p-2 bg-base-200 rounded-lg px-4"><strong>T13</strong>: Dành cho người xem từ 13 tuổi trở lên</div>
+                            <div className="p-2 bg-base-200 rounded-lg px-4"><strong>T16</strong>: Dành cho người xem từ 16 tuổi trở lên</div>
+                            <div className="p-2 bg-base-200 rounded-lg px-4"><strong>T18</strong>: Dành cho người xem từ 18 tuổi trở lên</div>
                         </div>
                         <p className="text-error font-medium text-xs">
                             Nhân viên soát vé có quyền yêu cầu xuất trình CCCD trước khi vào phòng chiếu đối với một số phim yêu cầu về độ tuổi. Trong trường hợp đã thanh toán vé trước đó, rạp từ chối hoàn tiền nếu khán giả không đủ tuổi theo quy định.
@@ -89,7 +90,7 @@ const HelperTermsOfService = () => {
                         </p>
                         <ul className="list-disc pl-5 space-y-2">
                             <li>Gây mất trật tự, chen lấn, sử dụng ngôn từ kích động, xúc phạm hoặc làm ảnh hưởng đến trải nghiệm xem phim của những người xung quanh.</li>
-                            <li>Thực hiện các hành vi riêng tư quá đà, thiếu chuẩn mực hoặc gây phản cảm trong phòng chiếu cũng như khu vực chung.</li>
+                            <li>Thực hiện các hành vi riêng tư quá đà, thiếu chuẩn mực trong phòng chiếu cũng như khu vực chung.</li>
                             <li>Mang đồ ăn/thức uống có mùi từ bên ngoài vào trong rạp.</li>
                             <li><strong>Nghiêm cấm hành vi</strong>: Quay lén, ghi âm, phát sóng trực tiếp (livestream) hoặc sao chép nội dung phim dưới mọi hình thức.</li>
                         </ul>

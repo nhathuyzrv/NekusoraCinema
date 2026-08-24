@@ -84,6 +84,20 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Ho_Chi_Minh'
 
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    "auto-update-showtime-status": {
+        "task": "nekusoracinema.tasks.auto_update_showtime_status",
+        "schedule": crontab(minute="*/5"),
+    },
+    "auto-update-movie-status": {
+        "task": "nekusoracinema.tasks.auto_update_movie_status",
+        "schedule": crontab(hour=0, minute=0),
+    },
+}
+
+
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",

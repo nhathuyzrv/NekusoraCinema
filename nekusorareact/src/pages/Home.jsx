@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import { useMovies } from "../hooks/useMovies";
 import { ChevronLeft, ChevronRight, ArrowRight, Gift, Film, Users, Moon, Ticket } from "lucide-react";
 import { MovieCardHome, ComingSoonCard, MovieCardSkeleton } from "../components/MovieComponents";
+import Configs from "../configs/Configs";
 
 
 const SCREEN_TYPES = [
@@ -26,7 +27,7 @@ const HERO_STARS = Array.from({ length: 36 }).map((_, i) => ({
     delay: Math.random() * 3,
 }));
 
-const HOME_MOVIE_LIMIT = 4;
+const SHOWING_MOVIE_LIMIT = 4;
 
 function useInView() {
     const ref = useRef(null);
@@ -86,8 +87,8 @@ const Home = () => {
         isPending: comingSoonPending,
     } = useMovies({ status: "COMING_SOON" });
 
-    const nowShowing = (nowShowingData ?? []).slice(0, HOME_MOVIE_LIMIT);
-    const comingSoon = (comingSoonData ?? []).slice(0, HOME_MOVIE_LIMIT);
+    const nowShowing = (nowShowingData ?? []).slice(0, SHOWING_MOVIE_LIMIT);
+    const comingSoon = comingSoonData ?? [];
 
     const heroSlides = useMemo(() => {
         if (!nowShowingData?.length) return [];
@@ -117,6 +118,7 @@ const Home = () => {
     const [screensRef, screensVisible] = useInView();
     const [promosRef, promosVisible] = useInView();
     const [ctaRef, ctaVisible] = useInView();
+    const [priceRef, priceVisible] = useInView();
 
     return (
         <div className="pb-16">
@@ -172,7 +174,7 @@ const Home = () => {
                                 )}
                                 <div className="hero-fade-up delay-300 flex flex-wrap gap-3">
                                     <button
-                                        onClick={() => navigate(`/movies/${currentSlide.slug}`)}
+                                        onClick={() => navigate("/order")}
                                         className="btn btn-secondary gap-2"
                                     >
                                         <Ticket size={18} />
@@ -249,7 +251,7 @@ const Home = () => {
                     <SectionHeading eyebrow="Lịch chiếu" title="Phim đang chiếu" to="/movies" />
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                         {nowShowingPending
-                            ? Array.from({ length: HOME_MOVIE_LIMIT }).map((_, i) => (
+                            ? Array.from({ length: SHOWING_MOVIE_LIMIT }).map((_, i) => (
                                 <MovieCardSkeleton key={i} />
                             ))
                             : nowShowing.length === 0
@@ -266,7 +268,7 @@ const Home = () => {
                     <SectionHeading eyebrow="Sắp ra mắt" title="Phim sắp chiếu" to="/movies" />
                     <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-2">
                         {comingSoonPending
-                            ? Array.from({ length: HOME_MOVIE_LIMIT }).map((_, i) => (
+                            ? Array.from({ length: SHOWING_MOVIE_LIMIT }).map((_, i) => (
                                 <div key={i} className="shrink-0 w-37.5 sm:w-47.5">
                                     <MovieCardSkeleton />
                                 </div>
@@ -316,6 +318,45 @@ const Home = () => {
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </section>
+
+                <section
+                    ref={priceRef}
+                    className={`section-reveal pt-16 ${priceVisible ? "is-visible" : ""}`}
+                >
+                    <h2 className="text-2xl font-bold mb-2">Bảng giá vé</h2>
+                    <p className="text-base-content/60 text-sm mb-6">Giá vé áp dụng cho ghế thường. Ghế đôi và VIP có mức giá riêng.</p>
+
+                    <div className="overflow-x-auto rounded-2xl border border-base-300">
+                        <table className="table table-zebra w-full text-sm">
+                            <thead>
+                                <tr className="bg-base-200">
+                                    <th className="py-3 px-4">Ngày</th>
+                                    <th className="py-3 px-4 text-center">Giá vé cơ bản</th>
+                                    {["3D", "IMAX", "4DX"].map((code) => (
+                                        <th key={code} className="py-3 px-4 text-center">{Configs.TICKET_FORMAT_LABELS[code]}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {[
+                                    { label: "Thứ 3", key: "TUE" },
+                                    { label: "Thứ 2, 4, 5, 6", key: "MON" },
+                                    { label: "Thứ 7, Chủ nhật", key: "SAT" },
+                                ].map(({ label, key }) => (
+                                    <tr key={key}>
+                                        <td className="py-3 px-4 font-medium">{label}</td>
+                                        <td className="py-3 px-4 text-center">{(Configs.TICKET_BASE_PRICE[key] / 1000).toFixed(0)}k</td>
+                                        {["3D", "IMAX", "4DX"].map((code) => (
+                                            <td key={code} className="py-3 px-4 text-center">
+                                                {((Configs.TICKET_BASE_PRICE[key] + Configs.TICKET_FORMAT_SURCHARGE[code]) / 1000).toFixed(0)}k
+                                            </td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </section>
 

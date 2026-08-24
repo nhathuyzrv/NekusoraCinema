@@ -68,7 +68,34 @@ const Configs = {
     PAYMENT_METHODS: {
         BANK_QR: "BANK_QR",
         MOMO: "MOMO",
-    }
+        PAYPAL: "PAYPAL",
+    },
+
+    TICKET_BASE_PRICE: {
+        MON: 65000,
+        TUE: 55000,
+        WED: 65000,
+        THU: 65000,
+        FRI: 65000,
+        SAT: 80000,
+        SUN: 80000,
+    },
+
+    TICKET_FORMAT_SURCHARGE: {
+        "2D_PD": 0,
+        "2D_LT": 0,
+        "3D": 30000,
+        "IMAX": 50000,
+        "4DX": 80000,
+    },
+
+    TICKET_FORMAT_LABELS: {
+        "2D_PD": "2D Phụ đề",
+        "2D_LT": "2D Lồng tiếng",
+        "3D": "3D",
+        "IMAX": "IMAX",
+        "4DX": "4DX",
+    },
 };
 
 export default Configs;

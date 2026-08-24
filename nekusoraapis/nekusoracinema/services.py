@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
-from nekusoracinema import tasks, utils
+from nekusoracinema import tasks
 from nekusoracinema.models import *
 from django.utils import timezone
 from django.db import models

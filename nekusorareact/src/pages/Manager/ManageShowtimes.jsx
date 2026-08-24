@@ -12,6 +12,7 @@ import {
 } from "../../hooks/useManagement";
 import { useToast } from "../../hooks/useToast";
 import { formatDate } from "../../utils/DateTime";
+import { formatMoney } from "../../utils/Money";
 import MyAlert from "../../configs/MyAlert";
 import Configs from "../../configs/Configs";
 import { useAuth } from "../../hooks/useAuth";
@@ -22,6 +23,16 @@ const SHOWTIME_STATUS = {
     SCHEDULED: { label: "Đã lên lịch" },
     CANCELLED: { label: "Đã hủy" },
     COMPLETED: { label: "Đã kết thúc" },
+};
+
+const DAY_KEYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+
+const calcAutoPrice = (show_date, formatCode) => {
+    if (!show_date || !formatCode) return "";
+    const dayKey = DAY_KEYS[new Date(show_date).getDay()];
+    const base = Configs.TICKET_BASE_PRICE[dayKey] ?? 0;
+    const surcharge = Configs.TICKET_FORMAT_SURCHARGE[formatCode] ?? 0;
+    return String(base + surcharge);
 };
 
 const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
@@ -35,6 +46,9 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
     const { mutate: updateShowtime, isPending: updateShowtimePending } = useUpdateShowtime();
     const toast = useToast();
 
+    const [priceMode, setPriceMode] = useState("auto");
+    const [selectedFormatCode, setSelectedFormatCode] = useState(showtimeData?.screening_format?.code || "");
+
     const [form, setForm] = useState({
         room: showtimeData?.room?.id || "",
         screening_format: showtimeData?.screening_format?.id || "",
@@ -45,6 +59,14 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
     });
 
     const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+
+    useEffect(() => {
+        if (priceMode === "auto") {
+            const auto = calcAutoPrice(form.show_date, selectedFormatCode);
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            if (auto) set("price", auto);
+        }
+    }, [priceMode, form.show_date, selectedFormatCode]);
 
     const handleSubmit = () => {
         if (!form.room || !form.screening_format || !form.show_date || !form.start_time || !form.price) {
@@ -103,7 +125,11 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
 
                     <div className="sm:col-span-2">
                         <label className="label label-text font-medium">Loại hình chiếu <span className="text-error">*</span></label>
-                        <select className="select select-bordered w-full" value={form.screening_format} onChange={(e) => set("screening_format", e.target.value)}>
+                        <select className="select select-bordered w-full" value={form.screening_format} onChange={(e) => {
+                            set("screening_format", e.target.value);
+                            const found = formatList.find((f) => f.id === Number(e.target.value));
+                            setSelectedFormatCode(found?.code || "");
+                        }}>
                             <option value="">Chọn loại hình chiếu...</option>
                             {formatList.map((f) => (
                                 <option key={f.id} value={f.id}>{f.name} ({f.code})</option>
@@ -121,9 +147,31 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
                         <input type="time" className="input input-bordered w-full" value={form.start_time} onChange={(e) => set("start_time", e.target.value)} />
                     </div>
 
-                    <div>
+                    <div className="sm:col-span-2">
                         <label className="label label-text font-medium">Giá vé (đ) <span className="text-error">*</span></label>
-                        <input type="number" className="input input-bordered w-full" value={form.price} onChange={(e) => set("price", e.target.value)} min={0} placeholder="85000" />
+                        <div className="flex gap-2 mb-2">
+                            <button
+                                type="button"
+                                className={`btn btn-sm flex-1 ${priceMode === "auto" ? "btn-primary" : "btn-ghost border border-base-300"}`}
+                                onClick={() => setPriceMode("auto")}
+                            >
+                                Tự động
+                            </button>
+                            <button
+                                type="button"
+                                className={`btn btn-sm flex-1 ${priceMode === "manual" ? "btn-primary" : "btn-ghost border border-base-300"}`}
+                                onClick={() => setPriceMode("manual")}
+                            >
+                                Nhập thủ công
+                            </button>
+                        </div>
+                        {priceMode === "auto" ? (
+                            <div className="input input-bordered w-full flex items-center bg-base-200 text-base-content/60 select-none">
+                                {form.price ? formatMoney(Number(form.price)) : "Chọn ngày và loại hình chiếu"}
+                            </div>
+                        ) : (
+                            <input type="number" className="input input-bordered w-full" value={form.price} onChange={(e) => set("price", e.target.value)} min={0} placeholder="85000" />
+                        )}
                     </div>
 
                     {isEdit && (

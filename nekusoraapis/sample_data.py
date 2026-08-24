@@ -72,13 +72,13 @@ NOW = timezone.now()
 TODAY = timezone.localdate()
 
 # 1. CONFIG
-NUM_EXTRA_CUSTOMERS = 500
+NUM_EXTRA_CUSTOMERS = 400
 NUM_EXTRA_STAFF = 25
 NUM_EXTRA_MANAGERS = 4
 
 ROOMS_PER_BRANCH = 4
 SHOWTIME_DAYS_BEFORE_TODAY = 7
-SHOWTIME_DAYS_AFTER_TODAY = 14
+SHOWTIME_DAYS_AFTER_TODAY = 30
 ROOMS_SAMPLED_PER_SHOWDAY = 6
 SHOWTIMES_PER_ROOM_PER_DAY = 3
 
@@ -205,11 +205,11 @@ FORMAT_SURCHARGE = {
 def calc_ticket_price(show_date, screening_format_code):
     weekday = show_date.weekday()
     if weekday == 1:
-        base = Decimal(60000)
+        base = Decimal(55000)
     elif weekday in (5, 6):
-        base = Decimal(90000)
-    else:
         base = Decimal(80000)
+    else:
+        base = Decimal(65000)
     return base + FORMAT_SURCHARGE.get(screening_format_code, Decimal(0))
 
 screening_formats = []
@@ -493,6 +493,65 @@ MOVIES = [
                        "cùng cả gia đình lạc vào Xứ Sở Yêu Quái bí ẩn, nơi con người chưa từng đặt chân. "
                        "Giữa những sinh vật kỳ lạ và thử thách bất ngờ, Shin phát huy sự lém lỉnh để cùng "
                        "gia đình tìm đường trở về."),
+    dict(title="Hộ Linh Tráng Sĩ: Bí Ẩn Mộ Vua Đinh", director="Bùi Thạc Chuyên",
+         country="Việt Nam", duration=115, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 8, 28), genres=["Hành động", "Lịch sử", "Phiêu lưu"],
+         cast=[], desc="Lấy bối cảnh triều đại nhà Đinh, nhóm hộ linh tráng sĩ điều tra bí ẩn "
+                       "xung quanh ngôi mộ của vua Đinh, nơi ẩn chứa nhiều thế lực tâm linh nguy hiểm."),
+    dict(title="Trại Buôn Người", director="Lê Văn Kiệt",
+         country="Việt Nam", duration=118, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 9, 2), genres=["Hành động", "Tâm lý"],
+         cast=["Quách Ngọc Ngoan"],
+         desc="Phim hành động khai thác chủ đề buôn người và hành trình sinh tồn của nạn nhân "
+              "bị giam giữ trong khu trại khép kín. Ra rạp dịp lễ Quốc khánh 2/9."),
+    dict(title="Ma Da 2", director="Huỳnh Tuấn Anh",
+         country="Việt Nam", duration=100, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 9, 2), genres=["Kinh dị"],
+         cast=[],
+         desc="Phần tiếp theo thương hiệu phim kinh dị Việt khai thác truyền thuyết dân gian. "
+              "Quy mô đầu tư lớn hơn, mở rộng bối cảnh và nhiều phân cảnh kinh dị công phu."),
+    dict(title="Quý Tử Vượt Giàu", director="Vũ Ngọc Phượng",
+         country="Việt Nam", duration=105, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 9, 11), genres=["Hài", "Gia đình"],
+         cast=["Thu Trang", "Tiến Luật"],
+         desc="Vợ chồng Diệp và Phát trong hành trình nuôi dạy cậu con trai Phú Quý. "
+              "Màn tái hợp của cặp đôi Thu Trang - Tiến Luật trên màn ảnh rộng."),
+    dict(title="Lên Hương", director="Khương Ngọc",
+         country="Việt Nam", duration=110, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 9, 18), genres=["Tâm lý", "Gia đình", "Bí ẩn"],
+         cast=["Hồng Đào"],
+         desc="Câu chuyện về tình thân và mưu sinh trong khu dân cư lao động. "
+              "Nghệ sĩ Hồng Đào đảm nhận vai bà Mũi bí ẩn hoàn toàn khác những vai trước."),
+    dict(title="Hòn Đảo Quên Lãng", director="Dean Wellins",
+         country="Mỹ", duration=98, age_rating=MovieAgeRating.P,
+         release_date=date(2026, 9, 25), genres=["Hoạt hình", "Phiêu lưu", "Gia đình"],
+         cast=[],
+         desc="Phim hoạt hình DreamWorks về hai người bạn Jo và Raissa khám phá hòn đảo kỳ ảo Nakali. "
+              "Cái giá để rời đảo là đánh đổi toàn bộ ký ức về tình bạn."),
+    dict(title="Cô Dâu Hào Môn", director="Nguyễn Hữu Hoàng",
+         country="Việt Nam", duration=108, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 10, 2), genres=["Tâm lý", "Tình cảm"],
+         cast=["Uyển Ân"],
+         desc="Cô gái bình thường lên kế hoạch kết hôn vào nhà giàu và phải đối mặt sự thật "
+              "phũ phàng khi bước vào thế giới thượng lưu đầy cạm bẫy."),
+    dict(title="Halloween Ends 2", director="David Gordon Green",
+         country="Mỹ", duration=105, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 10, 22), genres=["Kinh dị", "Hồi hộp"],
+         cast=["Jamie Lee Curtis"],
+         desc="Michael Myers trở lại gieo rắc kinh hoàng trong đêm Halloween. "
+              "Laurie Strode đối mặt ác mộng lần cuối trong cuộc chiến sinh tử không khoan nhượng."),
+    dict(title="Địa Đạo 2: Lửa Thiêng", director="Bùi Thạc Chuyên",
+         country="Việt Nam", duration=130, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 11, 20), genres=["Lịch sử", "Hành động", "Chiến tranh"],
+         cast=[],
+         desc="Phần tiếp theo phim chiến tranh ăn khách, tiếp tục câu chuyện về những con người "
+              "kiên cường trong lòng địa đạo Củ Chi chống giặc Mỹ xâm lược."),
+    dict(title="Wicked: Part Two", director="Jon M. Chu",
+         country="Mỹ", duration=145, age_rating=MovieAgeRating.P,
+         release_date=date(2026, 11, 26), genres=["Nhạc kịch", "Phiêu lưu", "Gia đình"],
+         cast=["Cynthia Erivo", "Ariana Grande"],
+         desc="Phần kết siêu phẩm nhạc kịch chuyển thể từ Broadway. Elphaba và Glinda đối mặt "
+              "thách thức lớn hơn trong thế giới Oz, kết thúc câu chuyện tình bạn đầy cảm xúc."),
     dict(title="Avengers: Doomsday", director="Anthony Russo, Joe Russo",
          country="Mỹ", duration=165, age_rating=MovieAgeRating.T13,
          release_date=date(2026, 12, 18), genres=["Hành động", "Khoa học viễn tưởng", "Siêu anh hùng"],

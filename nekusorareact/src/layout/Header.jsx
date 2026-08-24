@@ -8,7 +8,6 @@ import { Flame, Ticket } from "lucide-react";
 const NAV_LINKS = [
     { to: "/", label: "Trang chủ", end: true },
     { to: "/movies", label: "Phim" },
-    { to: "/order", label: "Đặt vé" },
 ];
 
 const navLinkClass = ({ isActive }) => `btn btn-ghost btn-md rounded-field font-medium transition-colors ${isActive ? "text-primary font-semibold" : ""}`;
@@ -64,7 +63,12 @@ const Header = () => {
                                 </NavLink>
                             </li>
                         ))}
-                        {isAuthenticated && hasRole("STAFF", "MANAGER") && (
+                        {isAuthenticated && hasRole("CUSTOMER") && (
+                            <li>
+                                <NavLink to="/order">Đặt vé</NavLink>
+                            </li>
+                        )}
+                        {isAuthenticated && hasRole("STAFF") && (
                             <li><NavLink to="/staff/checkin">Soát vé</NavLink></li>
                         )}
                         {isAuthenticated && hasRole("MANAGER") && (
@@ -89,7 +93,17 @@ const Header = () => {
                             </NavLink>
                         </li>
                     ))}
-                    {isAuthenticated && hasRole("STAFF", "MANAGER") && (
+                    {isAuthenticated && hasRole("CUSTOMER") && (
+                        <>
+                            <li>
+                                <NavLink to="/order" className={navLinkClass}>Đặt vé</NavLink>
+                            </li>
+                            <li>
+                                <NavLink to="/bookings" className={navLinkClass}>Vé của tôi</NavLink>
+                            </li>
+                        </>
+                    )}
+                    {isAuthenticated && hasRole("STAFF") && (
                         <li>
                             <NavLink to="/staff/checkin" className={navLinkClass}>Soát vé</NavLink>
                         </li>
@@ -176,7 +190,7 @@ const Header = () => {
 
                             )}
 
-                            {hasRole("STAFF", "MANAGER") && (
+                            {hasRole("STAFF") && (
                                 <li>
                                     <Link to="/staff/checkin">
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">

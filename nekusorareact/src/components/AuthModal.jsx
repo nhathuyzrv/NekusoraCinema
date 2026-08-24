@@ -302,9 +302,9 @@ function RegisterForm({ hook, onSwitch }) {
             <ServerError msg={hook.error} />
 
             {[
-                { label: "Họ", name: "last_name", placeholder: "Nhập họ" },
-                { label: "Tên", name: "first_name", placeholder: "Nhập tên" },
-                { label: "Email", name: "email", placeholder: "Nhập Email" },
+                { label: "Họ và tên đệm", name: "last_name", placeholder: "Nhập họ và tên đệm..." },
+                { label: "Tên", name: "first_name", placeholder: "Nhập tên..." },
+                { label: "Email", name: "email", placeholder: "Nhập email..." },
                 { label: "Số điện thoại", name: "phone_number", placeholder: "0xxxxxxxxx" },
             ].map(({ label, name, placeholder }) => (
                 <div className="form-control" key={name}>
@@ -338,8 +338,8 @@ function RegisterForm({ hook, onSwitch }) {
             </div>
 
             {[
-                { label: "Mật khẩu", name: "password", placeholder: "Nhập mật khẩu" },
-                { label: "Nhập lại mật khẩu", name: "confirm_password", placeholder: "Nhập lại mật khẩu" },
+                { label: "Mật khẩu", name: "password", placeholder: "Nhập mật khẩu..." },
+                { label: "Nhập lại mật khẩu", name: "confirm_password", placeholder: "Nhập lại mật khẩu..." },
             ].map(({ label, name, placeholder }) => (
                 <div className="form-control" key={name}>
                     <label className="label"><span className="label-text text-sm">{label}</span></label>
@@ -356,7 +356,7 @@ function RegisterForm({ hook, onSwitch }) {
                     <input type="checkbox" className="checkbox checkbox-sm checkbox-primary"
                         checked={agree} onChange={() => setAgree(p => !p)} disabled={hook.loading} />
                     <span className="label-text text-xs sm:text-sm whitespace-normal">
-                        Bằng việc đăng ký, tôi đồng ý với <Link to="/terms" className="font-semibold text-info/80 hover:underline hover:underline-offset-3">Điều khoản dịch vụ</Link> và <Link to="/privacy" className="font-medium text-info/80 hover:underline hover:underline-offset-3">Chính sách bảo mật</Link>
+                        Bằng việc đăng ký, tôi đồng ý với <Link to="/help/terms-of-service" className="font-semibold text-info/80 hover:underline hover:underline-offset-3">Điều khoản dịch vụ</Link> và <Link to="/help/privacy-policy" className="font-medium text-info/80 hover:underline hover:underline-offset-3">Chính sách bảo mật</Link>
                     </span>
                 </label>
                 {errors.agree && <span className="text-error text-xs">{errors.agree}</span>}

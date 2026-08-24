@@ -10,7 +10,7 @@ def seat_hold_key(showtime_id, seat_id):
     return f"seat_hold:{showtime_id}:{seat_id}"
 
 
-_redis_pool = aioredis.ConnectionPool.from_url(
+redis_pool = aioredis.ConnectionPool.from_url(
     "redis://127.0.0.1:6379/1",
     decode_responses=True,
     socket_keepalive=True,
@@ -24,7 +24,7 @@ class SeatConsumer(AsyncWebsocketConsumer):
         self.showtime_id = self.scope["url_route"]["kwargs"]["showtime_id"]
         self.group_name = f"showtime_{self.showtime_id}"
 
-        self.redis = aioredis.Redis(connection_pool=_redis_pool)
+        self.redis = aioredis.Redis(connection_pool=redis_pool)
 
         await self.channel_layer.group_add(self.group_name, self.channel_name)
         await self.accept()

@@ -150,25 +150,25 @@ const StaffFormModal = ({ staff, onClose }) => {
                         <>
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="label label-text font-medium">Họ <span className="text-error">*</span></label>
-                                    <input className="input input-bordered w-full" value={form.last_name} onChange={(e) => set("last_name", e.target.value)} placeholder="Nguyễn" />
+                                    <label className="label label-text font-medium">Họ và tên đệm <span className="text-error">*</span></label>
+                                    <input className="input input-bordered w-full" value={form.last_name} onChange={(e) => set("last_name", e.target.value)} placeholder="Nguyễn Văn" />
                                 </div>
                                 <div>
                                     <label className="label label-text font-medium">Tên <span className="text-error">*</span></label>
-                                    <input className="input input-bordered w-full" value={form.first_name} onChange={(e) => set("first_name", e.target.value)} placeholder="Văn A" />
+                                    <input className="input input-bordered w-full" value={form.first_name} onChange={(e) => set("first_name", e.target.value)} placeholder="A" />
                                 </div>
                             </div>
                             <div>
                                 <label className="label label-text font-medium">Email <span className="text-error">*</span></label>
-                                <input type="email" className="input input-bordered w-full" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="nhanvien@cinema.vn" />
+                                <input type="email" className="input input-bordered w-full" value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="nhanvien@nekusora.vn" />
                             </div>
                             <div>
                                 <label className="label label-text font-medium">Số điện thoại</label>
-                                <input className="input input-bordered w-full" value={form.phone_number} onChange={(e) => set("phone_number", e.target.value)} placeholder="0901234567" />
+                                <input className="input input-bordered w-full" value={form.phone_number} onChange={(e) => set("phone_number", e.target.value)} placeholder="0xxxxxxxxx" />
                             </div>
                             <div>
                                 <label className="label label-text font-medium">Mật khẩu <span className="text-error">*</span></label>
-                                <input type="password" className="input input-bordered w-full" value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="Tối thiểu 8 ký tự..." />
+                                <input type="password" className="input input-bordered w-full" value={form.password} onChange={(e) => set("password", e.target.value)} placeholder="Nhập mật khẩu..." />
                             </div>
                             <div className="divider text-xs text-base-content/50">Thông tin công việc</div>
                         </>

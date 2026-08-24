@@ -161,7 +161,7 @@ export function MovieCardHome({ movie }) {
                         <button
                             type="button"
                             className="btn btn-secondary btn-sm w-full gap-1"
-                            onClick={(e) => { e.stopPropagation(); navigate(`/booking?movie=${movie.id}`); }}
+                            onClick={(e) => { e.stopPropagation(); navigate("/order"); }}
                         >
                             <Ticket size={14} />
                             Đặt vé
