@@ -47,7 +47,7 @@ const PaymentPayOS = ({ booking }) => {
                 <p className="text-sm font-semibold">Quét mã QR để thanh toán</p>
 
                 {payment?.qr_code_url ? (
-                    <div className={`transition-opacity ${isExpired ? "opacity-30 pointer-events-none" : ""}`}>
+                    <div className={`bg-white p-2 rounded-xl transition-opacity ${isExpired ? "opacity-30 pointer-events-none" : ""}`}>
                         <QRCodeSVG value={payment.qr_code_url} size={208} />
                     </div>
                 ) : (
@@ -90,8 +90,8 @@ const PaymentMoMo = ({ booking }) => {
             <div className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col items-center gap-4">
                 <p className="text-sm font-semibold">Thanh toán qua MoMo</p>
 
-                <div className="w-16 h-16 rounded-2xl bg-[#ae2070] flex items-center justify-center">
-                    <span className="text-white text-2xl font-bold">M</span>
+                <div className="max-w-40">
+                    <img src="/momo-logo.png" />
                 </div>
 
                 {timeLeft !== null && (
@@ -143,8 +143,8 @@ const PaymentPayPal = ({ booking }) => {
             <div className="bg-base-100 border border-base-300 rounded-2xl p-5 flex flex-col items-center gap-4">
                 <p className="text-sm font-semibold">Thanh toán qua PayPal</p>
 
-                <div className="w-16 h-16 rounded-2xl bg-[#003087] flex items-center justify-center">
-                    <span className="text-white text-2xl font-bold">P</span>
+                <div className="max-w-40">
+                    <img src="/paypal-logo.png" />
                 </div>
 
                 {timeLeft !== null && (
