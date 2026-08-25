@@ -283,14 +283,18 @@ class PaymentMethodViewSet(viewsets.ViewSet, generics.ListAPIView):
     serializer_class = serializers.PaymentMethodSerializer
 
 
-class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView, generics.CreateAPIView, generics.DestroyAPIView):
+class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveUpdateAPIView, generics.CreateAPIView, generics.DestroyAPIView):
     pagination_class = paginators.BookingItemPaginator
     lookup_field = 'booking_code'
     lookup_url_kwarg = 'pk'
 
     def get_permissions(self):
-        if self.action in ['create']:
+        if self.action in ['list', 'create']:
             return [perms.IsCustomer()]
+        if self.action in ['destroy', 'products', 'promotion', 'points', 'payment']:
+            return [perms.BookingOwner()]
+        if self.action in ['update', 'partial_update']:
+            return [perms.IsStaff()]
         return [permissions.IsAuthenticated()]
 
     def get_serializer_class(self):
@@ -299,9 +303,12 @@ class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
         return serializers.BookingSerializer
 
     def get_queryset(self):
-        query = (Booking.objects.filter(active=True, customer=self.request.user).order_by('-created_at')
+        query = (Booking.objects.filter(active=True).order_by('-created_at')
                  .select_related('showtime__movie', 'showtime__room__branch__location', 'showtime__screening_format')
                  .prefetch_related('booking_tickets__seat', 'booking_products__product', 'booking_promotion__promotion', 'payment__method'))
+
+        if self.request.user.role == UserRole.CUSTOMER:
+            query = query.filter(customer=self.request.user)
 
         if self.action in ['list']:
             q_status = self.request.query_params.get('status')
@@ -325,6 +332,13 @@ class BookingViewSet(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAP
         booking = BookingService.create_holding_booking(request.user, s.validated_data['showtime'], s.validated_data['seats'])
 
         return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        s = serializers.CheckinBookingSerializer(data=request.data)
+        s.is_valid(raise_exception=True)
+        booking = BookingService.checkin_booking(booking_code=kwargs.get('pk'), staff=request.user, is_checked_in=s.validated_data['is_checked_in'])
+
+        return Response(serializers.BookingSerializer(booking).data, status=status.HTTP_200_OK)
 
     @require_holding_booking
     def destroy(self, request, pk=None, booking=None, *args, **kwargs):

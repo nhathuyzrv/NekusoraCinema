@@ -21,6 +21,9 @@ const bookingService = {
     deleteBooking: (bookingCode) =>
         authApis.delete(endpoints.bookingDetails(bookingCode))
             .then(r => r.data),
+    checkinBooking: (bookingCode, data) =>
+        authApis.patch(endpoints.bookingDetails(bookingCode), data)
+            .then(res => res.data),
 
     getProducts: () =>
         Apis.get("/products/")

@@ -117,7 +117,8 @@ const Footer = () => {
 
             <div className="border-t border-base-300">
                 <div className="max-w-7xl mx-auto px-4 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-base-content/50">
-                    <p>© {year} NekusoraCinema. All rights reserved.</p>
+                    <p>©{year} NekusoraCinema. All rights reserved.</p>
+                    <p>Dự án này chỉ được thực hiện cho mục đích học tập và nghiên cứu / This project is developed strictly for educational and research purposes only</p>
                 </div>
             </div>
         </footer>

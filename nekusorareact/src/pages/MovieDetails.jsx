@@ -169,7 +169,7 @@ function RatingPanel({ movieId, movieStatus, avgRating, ratingCount, isAuthentic
             <div className="bg-base-100 border border-base-300 rounded-2xl p-4 flex items-center gap-4">
                 <div className="text-center shrink-0">
                     <p className="text-3xl font-black text-warning">
-                        {avgRating ? avgRating.toFixed(1) : "—"}
+                        {avgRating ? avgRating.toFixed(1) : "-"}
                     </p>
                     <p className="text-xs text-base-content/50">/10</p>
                 </div>
@@ -613,7 +613,7 @@ const MovieDetails = () => {
                                     { icon: <Globe size={14} />, label: "Quốc gia", value: movie.country },
                                     { icon: <Clapperboard size={14} />, label: "Đạo diễn", value: movie.director },
                                     { icon: <Users size={14} />, label: "Diễn viên", value: movie.actors?.length > 0 ? movie.actors.map(a => a.name ?? a).join(", ") : "Đang cập nhật" },
-                                    { icon: <Film size={14} />, label: "Thể loại", value: movie.genres?.map(g => g.name).join(", ") ?? "—" },
+                                    { icon: <Film size={14} />, label: "Thể loại", value: movie.genres?.map(g => g.name).join(", ") ?? "-" },
                                 ].map(({ icon, label, value }) => (
                                     <div key={label} className="flex items-start gap-2">
                                         <span className="text-primary mt-0.5 shrink-0">{icon}</span>

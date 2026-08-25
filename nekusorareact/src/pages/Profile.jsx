@@ -1,10 +1,11 @@
 import { useRef, useState } from "react";
-import { User, Mail, Phone, Calendar, Venus, Mars, Camera, CircleUserRound, Flame } from "lucide-react";
+import { User, Mail, Phone, Calendar, Venus, Mars, Camera, CircleUserRound, Flame, Building2, MapPinHouse } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
 import { useUpdateUser } from "../hooks/useUpdateUser";
 import LocalLoading from "../components/LocalLoading";
 import { useToast } from "../hooks/useToast";
 import Configs from "../configs/Configs";
+import { formatDate } from "../utils/DateTime";
 
 function calcAge(dateStr) {
     if (!dateStr) return null;
@@ -20,7 +21,7 @@ function formatGender(g) {
     if (g === "MALE") return "Nam";
     if (g === "FEMALE") return "Nữ";
     if (g === "OTHER") return "Khác";
-    return "—";
+    return "-";
 }
 
 function GenderIcon({ gender }) {
@@ -57,7 +58,7 @@ function InfoRow({ icon, label, value }) {
             <div className="mt-0.5 text-primary shrink-0">{icon}</div>
             <div className="min-w-0">
                 <p className="text-xs text-base-content/50 mb-0.5">{label}</p>
-                <p className="text-sm font-medium text-base-content break-all">{value || "—"}</p>
+                <p className="text-sm font-medium text-base-content break-all">{value || "-"}</p>
             </div>
         </div>
     );
@@ -194,6 +195,16 @@ const Profile = () => {
                                 value={formatGender(user.gender)}
                             />
                         </div>
+
+                        {hasRole("STAFF", "MANAGER") && user.staff_profile &&
+                            <div className="bg-base-100 border border-base-300 rounded-2xl p-5 mt-4">
+                                <p className="font-bold mb-2">Thông tin công việc</p>
+                                <InfoRow icon={<Building2 size={15} />} label="Chi nhánh" value={user.staff_profile.branch?.name} />
+                                <InfoRow icon={<MapPinHouse size={15} />} label="Địa chỉ chi nhánh" value={user.staff_profile.branch?.address} />
+                                <InfoRow icon={<Phone size={15} />} label="CSKH" value={user.staff_profile.branch?.phone_number} />
+                                <InfoRow icon={<Calendar size={15} />} label="Ngày vào làm" value={formatDate(user.staff_profile.hire_date)} />
+                            </div>
+                        }
                     </LocalLoading>
                 </aside>
 

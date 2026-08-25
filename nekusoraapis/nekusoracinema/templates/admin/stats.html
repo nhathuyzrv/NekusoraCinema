@@ -1,0 +1,234 @@
+{% extends 'admin/base_site.html' %}
+{% load static %}
+
+{% block title %}Báo cáo & Thống kê{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'css/styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="stats-wrap">
+    <div class="stats-title">Báo cáo & Thống kê</div>
+
+    <nav class="tab-nav">
+        <a href="/admin/stats/revenue/{% if selected_year %}?year={{ selected_year }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_branch_id %}&branch_id={{ selected_branch_id }}{% endif %}{% if selected_movie_id %}&movie_id={{ selected_movie_id }}{% endif %}{% endif %}"
+           class="tab-btn {% if active_tab == 'revenue' %}active{% endif %}">Doanh thu</a>
+        <a href="/admin/stats/movies/{% if selected_year %}?year={{ selected_year }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% endif %}"
+           class="tab-btn {% if active_tab == 'movies' %}active{% endif %}">Theo phim</a>
+        <a href="/admin/stats/branches/{% if selected_year %}?year={{ selected_year }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% endif %}"
+           class="tab-btn {% if active_tab == 'branches' %}active{% endif %}">Theo chi nhánh</a>
+        <a href="/admin/stats/showtimes/{% if selected_year %}?year={{ selected_year }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% endif %}"
+           class="tab-btn {% if active_tab == 'showtimes' %}active{% endif %}">Theo suất chiếu</a>
+    </nav>
+
+    <form method="get" class="filter-bar">
+        <select name="year">
+            {% for y in years %}
+            <option value="{{ y }}" {% if y == selected_year %}selected{% endif %}>{{ y }}</option>
+            {% endfor %}
+        </select>
+        <select name="month">
+            <option value="">Tất cả tháng</option>
+            {% for m in months %}
+            <option value="{{ m }}" {% if m == selected_month %}selected{% endif %}>Tháng {{ m }}</option>
+            {% endfor %}
+        </select>
+        <select name="branch_id">
+            <option value="">Tất cả chi nhánh</option>
+            {% for b in branches %}
+            <option value="{{ b.id }}" {% if b.id == selected_branch_id %}selected{% endif %}>{{ b.name }}</option>
+            {% endfor %}
+        </select>
+        <select name="movie_id">
+            <option value="">Tất cả phim</option>
+            {% for m in movies %}
+            <option value="{{ m.id }}" {% if m.id == selected_movie_id %}selected{% endif %}>{{ m.title }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">Lọc</button>
+    </form>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {% if no_data %}
+    <div class="no-data">Không có dữ liệu trong khoảng thời gian đã chọn.</div>
+    {% endif %}
+
+    {% if active_tab == 'revenue' and not no_data %}
+    <div class="stat-cards">
+        <div class="stat-card green">
+            <div class="stat-card-label">Tổng doanh thu</div>
+            <div class="stat-card-value">{{ overview.total_revenue }}</div>
+        </div>
+        <div class="stat-card blue">
+            <div class="stat-card-label">Số đơn xác nhận</div>
+            <div class="stat-card-value">{{ overview.total_bookings }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-label">Tổng vé bán ra</div>
+            <div class="stat-card-value">{{ overview.total_tickets }}</div>
+        </div>
+        <div class="stat-card amber">
+            <div class="stat-card-label">Doanh thu bắp/nước</div>
+            <div class="stat-card-value">{{ overview.total_product_revenue }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-label">Lượt dùng khuyến mãi</div>
+            <div class="stat-card-value">{{ overview.total_promotions_used }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-label">Điểm đã dùng</div>
+            <div class="stat-card-value">{{ overview.total_points_used }}</div>
+        </div>
+    </div>
+
+    <div class="chart-row">
+        <div class="chart-box full">
+            <h3>Doanh thu theo tháng</h3>
+            <canvas id="revenueByMonthChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        var labels = [], revenues = [], bookings = [];
+        var data = {{ revenue_by_month|safe }};
+        data.forEach(function(d) {
+            labels.push('Tháng ' + d.month);
+            revenues.push(d.revenue_raw);
+            bookings.push(d.bookings);
+        });
+        new Chart(document.getElementById('revenueByMonthChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Doanh thu (đ)', data: revenues, backgroundColor: '#2563eb', borderRadius: 4, yAxisID: 'y' },
+                    { label: 'Số đơn', data: bookings, backgroundColor: '#10b981', borderRadius: 4, yAxisID: 'y1', type: 'line', borderColor: '#10b981', tension: 0.3 }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: { beginAtZero: true, position: 'left', ticks: { callback: function(v) { return (v/1000000).toFixed(0) + 'M'; } } },
+                    y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } }
+                }
+            }
+        });
+    })();
+    </script>
+    {% endif %}
+
+    {% if active_tab == 'movies' and not no_data %}
+    <div class="chart-row">
+        <div class="chart-box full">
+            <h3>Doanh thu theo phim (Top 15)</h3>
+            <canvas id="movieChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-box full">
+        <h3>Chi tiết</h3>
+        <table class="data-table">
+            <thead><tr><th>#</th><th>Phim</th><th>Số đơn</th><th>Doanh thu (đ)</th></tr></thead>
+            <tbody>
+            {% for r in by_movie %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ r.movie }}</td>
+                <td>{{ r.bookings }}</td>
+                <td>{{ r.revenue }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+    (function() {
+        var labels = [], revenues = [];
+        var data = {{ by_movie|safe }};
+        data.forEach(function(d) { labels.push(d.movie); revenues.push(d.revenue); });
+        new Chart(document.getElementById('movieChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{ label: 'Doanh thu', data: revenues,
+                    backgroundColor: ['#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16','#f97316','#6366f1','#14b8a6','#e11d48','#a855f7','#0ea5e9','#22c55e'],
+                    borderRadius: 4 }]
+            },
+            options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } },
+                scales: { x: { beginAtZero: true, ticks: { callback: function(v) { return (v/1000000).toFixed(0)+'M'; } } } } }
+        });
+    })();
+    </script>
+    {% endif %}
+
+    {% if active_tab == 'branches' and not no_data %}
+    <div class="chart-row">
+        <div class="chart-box">
+            <h3>Doanh thu theo chi nhánh</h3>
+            <canvas id="branchChart"></canvas>
+        </div>
+        <div class="chart-box">
+            <h3>Số đơn theo chi nhánh</h3>
+            <canvas id="branchBookingsChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-box full">
+        <h3>Chi tiết</h3>
+        <table class="data-table">
+            <thead><tr><th>Chi nhánh</th><th>Số đơn</th><th>Doanh thu (đ)</th></tr></thead>
+            <tbody>
+            {% for r in by_branch %}
+            <tr><td>{{ r.branch }}</td><td>{{ r.bookings }}</td><td>{{ r.revenue }}</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <script>
+    (function() {
+        var labels = [], revenues = [], bookings = [];
+        var data = {{ by_branch|safe }};
+        var colors = ['#2563eb','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#ec4899','#84cc16'];
+        data.forEach(function(d) { labels.push(d.branch); revenues.push(d.revenue); bookings.push(d.bookings); });
+        new Chart(document.getElementById('branchChart'), {
+            type: 'doughnut',
+            data: { labels: labels, datasets: [{ data: revenues, backgroundColor: colors, borderWidth: 2 }] },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+        new Chart(document.getElementById('branchBookingsChart'), {
+            type: 'doughnut',
+            data: { labels: labels, datasets: [{ data: bookings, backgroundColor: colors, borderWidth: 2 }] },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } }
+        });
+    })();
+    </script>
+    {% endif %}
+
+    {% if active_tab == 'showtimes' and not no_data %}
+    <div class="chart-box full">
+        <h3>Top 20 suất chiếu doanh thu cao nhất</h3>
+        <table class="data-table">
+            <thead>
+                <tr><th>#</th><th>Phim</th><th>Chi nhánh</th><th>Ngày</th><th>Giờ</th><th>Số đơn</th><th>Vé</th><th>Doanh thu (đ)</th></tr>
+            </thead>
+            <tbody>
+            {% for r in by_showtime %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ r.movie }}</td>
+                <td>{{ r.branch }}</td>
+                <td>{{ r.show_date }}</td>
+                <td>{{ r.start_time }}</td>
+                <td>{{ r.bookings }}</td>
+                <td>{{ r.tickets }}</td>
+                <td>{{ r.revenue }}</td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

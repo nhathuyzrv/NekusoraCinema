@@ -325,8 +325,8 @@ const Home = () => {
                     ref={priceRef}
                     className={`section-reveal pt-16 ${priceVisible ? "is-visible" : ""}`}
                 >
-                    <h2 className="text-2xl font-bold mb-2">Bảng giá vé</h2>
-                    <p className="text-base-content/60 text-sm mb-6">Giá vé áp dụng cho ghế thường. Ghế đôi và VIP có mức giá riêng.</p>
+                    <h2 className="text-2xl font-bold mb-2">Bảng giá</h2>
+                    <p className="text-base-content/60 text-sm mb-6">Giá vé áp dụng cho mọi suất chiếu</p>
 
                     <div className="overflow-x-auto rounded-2xl border border-base-300">
                         <table className="table table-zebra w-full text-sm">

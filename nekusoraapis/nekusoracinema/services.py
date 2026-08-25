@@ -355,6 +355,33 @@ class BookingService:
         return booking
 
     @classmethod
+    def checkin_booking(cls, booking_code, staff, is_checked_in):
+        if is_checked_in is not True:
+            raise ValidationError({'is_checked_in': 'Invalid data'})
+
+        booking = (Booking.objects
+                   .select_related('showtime__movie', 'showtime__room__branch', 'showtime__screening_format', 'customer')
+                   .prefetch_related('booking_tickets__seat', 'booking_products__product')
+                   .filter(booking_code=booking_code).first())
+
+        if not booking:
+            raise ValidationError({'booking_code': 'Mã vé không tồn tại'})
+
+        if booking.status != BookingStatus.CONFIRMED:
+            raise ValidationError({'booking_code': f'Đơn không hợp lệ để check-in. Trạng thái đơn: {booking.status.value}'})
+
+        if booking.is_checked_in:
+            raise ValidationError({'booking_code': 'Vé này đã được check-in trước đó'})
+
+        with transaction.atomic():
+            booking.is_checked_in = True
+            booking.checked_in_at = timezone.now()
+            booking.checked_in_by = staff
+            booking.save(update_fields=['is_checked_in', 'checked_in_at', 'checked_in_by'])
+
+        return booking
+
+    @classmethod
     def set_products(cls, booking, items):
         with transaction.atomic():
             booking.booking_products.all().delete()

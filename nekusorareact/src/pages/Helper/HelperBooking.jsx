@@ -1158,7 +1158,7 @@ const TUTORIAL_FLOW = {
         },
         {
             refKey: "seatContinue",
-            message: "Tuyệt! Bạn đã chọn ghế xong rồi. Nhấn 'Tiếp tục' để sang bước chọn bắp nước. Lưu ý: Trong thực tế sau khi tiếp tục, chúng tôi sẽ giữ ghế cho bạn trong một khoảng thời gian, hãy nhớ hoàn tất đơn đặt vé trong thời gian giới hạn nhé.",
+            message: "Tuyệt! Bạn đã chọn ghế xong rồi. Nhấn 'Tiếp tục' để sang bước chọn bắp nước. Lưu ý: Trong thực tế sau khi tiếp tục, chúng mình sẽ giữ ghế cho bạn trong một khoảng thời gian, hãy nhớ hoàn tất đơn đặt vé trong thời gian giới hạn nhé.",
             nextLabel: null,
         },
     ],

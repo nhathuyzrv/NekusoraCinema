@@ -1,10 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
 import { Film, Calendar, Ticket, Popcorn, Tag, CreditCard, Clock, CheckCircle, XCircle, AlertCircle, Flame } from "lucide-react";
 import Barcode from "react-barcode";
-import { authApis, endpoints } from "../configs/Apis";
 import BackButton from "../components/BackButton";
 import Configs from "../configs/Configs";
+import { useBookingDetails } from "../hooks/useBooking";
 
 function formatMoney(n) {
     return n != null ? Number(n).toLocaleString("vi-VN") + "đ" : "-";
@@ -57,21 +56,12 @@ function InfoRow({ label, value, highlight }) {
     );
 }
 
-function useBookingDetail(bookingCode) {
-    return useQuery({
-        queryKey: ["booking", bookingCode],
-        queryFn: () => authApis.get(endpoints.bookingDetails(bookingCode)).then(r => r.data),
-        enabled: !!bookingCode,
-        staleTime: 1000 * 60,
-    });
-}
-
 const BookingDetails = () => {
     const { bookingCode } = useParams();
     const navigate = useNavigate();
-    const { data: booking, isLoading, isError } = useBookingDetail(bookingCode);
+    const { data: booking, isPending, isError } = useBookingDetails(bookingCode);
 
-    if (isLoading) {
+    if (isPending) {
         return (
             <div className="flex min-h-[60vh] items-center justify-center">
                 <span className="loading loading-bars loading-lg text-primary" />
@@ -243,6 +233,25 @@ const BookingDetails = () => {
                     </div>
                 )}
             </Section>
+
+            {booking.is_checked_in && (
+                <Section title="Thông tin check-in" icon={CheckCircle}>
+                    <InfoRow label="Trạng thái" value="Đã check-in" />
+                    {booking.checked_in_at && (
+                        <InfoRow label="Đã check-in lúc" value={formatDatetime(booking.checked_in_at)} />
+                    )}
+                    {booking.checked_in_by && (
+                        <div className="flex items-start justify-between gap-4 py-2 border-b border-base-200 last:border-0">
+                            <span className="text-sm text-base-content/50 shrink-0 w-36">Nhân viên</span>
+                            <div className="flex items-center gap-2 justify-end flex-1">
+                                <span className="text-sm font-medium">
+                                    {`${booking.checked_in_by.last_name || ""} ${booking.checked_in_by.first_name || ""}`}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                </Section>
+            )}
 
             {booking.status === "CONFIRMED" && (
                 <Section title="Mã vé điện tử" icon={Ticket}>

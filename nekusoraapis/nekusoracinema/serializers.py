@@ -302,13 +302,19 @@ class BookingSerializer(serializers.ModelSerializer):
     products = BookingProductSerializer(source='booking_products', many=True, read_only=True)
     promotion = BookingPromotionSerializer(source='booking_promotion', read_only=True)
     payment = PaymentSerializer(read_only=True)
+    checked_in_by = UserLiteSerializer(read_only=True)
 
     class Meta:
         model = Booking
         fields = [
             'id', 'booking_code', 'status', 'showtime', 'movie', 'tickets', 'products', 'promotion', 'payment', 'seat_amount', 'product_amount',
-            'discount_amount', 'points_used', 'points_used_amount', 'points_earned', 'final_amount', 'held_until', 'confirmed_at', 'created_at'
+            'discount_amount', 'points_used', 'points_used_amount', 'points_earned', 'final_amount', 'held_until', 'confirmed_at',
+            'is_checked_in', 'checked_in_at', 'checked_in_by', 'created_at'
         ]
+
+
+class CheckinBookingSerializer(serializers.Serializer):
+    is_checked_in = serializers.BooleanField()
 
 
 class HoldSeatsInputSerializer(serializers.Serializer):
@@ -339,6 +345,7 @@ class CreatePaymentInputSerializer(serializers.Serializer):
 
 
 class SimpleStaffProfileSerializer(serializers.ModelSerializer):
+    branch = BranchSerializer(read_only=True)
     class Meta:
         model = StaffProfile
         fields = ['id', 'branch', 'position', 'hire_date']
@@ -353,7 +360,6 @@ POSITION_TO_ROLE = {
 
 class StaffProfileSerializer(SimpleStaffProfileSerializer):
     user = UserSerializer(read_only=True)
-    branch = BranchSerializer(read_only=True)
     class Meta:
         model = SimpleStaffProfileSerializer.Meta.model
         fields = SimpleStaffProfileSerializer.Meta.fields + ['user', 'active', 'updated_at']
@@ -469,3 +475,41 @@ class ManageProductSerializer(ImageURLMixin, serializers.ModelSerializer):
             raise serializers.ValidationError({'items': 'Vui lòng chọn ít nhất 1 sản phẩm đơn cho combo'})
 
         return attrs
+
+
+class StatsOverviewSerializer(serializers.Serializer):
+    total_revenue = serializers.DecimalField(max_digits=15, decimal_places=0)
+    total_bookings = serializers.IntegerField()
+    total_tickets = serializers.IntegerField()
+    total_product_revenue = serializers.DecimalField(max_digits=15, decimal_places=0)
+    total_promotions_used = serializers.IntegerField()
+    total_points_used = serializers.IntegerField()
+
+
+class StatsRevenueByMonthSerializer(serializers.Serializer):
+    month = serializers.IntegerField()
+    revenue = serializers.DecimalField(max_digits=15, decimal_places=0)
+    bookings = serializers.IntegerField()
+
+
+class StatsRevenueByMovieSerializer(serializers.Serializer):
+    movie = serializers.CharField()
+    revenue = serializers.DecimalField(max_digits=15, decimal_places=0)
+    bookings = serializers.IntegerField()
+
+
+class StatsRevenueByBranchSerializer(serializers.Serializer):
+    branch = serializers.CharField()
+    revenue = serializers.DecimalField(max_digits=15, decimal_places=0)
+    bookings = serializers.IntegerField()
+
+
+class StatsRevenueByShowtimeSerializer(serializers.Serializer):
+    st_id = serializers.IntegerField()
+    movie = serializers.CharField()
+    branch = serializers.CharField()
+    show_date = serializers.DateField()
+    start_time = serializers.TimeField()
+    revenue = serializers.DecimalField(max_digits=15, decimal_places=0)
+    bookings = serializers.IntegerField()
+    tickets = serializers.IntegerField()

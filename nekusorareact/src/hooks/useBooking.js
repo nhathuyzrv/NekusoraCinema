@@ -60,6 +60,8 @@ export function useBookingDetails(bookingCode) {
         queryKey: ["booking", bookingCode],
         queryFn: () => bookingService.getBooking(bookingCode),
         enabled: !!bookingCode,
+        staleTime: 1000 * 60,
+        retry: 0,
     });
 }
 
@@ -134,4 +136,21 @@ export function useDeleteBooking() {
             toast.error("Hủy đặt vé thất bại", msg);
         }
     });
+}
+
+export function useCheckinBooking({ bookingCode }) {
+    const toast = useToast();
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (data) => bookingService.checkinBooking(bookingCode, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["booking", bookingCode] });
+            toast.success("Check-in thành công");
+        },
+        onError: (err) => {
+            const msg = err.response?.data?.message || Object.values(err.response?.data) || "Đã có lỗi xảy ra, vui lòng thử lại";
+            toast.error("Check-in thất bại", msg);
+        }
+    })
 }

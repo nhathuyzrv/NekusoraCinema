@@ -12,11 +12,11 @@ const FAQ_DATA = [
             },
             {
                 q: "Tôi có thể hủy hoặc đổi vé sau khi đặt không?",
-                a: "Vé đã thanh toán không được hoàn trả hoặc đổi suất chiếu. Vui lòng kiểm tra kỹ tên phim, suất chiếu, ngày giờ và vị trí ghế trước khi xác nhận thanh toán. Trong trường hợp lỗi hệ thống, vui lòng liên hệ hotline để được hỗ trợ.",
+                a: "Vé đã thanh toán không được hoàn trả hoặc đổi suất chiếu. Vui lòng kiểm tra kỹ tên phim, suất chiếu, ngày giờ và vị trí ghế trước khi xác nhận thanh toán. Trong trường hợp lỗi hệ thống, vui lòng liên hệ CSKH để được hỗ trợ.",
             },
             {
                 q: "Vé điện tử sử dụng như thế nào khi vào rạp?",
-                a: "Sau khi đặt vé thành công, mã QR sẽ được gửi đến email của bạn. Bạn chỉ cần xuất trình mã QR này tại cổng soát vé — nhân viên sẽ quét và bạn vào phòng chiếu trực tiếp, không cần đổi vé giấy.",
+                a: "Sau khi đặt vé thành công, mã QR sẽ được gửi đến email của bạn. Bạn chỉ cần xuất trình mã QR này tại cổng soát vé, nhân viên sẽ quét và bạn vào phòng chiếu trực tiếp, không cần đổi vé giấy.",
             },
             {
                 q: "Tôi đã thanh toán thành công nhưng không nhận được vé, phải làm gì?",
@@ -25,6 +25,10 @@ const FAQ_DATA = [
             {
                 q: "Thời gian giữ ghế khi đặt vé là bao lâu?",
                 a: "Sau khi chọn ghế, hệ thống sẽ giữ chỗ cho bạn trong vòng 10 phút. Nếu chưa hoàn tất thanh toán trong thời gian này, ghế sẽ được tự động trả về và bạn cần chọn lại từ đầu.",
+            },
+            {
+                q: "Tôi chưa biết cách đặt vé",
+                a: `Hãy ghé mục "Hướng dẫn đặt vé" ở cuối trang để xem hướng dẫn. Mọi thao tác trong chế độ hướng dẫn không ảnh hưởng đến kết quả thực sự.`,
             },
         ],
     },

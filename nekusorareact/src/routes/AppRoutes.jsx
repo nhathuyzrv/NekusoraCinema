@@ -19,6 +19,8 @@ import HelperFAQ from "../pages/Helper/HelperFAQ";
 import HelperTermsOfService from "../pages/Helper/HelperTermsOfService";
 import HelperPrivacyPolicy from "../pages/Helper/HelperPrivacyPolicy";
 
+import CheckinBooking from "../pages/Staff/CheckinBooking";
+
 import ManagerDashboard from "../pages/Manager/ManagerDashboard";
 import ManagerMonitor from "../pages/Manager/ManagerMonitor";
 import ManageGenres from "../pages/Manager/ManageGenres";
@@ -61,8 +63,8 @@ const AppRoutes = () => {
                     <Route path="bookings/:bookingCode" element={<BookingDetails />} />
                 </Route>
 
-                <Route element={<ProtectedRoutes roles={["STAFF", "MANAGER"]} />}>
-                    {/* <Route path="staff/checkin" element={<CheckIn />} /> */}
+                <Route element={<ProtectedRoutes roles={["STAFF"]} />}>
+                    <Route path="staff/checkin" element={<CheckinBooking />} />
                 </Route>
 
                 <Route element={<ProtectedRoutes roles={["MANAGER"]} />}>

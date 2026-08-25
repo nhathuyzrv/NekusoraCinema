@@ -26,7 +26,7 @@ function BookingListItem({ booking }) {
                     )}
                     <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
-                            <p className="font-semibold text-sm line-clamp-2 flex-1">{movie?.title ?? "—"}</p>
+                            <p className="font-semibold text-sm line-clamp-2 flex-1">{movie?.title ?? "-"}</p>
                             <span className={`badge badge-sm shrink-0 ${Configs.BOOKING_STATUS_BADGE[booking.status] ?? "badge-accent"}`}>
                                 {Configs.BOOKING_STATUS_LABEL[booking.status] ?? booking.status}
                             </span>
