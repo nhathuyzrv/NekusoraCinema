@@ -30,6 +30,7 @@ import ManageLocations from "../pages/Manager/ManageLocations";
 import ManageProducts from "../pages/Manager/ManageProducts";
 import ManagePromotions from "../pages/Manager/ManagePromotions";
 import ManageStaffs from "../pages/Manager/ManageStaffs";
+import Reports from "../pages/Manager/Reports";
 
 // import CheckIn from "../pages/staff/CheckIn";
 
@@ -77,6 +78,7 @@ const AppRoutes = () => {
                         <Route path="products" element={<ManageProducts />} />
                         <Route path="promotions" element={<ManagePromotions />} />
                         <Route path="staffs" element={<ManageStaffs />} />
+                        <Route path="stats" element={<Reports />} />
                     </Route>
                 </Route>
 

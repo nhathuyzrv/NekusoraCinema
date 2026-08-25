@@ -56,7 +56,7 @@
 }
 
 .filter-bar select {
-    padding: 12px;
+    padding: 0px 12px;
     border-radius: 6px;
     border: 1px solid #e2e8f0;
     font-size: 13px;

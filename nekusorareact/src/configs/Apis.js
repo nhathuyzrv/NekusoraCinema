@@ -124,6 +124,51 @@ export const endpoints = {
         if (discount_type) params.append("discount_type", discount_type);
         return `/manage/promotions/?${params.toString()}`;
     },
+
+    manageStatsOverview: ({ year = "", month = "", branch_id = "", movie_id = "" } = {}) => {
+        const params = new URLSearchParams();
+        if (year) params.append("year", year);
+        if (month) params.append("month", month);
+        if (branch_id) params.append("branch", branch_id);
+        if (movie_id) params.append("movie", movie_id);
+        return `/manage/stats/overview/?${params.toString()}`;
+    },
+
+    manageStatsByMonth: ({ year = "", month = "", branch_id = "", movie_id = "" } = {}) => {
+        const params = new URLSearchParams();
+        if (year) params.append("year", year);
+        if (month) params.append("month", month);
+        if (branch_id) params.append("branch", branch_id);
+        if (movie_id) params.append("movie", movie_id);
+        return `/manage/stats/month/?${params.toString()}`;
+    },
+
+    manageStatsByMovie: ({ year = "", month = "", branch_id = "", movie_id = "" } = {}) => {
+        const params = new URLSearchParams();
+        if (year) params.append("year", year);
+        if (month) params.append("month", month);
+        if (branch_id) params.append("branch", branch_id);
+        if (movie_id) params.append("movie", movie_id);
+        return `/manage/stats/movie/?${params.toString()}`;
+    },
+
+    manageStatsByBranch: ({ year = "", month = "", branch_id = "", movie_id = "" } = {}) => {
+        const params = new URLSearchParams();
+        if (year) params.append("year", year);
+        if (month) params.append("month", month);
+        if (branch_id) params.append("branch", branch_id);
+        if (movie_id) params.append("movie", movie_id);
+        return `/manage/stats/branch/?${params.toString()}`;
+    },
+
+    manageStatsByShowtime: ({ year = "", month = "", branch_id = "", movie_id = "" } = {}) => {
+        const params = new URLSearchParams();
+        if (year) params.append("year", year);
+        if (month) params.append("month", month);
+        if (branch_id) params.append("branch", branch_id);
+        if (movie_id) params.append("movie", movie_id);
+        return `/manage/stats/showtime/?${params.toString()}`;
+    },
 };
 
 const BASE_URL = 'http://127.0.0.1:8000/';

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Film, CalendarDays, MapPin, Users, ShoppingBag, Tag, ChevronRight, BookOpen } from "lucide-react";
+import { Film, CalendarDays, MapPin, Users, ShoppingBag, Tag, ChevronRight, BookOpen, ChartNoAxesCombined } from "lucide-react";
 
 const MENU_ITEMS = [
     { to: "/manage/movies", label: "Phim", icon: Film },
@@ -9,6 +9,7 @@ const MENU_ITEMS = [
     { to: "/manage/products", label: "Sản phẩm & Combo", icon: ShoppingBag },
     { to: "/manage/promotions", label: "Khuyến mãi", icon: Tag },
     { to: "/manage/staffs", label: "Nhân viên", icon: Users },
+    { to: "/manage/stats", label: "Báo cáo & Thống kê", icon: ChartNoAxesCombined },
 ];
 
 const ManagerMonitor = () => (

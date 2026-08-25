@@ -1,14 +1,15 @@
 from datetime import timedelta
 from django.core.cache import cache
 from django.db.models import Prefetch
-from django.db.models.aggregates import Avg, Count
+from django.db.models.aggregates import Avg, Sum, Count
+from django.db.models.functions import ExtractMonth
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets, generics, parsers, permissions, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
-from nekusoracinema import serializers, paginators, perms, utils, tasks
+from nekusoracinema import serializers, paginators, perms, tasks
 from nekusoracinema.models import *
 from nekusoracinema.patterns import OTP_MODE, require_holding_booking_not_expired, require_holding_booking, PAYMENT_STRATEGY
 from nekusoracinema.services import BookingService, CinemaRoomService, PromotionService, ProductService
@@ -715,5 +716,92 @@ class ManagePromotionViewSet(viewsets.ViewSet, generics.ListCreateAPIView):
 
         promotion = PromotionService.create_promotion(s.validated_data)
 
-        output_serializer = self.get_serializer(promotion)
-        return Response(output_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializers.ManagePromotionCreateSerializer(promotion).data, status=status.HTTP_201_CREATED)
+
+
+class ManageStatsViewSet(viewsets.ViewSet):
+    permission_classes = [perms.IsManager]
+
+    def get_queryset(self):
+        now = utils.get_timezone_now()
+        year = self.request.query_params.get('year')
+        month = self.request.query_params.get('month')
+        branch_id = self.request.query_params.get('branch')
+        movie_id = self.request.query_params.get('movie')
+
+        year = int(year) if year and year.isdigit() else now.year
+        month = int(month) if month and month.isdigit() and 1 <= int(month) <= 12 else None
+        branch_id = int(branch_id) if branch_id and branch_id.isdigit() else None
+        movie_id = int(movie_id) if movie_id and movie_id.isdigit() else None
+
+        query = Booking.objects.filter(status=BookingStatus.CONFIRMED, confirmed_at__year=year)
+        if month:
+            query = query.filter(confirmed_at__month=month)
+        if branch_id:
+            query = query.filter(showtime__room__branch_id=branch_id)
+        if movie_id:
+            query = query.filter(showtime__movie_id=movie_id)
+
+        return query
+
+    @action(methods=['get'], url_path='overview', detail=False)
+    def stats_overview(self, request):
+        query = self.get_queryset()
+        agg = query.aggregate(
+            total_revenue=Sum('final_amount'),
+            total_bookings=Count('id'),
+            total_product_revenue=Sum('product_amount'),
+            total_points_used=Sum('points_used'),
+        )
+        agg = {k: v or 0 for k, v in agg.items()}
+        agg['total_tickets'] = Ticket.objects.filter(booking__in=query, status=TicketStatus.BOOKED).count()
+        agg['total_promotions_used'] = BookingPromotion.objects.filter(booking__in=query).count()
+
+        return Response(serializers.StatsOverviewSerializer(agg).data, status=status.HTTP_200_OK)
+
+    @action(methods=['get'], url_path='month', detail=False)
+    def stats_month(self, request):
+        query = self.get_queryset()
+        data = list(
+            query.annotate(month=ExtractMonth('confirmed_at'))
+            .values('month')
+            .annotate(revenue=Sum('final_amount'), bookings=Count('id'))
+            .order_by('month')
+        )
+
+        return Response(serializers.StatsRevenueByMonthSerializer(data, many=True).data)
+
+    @action(methods=['get'], url_path='movie', detail=False)
+    def stats_movie(self, request):
+        query = self.get_queryset()
+        data = list(query.values(movie=models.F('showtime__movie__title'))
+            .annotate(revenue=Sum('final_amount'), bookings=Count('id'))
+            .order_by('-revenue')[:15])
+
+        return Response(serializers.StatsRevenueByMovieSerializer(data, many=True).data, status=status.HTTP_200_OK)
+
+    @action(methods=['get'], url_path='branch', detail=False)
+    def stats_branch(self, request):
+        query = self.get_queryset()
+        data = list(query.values(branch=models.F('showtime__room__branch__name'))
+            .annotate(revenue=Sum('final_amount'), bookings=Count('id'))
+            .order_by('-revenue'))
+
+        return Response(serializers.StatsRevenueByBranchSerializer(data, many=True).data, status=status.HTTP_200_OK)
+
+    @action(methods=['get'], url_path='showtime', detail=False)
+    def stats_showtime(self, request):
+        query = self.get_queryset()
+        data = list(
+            query.values(
+                st_id=models.F('showtime__id'),
+                movie=models.F('showtime__movie__title'),
+                branch=models.F('showtime__room__branch__name'),
+                show_date=models.F('showtime__show_date'),
+                start_time=models.F('showtime__start_time'),
+            )
+            .annotate(revenue=Sum('final_amount'), bookings=Count('id'), tickets=Count('booking_tickets'))
+            .order_by('-revenue')[:20]
+        )
+
+        return Response(serializers.StatsRevenueByShowtimeSerializer(data, many=True).data, status=status.HTTP_200_OK)

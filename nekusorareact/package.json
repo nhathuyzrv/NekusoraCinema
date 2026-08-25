@@ -19,12 +19,15 @@
     "dompurify": "^3.4.12",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
     "html-react-parser": "^6.1.5",
+    "html-to-image": "^1.11.13",
+    "jspdf": "^4.2.1",
     "lucide-react": "^1.26.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
     "react-barcode": "^1.6.1",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.1",
+    "recharts": "^3.10.1",
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {

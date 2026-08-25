@@ -56,7 +56,7 @@ class MovieAdmin(ImageViewAdmin):
 
 
 def get_confirmed_bookings(year=None, month=None, branch_id=None, movie_id=None):
-    query = Booking.objects.filter(status=BookingStatus.CONFIRMED)
+    query = Booking.objects.filter(active=True, status=BookingStatus.CONFIRMED)
     if year:
         query = query.filter(confirmed_at__year=year)
     if month:
@@ -113,12 +113,12 @@ class MyAdminSite(admin.AdminSite):
         agg = query.aggregate(
             total_revenue=Sum('final_amount'),
             total_bookings=Count('id'),
-            total_tickets=Count('booking_tickets'),
             total_product_revenue=Sum('product_amount'),
-            total_promotions_used=Count('booking_promotion'),
             total_points_used=Sum('points_used'),
         )
         agg = {k: v or 0 for k, v in agg.items()}
+        agg['total_tickets'] = Ticket.objects.filter(active=True, booking__in=query, status=TicketStatus.BOOKED).count()
+        agg['total_promotions_used'] = BookingPromotion.objects.filter(active=True, booking__in=query).count()
 
         by_month = list(
             query.annotate(month=ExtractMonth('confirmed_at'))
