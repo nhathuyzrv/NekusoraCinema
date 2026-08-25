@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { FileDown, Loader2 } from "lucide-react";
 import { useStatsOverview, useStatsByMonth, useStatsByMovie, useStatsByBranch, useStatsByShowtime } from "../../hooks/useStats";
 import { formatMoney } from "../../utils/Money";
