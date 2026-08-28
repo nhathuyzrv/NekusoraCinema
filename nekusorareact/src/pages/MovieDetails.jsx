@@ -97,7 +97,7 @@ function RatingCard({ rating }) {
     );
 }
 
-function RatingPanel({ movieId, movieStatus, avgRating, ratingCount, isAuthenticated }) {
+function RatingPanel({ movieId, movieStatus, avgRating, ratingCount, isAuthenticated, hasRole }) {
     const scrollRef = useRef(null);
     const [score, setScore] = useState(0);
     const [comment, setComment] = useState("");
@@ -187,91 +187,97 @@ function RatingPanel({ movieId, movieStatus, avgRating, ratingCount, isAuthentic
                 </div>
             </div>
 
-            {movieStatus !== "COMING_SOON" && isAuthenticated ? (
-                <div className="bg-base-100 border border-base-300 rounded-2xl p-4">
-                    {hasMyRating && !isEditing ? (
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <p className="text-sm font-semibold">Đánh giá của bạn</p>
-                                <button
-                                    className="btn btn-ghost btn-xs text-primary"
-                                    onClick={handleStartEdit}
-                                    disabled={isMyRatingLoading}
-                                >
-                                    Sửa đánh giá
-                                </button>
-                            </div>
-                            <div className="flex items-center gap-1">
-                                {Array.from({ length: 10 }, (_, i) => (
-                                    <span key={i} className={`text-base ${i < myRating.score ? "text-warning" : "text-base-content/15"}`}>★</span>
-                                ))}
-                                <span className="ml-1 text-sm font-semibold text-warning">{myRating.score}/10</span>
-                            </div>
-                            {myRating.comment && (
-                                <p className="text-xs text-base-content/70 leading-relaxed bg-base-200 rounded-xl px-3 py-2">
-                                    {myRating.comment}
-                                </p>
+            {movieStatus !== "COMING_SOON" && (
+                <>
+                    {isAuthenticated && hasRole("CUSTOMER") && (
+                        <div className="bg-base-100 border border-base-300 rounded-2xl p-4">
+                            {hasMyRating && !isEditing ? (
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm font-semibold">Đánh giá của bạn</p>
+                                        <button
+                                            className="btn btn-ghost btn-xs text-primary"
+                                            onClick={handleStartEdit}
+                                            disabled={isMyRatingLoading}
+                                        >
+                                            Sửa đánh giá
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        {Array.from({ length: 10 }, (_, i) => (
+                                            <span key={i} className={`text-base ${i < myRating.score ? "text-warning" : "text-base-content/15"}`}>★</span>
+                                        ))}
+                                        <span className="ml-1 text-sm font-semibold text-warning">{myRating.score}/10</span>
+                                    </div>
+                                    {myRating.comment && (
+                                        <p className="text-xs text-base-content/70 leading-relaxed bg-base-200 rounded-xl px-3 py-2">
+                                            {myRating.comment}
+                                        </p>
+                                    )}
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <p className="text-sm font-semibold">
+                                            Đánh giá của bạn
+                                        </p>
+                                        {isEditing && (
+                                            <button
+                                                className="btn btn-ghost btn-xs text-base-content/50"
+                                                onClick={handleCancelEdit}
+                                                disabled={isPending}
+                                            >
+                                                Huỷ
+                                            </button>
+                                        )}
+                                    </div>
+                                    <form onSubmit={handleSubmit} className="space-y-3">
+                                        <div>
+                                            <p className="text-xs text-base-content/50 mb-1">Trải nghiệm tổng thể</p>
+                                            <StarInput value={score} onChange={setScore} disabled={isPending} />
+                                        </div>
+                                        <textarea
+                                            className="textarea textarea-bordered w-full text-sm resize-none"
+                                            rows={3}
+                                            placeholder="Nhận xét của bạn (không bắt buộc)..."
+                                            value={comment}
+                                            onChange={e => setComment(e.target.value)}
+                                            disabled={isPending}
+                                        />
+                                        <button
+                                            type="submit"
+                                            className="btn btn-primary btn-sm w-full"
+                                            disabled={isPending || score === 0}
+                                        >
+                                            <Send size={14} />
+                                            {isPending
+                                                ? (isEditing ? "Đang sửa..." : "Đang gửi...")
+                                                : (isEditing ? "Sửa đánh giá" : "Gửi đánh giá")
+                                            }
+                                        </button>
+                                    </form>
+                                </>
                             )}
                         </div>
-                    ) : (
-                        <>
-                            <div className="flex items-center justify-between mb-3">
-                                <p className="text-sm font-semibold">
-                                    Đánh giá của bạn
-                                </p>
-                                {isEditing && (
-                                    <button
-                                        className="btn btn-ghost btn-xs text-base-content/50"
-                                        onClick={handleCancelEdit}
-                                        disabled={isPending}
-                                    >
-                                        Huỷ
-                                    </button>
-                                )}
-                            </div>
-                            <form onSubmit={handleSubmit} className="space-y-3">
-                                <div>
-                                    <p className="text-xs text-base-content/50 mb-1">Trải nghiệm tổng thể</p>
-                                    <StarInput value={score} onChange={setScore} disabled={isPending} />
-                                </div>
-                                <textarea
-                                    className="textarea textarea-bordered w-full text-sm resize-none"
-                                    rows={3}
-                                    placeholder="Nhận xét của bạn (không bắt buộc)..."
-                                    value={comment}
-                                    onChange={e => setComment(e.target.value)}
-                                    disabled={isPending}
-                                />
-                                <button
-                                    type="submit"
-                                    className="btn btn-primary btn-sm w-full"
-                                    disabled={isPending || score === 0}
-                                >
-                                    <Send size={14} />
-                                    {isPending
-                                        ? (isEditing ? "Đang sửa..." : "Đang gửi...")
-                                        : (isEditing ? "Sửa đánh giá" : "Gửi đánh giá")
-                                    }
-                                </button>
-                            </form>
-                        </>
                     )}
-                </div>
-            ) : movieStatus !== "COMING_SOON" && (
-                <div className="bg-base-100 border border-base-300 rounded-2xl p-4 text-center">
-                    <p className="text-sm text-base-content/60">
-                        <button
-                            className="link link-primary font-medium"
-                            onClick={() => {
-                                const modal = document.getElementById("auth_modal");
-                                if (modal) { modal.dataset.tab = "login"; modal.showModal(); }
-                            }}
-                        >
-                            Đăng nhập
-                        </button>
-                        {" "}để gửi đánh giá
-                    </p>
-                </div>
+
+                    {!isAuthenticated && (
+                        <div className="bg-base-100 border border-base-300 rounded-2xl p-4 text-center">
+                            <p className="text-sm text-base-content/60">
+                                <button
+                                    className="link link-primary font-medium"
+                                    onClick={() => {
+                                        const modal = document.getElementById("auth_modal");
+                                        if (modal) { modal.dataset.tab = "login"; modal.showModal(); }
+                                    }}
+                                >
+                                    Đăng nhập
+                                </button>
+                                {" "}để gửi đánh giá
+                            </p>
+                        </div>
+                    )}
+                </>
             )}
 
             <div className="bg-base-100 border border-base-300 rounded-2xl overflow-hidden">
@@ -509,7 +515,7 @@ function ShowtimesPanel({ movieId, movie }) {
 const MovieDetails = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, hasRole } = useAuth();
     const movieId = location.state?.movieId;
     const [trailerActive, setTrailerActive] = useState(false);
     const showtimeRef = useRef(null);
@@ -655,6 +661,7 @@ const MovieDetails = () => {
                         avgRating={movie.avg_rating}
                         ratingCount={movie.rating_count}
                         isAuthenticated={isAuthenticated}
+                        hasRole={hasRole}
                     />
                 </div>
             </div>

@@ -16,6 +16,7 @@ import { useAuth } from "../../hooks/useAuth";
 import Configs from "../../configs/Configs";
 import { useNavigate } from "react-router-dom";
 import BackButton from "../../components/BackButton";
+import MyAlert from "../../configs/MyAlert";
 
 const LocationFormModal = ({ location, onClose }) => {
     const isEdit = !!location;
@@ -171,11 +172,28 @@ const RoomFormModal = ({ branchId, branchName, room, onClose }) => {
         }
 
         if (isEdit) {
-            updateRoom({ id: room.id, data: form }, {
-                onSuccess: () => {
-                    onClose();
-                },
-            });
+            if (form.force_update) {
+                await MyAlert.alert("Thông báo", "Bạn đang áp dụng bắt buộc cập nhật. Bạn sẽ cần thông báo với khách hàng sau khi thực hiện thay đổi.",
+                    [
+                        { text: "Hủy", style: "ghost" },
+                        {
+                            text: "Xác nhận", style: "primary", onClick: () => {
+                                updateRoom({ id: room.id, data: form }, {
+                                    onSuccess: () => {
+                                        onClose();
+                                    },
+                                });
+                            }
+                        }
+                    ]
+                )
+            } else {
+                updateRoom({ id: room.id, data: form }, {
+                    onSuccess: () => {
+                        onClose();
+                    },
+                });
+            }
         } else {
             createRoom(form, {
                 onSuccess: () => {

@@ -32,13 +32,7 @@ const ScrollToTop = () => {
     return (
         <button
             onClick={scrollToTop}
-            className="fixed bottom-6 right-6 z-50 btn btn-primary btn-lg btn-circle shadow-lg"
-            style={{
-                opacity: visible ? 1 : 0,
-                transform: visible ? "translateY(0) scale(1)" : "translateY(12px) scale(0.9)",
-                pointerEvents: visible ? "auto" : "none",
-                transition: "opacity 0.35s cubic-bezier(0.22, 1, 0.36, 1), transform 0.35s cubic-bezier(0.22, 1, 0.36, 1)",
-            }}
+            className={`fixed bottom-6 right-6 z-50 btn btn-primary btn-lg btn-circle shadow-lg transition-all duration-350 ease-[cubic-bezier(0.22,1,0.36,1)] ${visible ? "opacity-100 translate-y-0 scale-100 pointer-events-auto" : "opacity-0 translate-y-3 scale-90 pointer-events-none"}`}
         >
             <svg
                 xmlns="http://www.w3.org/2000/svg"

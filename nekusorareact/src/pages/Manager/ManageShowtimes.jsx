@@ -227,7 +227,7 @@ const MovieShowtimesPanel = ({ movie }) => {
     }, [list]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const handleDelete = async (st) => {
-        MyAlert.alert("Xác nhận xóa suất chiếu",
+        await MyAlert.alert("Xác nhận xóa suất chiếu",
             `Bạn có chắc chắn muốn xóa suất chiếu ${st.start_time} ngày ${st.show_date}?
             Sau khi xác nhận sẽ không thể hoàn tác`,
             [

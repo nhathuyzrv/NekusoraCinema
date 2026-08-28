@@ -188,7 +188,7 @@ class MoMoPayment(PaymentStrategy):
 
     @classmethod
     def create(cls, booking, method, validated_data):
-        raise ValidationError({'message': f'Phương thức thanh toán "{method.name}" đang được cập nhật'})
+        # raise ValidationError({'message': f'Phương thức thanh toán "{method.name}" đang được cập nhật'})
 
         try:
             existing = booking.payment

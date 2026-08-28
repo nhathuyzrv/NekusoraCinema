@@ -1,4 +1,3 @@
-import hashlib
 import json
 import redis.asyncio as aioredis
 from channels.generic.websocket import AsyncWebsocketConsumer

@@ -1,3 +1,4 @@
+from datetime import timedelta
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -6,7 +7,7 @@ from celery import shared_task
 from django.core.mail import EmailMultiAlternatives, get_connection
 from django.core.cache import cache
 from django.template.loader import render_to_string
-
+from django.db.models import F
 from nekusoraapis import settings
 from nekusoracinema.models import *
 from babel.numbers import format_decimal
@@ -89,27 +90,20 @@ def auto_expire_booking(booking_id):
 def auto_update_showtime_status():
     now = utils.get_timezone_now()
     today = now.date()
+    yesterday = today - timedelta(days=1)
     current_time = now.time()
 
-    (Showtime.objects.filter(status=ShowtimeStatus.SCHEDULED).filter(Q(show_date__lt=today) | Q(show_date=today, end_time__lte=current_time))
-     .update(status=ShowtimeStatus.COMPLETED))
+    (Showtime.objects.filter(status=ShowtimeStatus.SCHEDULED).filter(
+        Q(show_date__lt=yesterday) |
+        Q(show_date=today, end_time__gte=F('start_time'), end_time__lte=current_time) |
+        Q(show_date=yesterday, end_time__lt=F('start_time'), end_time__lte=current_time)
+    ).update(status=ShowtimeStatus.COMPLETED))
 
 
 @shared_task
 def auto_update_movie_status():
     now = utils.get_timezone_now()
     today = now.date()
-    current_time = now.time()
 
-    coming_soon_ids = Movie.objects.filter(status=MovieStatus.COMING_SOON).values_list("id", flat=True)
-    to_now_showing = Showtime.objects.filter(movie_id__in=coming_soon_ids, show_date=today, start_time__lte=current_time, status=ShowtimeStatus.SCHEDULED).values_list("movie_id", flat=True).distinct()
-
-    if to_now_showing:
-        Movie.objects.filter(id__in=to_now_showing).update(status=MovieStatus.NOW_SHOWING)
-
-    now_showing_ids = Movie.objects.filter(status=MovieStatus.NOW_SHOWING).values_list("id", flat=True)
-    scheduling_ids = Showtime.objects.filter(movie_id__in=now_showing_ids, status=ShowtimeStatus.SCHEDULED).values_list("movie_id", flat=True).distinct()
-
-    ended_ids = set(now_showing_ids) - set(scheduling_ids)
-    if ended_ids:
-        Movie.objects.filter(id__in=ended_ids).update(status=MovieStatus.ENDED)
+    (Movie.objects.filter(status=MovieStatus.COMING_SOON, release_date__lte=today)
+     .update(status=MovieStatus.NOW_SHOWING))

@@ -684,10 +684,14 @@ class PromotionService:
 
     @staticmethod
     def create_promotion(data):
+        today = utils.get_timezone_now().date()
         start_date = data.get('start_date')
         end_date = data.get('end_date')
 
-        if start_date and end_date and end_date <= start_date:
-            raise ValidationError({'end_date': 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu'})
+        if start_date and end_date:
+            if start_date < today:
+                raise ValidationError({'start_date': 'Thời gian bắt đầu không được nhỏ hơn hôm nay'})
+            if end_date <= start_date:
+                raise ValidationError({'end_date': 'Thời gian kết thúc phải lớn hơn thời gian bắt đầu'})
 
         return Promotion.objects.create(**data)

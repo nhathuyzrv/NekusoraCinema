@@ -74,7 +74,7 @@ const PaymentPayOS = ({ booking }) => {
             </div>
 
             <p className="text-xs text-base-content/70 text-center px-4">
-                Vui lòng không tự ý thay đổi nội dung chuyển khoản. Sau khi thanh toán, xin chờ một chút để hệ tống xử lý giao dịch.
+                Khách hàng không tự ý thay đổi nội dung chuyển khoản. Sau khi thanh toán, vui lòng chờ hệ tống xử lý giao dịch.
             </p>
         </div>
     );
@@ -122,12 +122,12 @@ const PaymentMoMo = ({ booking }) => {
                 <p className="text-sm font-semibold">Thông tin đơn hàng</p>
                 <div className="space-y-2 text-sm">
                     <InfoRow label="Số tiền" value={formatMoney(payment?.amount)} />
-                    <InfoRow label="Nội dung" value={payment?.provider_response?.orderInfo || ""} />
+                    <InfoRow label="Nội dung chuyển khoản" value={`NEKUSORA ${payment?.provider_response?.orderId?.split('_', 1)[0] || ""}`} />
                 </div>
             </div>
 
             <p className="text-xs text-base-content/70 text-center px-4">
-                Nhấn "Thanh toán ngay" để chuyển đến trang MoMo và nhập thông tin thẻ ATM. Sau khi hoàn tất, vui lòng chờ hệ thống xác nhận đơn đặt vé của bạn.
+                Nhấn "Thanh toán ngay" để chuyển đến trang MoMo và nhập thông tin thẻ ATM. Sau khi thanh toán, vui lòng chờ hệ tống xử lý giao dịch.
             </p>
         </div>
     );
@@ -174,13 +174,12 @@ const PaymentPayPal = ({ booking }) => {
             <div className="bg-base-100 border border-base-300 rounded-2xl p-5 space-y-3">
                 <p className="text-sm font-semibold">Thông tin đơn hàng</p>
                 <div className="space-y-2 text-sm">
-                    <InfoRow label="Số tiền (USD)" value={`$${(payment?.amount / 25000).toFixed(2)}`} />
-                    <InfoRow label="Nội dung" value={payment?.provider_response?.purchase_units?.[0]?.description || ""} />
+                    <InfoRow label="Số tiền (VND)" value={`${formatMoney(payment?.amount)}`} />
                 </div>
             </div>
 
             <p className="text-xs text-base-content/70 text-center px-4">
-                Nhấn "Thanh toán ngay" để chuyển đến trang PayPal. Sau khi hoàn tất, vui lòng chờ hệ thống xác nhận đơn đặt vé của bạn.
+                Nhấn "Thanh toán ngay" để chuyển đến trang PayPal. Sau khi thanh toán, vui lòng chờ hệ tống xử lý giao dịch.
             </p>
         </div>
     );
