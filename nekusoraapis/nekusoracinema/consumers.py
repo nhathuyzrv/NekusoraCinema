@@ -2,15 +2,17 @@ import json
 import redis.asyncio as aioredis
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
+from nekusoraapis import settings
 from nekusoracinema.models import Ticket, TicketStatus
 
 
 def seat_hold_key(showtime_id, seat_id):
     return f"seat_hold:{showtime_id}:{seat_id}"
 
+REDIS_URL=settings.REDIS_URL
 
 redis_pool = aioredis.ConnectionPool.from_url(
-    "redis://127.0.0.1:6379/1",
+    f"{REDIS_URL}/1",
     decode_responses=True,
     socket_keepalive=True,
     socket_connect_timeout=5,
@@ -56,7 +58,7 @@ class SeatConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def get_booked_seats(self):
-        return list(Ticket.objects.filter(showtime_id=self.showtime_id, status=TicketStatus.BOOKED).values_list("seat_id", flat=True))
+        return list(Ticket.objects.filter(active=True, showtime_id=self.showtime_id, status=TicketStatus.BOOKED).values_list("seat_id", flat=True))
 
     async def get_held_seats(self):
         pattern = seat_hold_key(self.showtime_id, '*')

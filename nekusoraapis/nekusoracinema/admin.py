@@ -73,7 +73,7 @@ class MyAdminSite(admin.AdminSite):
 
     def get_urls(self):
         return [
-            path('stats/revenue/', self.stats_revenue),
+            path('stats/overview/', self.stats_overview),
             path('stats/movies/', self.stats_movies),
             path('stats/branches/', self.stats_branches),
             path('stats/showtimes/', self.stats_showtimes),
@@ -106,7 +106,7 @@ class MyAdminSite(admin.AdminSite):
             'movies': list(Movie.objects.values('id', 'title')),
         }
 
-    def stats_revenue(self, request):
+    def stats_overview(self, request):
         year, month, branch_id, movie_id = self.get_filters(request)
         query = get_confirmed_bookings(year, month, branch_id, movie_id)
 
@@ -130,7 +130,7 @@ class MyAdminSite(admin.AdminSite):
         overview = serializers.StatsOverviewSerializer(agg).data
         revenue_by_month = serializers.StatsRevenueByMonthSerializer(by_month, many=True).data
 
-        ctx = self.base_context('revenue', year, month, branch_id, movie_id)
+        ctx = self.base_context('overview', year, month, branch_id, movie_id)
         formatted_overview = dict(overview)
         formatted_overview['total_revenue'] = format_decimal(agg['total_revenue'] or 0, format='#,##0', locale='vi_VN')
         formatted_overview['total_product_revenue'] = format_decimal(agg['total_product_revenue'] or 0, format='#,##0', locale='vi_VN')

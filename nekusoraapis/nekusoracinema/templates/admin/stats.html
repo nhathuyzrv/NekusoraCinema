@@ -13,8 +13,8 @@
     <div class="stats-title">Báo cáo & Thống kê</div>
 
     <nav class="tab-nav">
-        <a href="/admin/stats/revenue/{% if selected_year %}?year={{ selected_year }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_branch_id %}&branch_id={{ selected_branch_id }}{% endif %}{% if selected_movie_id %}&movie_id={{ selected_movie_id }}{% endif %}{% endif %}"
-           class="tab-btn {% if active_tab == 'revenue' %}active{% endif %}">Tổng quan</a>
+        <a href="/admin/stats/overview/{% if selected_year %}?year={{ selected_year }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% if selected_branch_id %}&branch_id={{ selected_branch_id }}{% endif %}{% if selected_movie_id %}&movie_id={{ selected_movie_id }}{% endif %}{% endif %}"
+           class="tab-btn {% if active_tab == 'overview' %}active{% endif %}">Tổng quan</a>
         <a href="/admin/stats/movies/{% if selected_year %}?year={{ selected_year }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% endif %}"
            class="tab-btn {% if active_tab == 'movies' %}active{% endif %}">Doanh thu theo phim</a>
         <a href="/admin/stats/branches/{% if selected_year %}?year={{ selected_year }}{% if selected_month %}&month={{ selected_month }}{% endif %}{% endif %}"
@@ -56,7 +56,7 @@
     <div class="no-data">Không có dữ liệu trong khoảng thời gian đã chọn.</div>
     {% endif %}
 
-    {% if active_tab == 'revenue' and not no_data %}
+    {% if active_tab == 'overview' and not no_data %}
     <div class="stat-cards">
         <div class="stat-card green">
             <div class="stat-card-label">Tổng doanh thu (VND)</div>

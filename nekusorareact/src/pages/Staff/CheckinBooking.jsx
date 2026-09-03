@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { ScanLine, Search, CheckCircle, XCircle, Film, Calendar, Armchair, Popcorn, AlertCircle } from "lucide-react";
+import { ScanLine, Search, CheckCircle, XCircle, Film, Calendar, Armchair, Popcorn, AlertCircle, Camera, CameraOff } from "lucide-react";
 import { useBookingDetails, useCheckinBooking } from "../../hooks/useBooking";
 import Configs from "../../configs/Configs";
 import { formatDate, formatShortWeekday } from "../../utils/DateTime";
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import { NotFoundException } from "@zxing/library";
 
 const STATUS_CONFIG = {
     CONFIRMED: { label: "Đã xác nhận", icon: CheckCircle, cls: "text-success", badgeCls: "badge-success" },
@@ -20,6 +22,110 @@ function InfoRow({ label, value }) {
     );
 }
 
+function BarcodeScanner({ onDetected, onClose }) {
+    const videoRef = useRef(null);
+    const readerRef = useRef(null);
+    const controlsRef = useRef(null);
+    const [error, setError] = useState(null);
+    const detectedRef = useRef(false);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const start = async () => {
+            try {
+                const reader = new BrowserMultiFormatReader();
+                readerRef.current = reader;
+
+                const devices = await BrowserMultiFormatReader.listVideoInputDevices();
+                if (!devices.length) {
+                    setError("Không tìm thấy camera trên thiết bị này.");
+                    return;
+                }
+
+                const preferred = devices.find(d =>
+                    d.label.toLowerCase().includes("back") ||
+                    d.label.toLowerCase().includes("rear") ||
+                    d.label.toLowerCase().includes("environment")
+                ) ?? devices[0];
+
+                const controls = await reader.decodeFromVideoDevice(
+                    preferred.deviceId,
+                    videoRef.current,
+                    (result, err) => {
+                        if (cancelled) return;
+                        if (result && !detectedRef.current) {
+                            detectedRef.current = true;
+                            onDetected(result.getText());
+                        }
+                        if (err && !(err instanceof NotFoundException)) {
+                            console.warn("ZXing error:", err);
+                        }
+                    }
+                );
+
+                controlsRef.current = controls;
+            } catch (e) {
+                if (!cancelled) {
+                    console.error(e);
+                    setError("Không thể truy cập camera. Hãy kiểm tra quyền truy cập trong trình duyệt.");
+                }
+            }
+        };
+
+        start();
+
+        return () => {
+            cancelled = true;
+            controlsRef.current?.stop();
+        };
+    }, [onDetected]);
+
+    return (
+        <div className="mt-4 rounded-2xl overflow-hidden border border-base-300 bg-base-100">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-base-200">
+                <div className="flex items-center gap-2">
+                    <Camera size={16} className="text-primary" />
+                    <p className="font-semibold text-sm">Camera</p>
+                </div>
+                <button className="btn btn-ghost btn-xs gap-1" onClick={onClose}>
+                    <CameraOff size={14} />
+                    Tắt camera
+                </button>
+            </div>
+
+            {error ? (
+                <div className="flex flex-col items-center justify-center gap-2 p-6 text-center text-error text-sm">
+                    <CameraOff size={28} className="opacity-50" />
+                    <p>{error}</p>
+                </div>
+            ) : (
+                <div className="relative bg-black">
+                    <video
+                        ref={videoRef}
+                        className="w-full max-h-64 object-cover"
+                        autoPlay
+                        muted
+                        playsInline
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div className="w-56 h-24 border-2 border-primary rounded-lg opacity-80">
+                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary rounded-tl" />
+                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary rounded-tr" />
+                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary rounded-bl" />
+                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary rounded-br" />
+                        </div>
+                    </div>
+                    <p className="absolute bottom-2 w-full text-center text-white/70 text-xs">
+                        Hướng camera vào mã vạch trên vé
+                    </p>
+                </div>
+            )}
+        </div>
+    );
+}
+
+// ─── Booking Preview ──────────────────────────────────────────────────────────
 function BookingPreview({ booking, onCheckin, isCheckinPending }) {
     const statusCfg = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.HOLDING;
     const StatusIcon = statusCfg.icon;
@@ -165,6 +271,7 @@ function BookingPreview({ booking, onCheckin, isCheckinPending }) {
 const CheckinBooking = () => {
     const [inputCode, setInputCode] = useState("");
     const [activeCode, setActiveCode] = useState(null);
+    const [showCamera, setShowCamera] = useState(false);
     const inputRef = useRef(null);
 
     const { data: booking, isLoading, isError, isFetched } = useBookingDetails(activeCode);
@@ -174,14 +281,21 @@ const CheckinBooking = () => {
         inputRef.current?.focus();
     }, []);
 
-    const handleSubmit = () => {
-        const trimmed = inputCode.trim();
+    const handleSubmit = (code) => {
+        const trimmed = (code ?? inputCode).trim();
         if (!trimmed) return;
+        setInputCode(trimmed);
         setActiveCode(trimmed);
     };
 
     const handleKeyDown = (e) => {
         if (e.key === "Enter") handleSubmit();
+    };
+
+    const handleDetected = (text) => {
+        setShowCamera(false);
+        setInputCode(text);
+        setActiveCode(text);
     };
 
     const handleCheckin = () => {
@@ -191,17 +305,16 @@ const CheckinBooking = () => {
     const handleReset = () => {
         setInputCode("");
         setActiveCode(null);
+        setShowCamera(false);
         setTimeout(() => inputRef.current?.focus(), 0);
     };
 
     return (
         <div className="max-w-2xl mx-auto px-4 py-8">
             <div className="px-2 mb-6">
-                <div>
-                    <h1 className="font-bold text-xl leading-tight mb-1">Soát vé</h1>
-                    <p className="text-sm text-base-content/70">Nhân viên quét barcode hoặc nhập mã vé thủ công</p>
-                    <p className="text-sm text-base-content/70">Chỉ được thực hiện check-in mỗi vé 1 lần duy nhất, vui lòng kiểm tra kỹ thông tin khách hàng trước khi thao tác</p>
-                </div>
+                <h1 className="font-bold text-xl leading-tight mb-1">Soát vé</h1>
+                <p className="text-sm text-base-content/70">Nhân viên quét barcode hoặc nhập mã vé thủ công</p>
+                <p className="text-sm text-base-content/70">Chỉ được thực hiện check-in mỗi vé 1 lần duy nhất, vui lòng kiểm tra kỹ thông tin khách hàng trước khi thao tác</p>
             </div>
 
             <div className="bg-base-100 border border-base-300 rounded-2xl overflow-hidden">
@@ -227,7 +340,7 @@ const CheckinBooking = () => {
                     <div className="flex gap-2">
                         <button
                             className="btn btn-primary flex-1"
-                            onClick={handleSubmit}
+                            onClick={() => handleSubmit()}
                             disabled={!inputCode.trim() || isLoading}
                         >
                             {isLoading
@@ -235,6 +348,14 @@ const CheckinBooking = () => {
                                 : <Search size={16} />
                             }
                             Tra cứu
+                        </button>
+                        <button
+                            className={`btn gap-1 ${showCamera ? "btn-neutral" : "btn-outline"}`}
+                            onClick={() => setShowCamera(v => !v)}
+                            title={showCamera ? "Tắt camera" : "Bật camera quét mã"}
+                        >
+                            {showCamera ? <CameraOff size={16} /> : <Camera size={16} />}
+                            Camera
                         </button>
                         {activeCode && (
                             <button className="btn btn-ghost" onClick={handleReset}>
@@ -244,6 +365,13 @@ const CheckinBooking = () => {
                     </div>
                 </div>
             </div>
+
+            {showCamera && (
+                <BarcodeScanner
+                    onDetected={handleDetected}
+                    onClose={() => setShowCamera(false)}
+                />
+            )}
 
             {isLoading && activeCode && (
                 <div className="flex min-h-40 items-center justify-center mt-6">

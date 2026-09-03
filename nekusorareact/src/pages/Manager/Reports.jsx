@@ -5,6 +5,8 @@ import { useStatsOverview, useStatsByMonth, useStatsByMovie, useStatsByBranch, u
 import { formatMoney } from "../../utils/Money";
 import { useBranches, useManageMovies } from "../../hooks/useManagement";
 import { useAuth } from "../../hooks/useAuth";
+import BackButton from "../../components/BackButton";
+import { useNavigate } from "react-router-dom";
 
 const COLORS = ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899", "#84cc16"];
 
@@ -223,6 +225,7 @@ const TAB_COMPONENTS = {
 };
 
 const Reports = () => {
+    const navigate = useNavigate();
     const { user } = useAuth();
     const [tab, setTab] = useState("revenue");
     const [year, setYear] = useState(NOW_YEAR);
@@ -305,6 +308,8 @@ const Reports = () => {
 
     return (
         <div className="space-y-5 px-4">
+            <BackButton label={"Quản lý"} onClick={() => navigate("/manage/")} />
+
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <h1 className="text-xl font-bold">Báo cáo & Thống kê</h1>
                 <button className="btn btn-sm btn-outline gap-2" onClick={handleExportPDF} disabled={exporting}>

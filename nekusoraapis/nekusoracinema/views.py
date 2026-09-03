@@ -427,7 +427,6 @@ class PayPalCaptureViewSet(viewsets.ViewSet):
 
 
 class ManageStaffViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):
-    serializer_class = serializers.StaffProfileSerializer
     permission_classes = [perms.IsManager]
 
     def get_serializer_class(self):
@@ -451,6 +450,10 @@ class ManageStaffViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.
             query = query.filter(position=q_position)
 
         return query
+
+    def perform_update(self, serializer):
+        branch_id = self.request.data.get('branch')
+        serializer.save(branch_id=branch_id)
 
 
 class ManageLocationViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveUpdateAPIView):

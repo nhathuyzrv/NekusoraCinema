@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import MyAlert from '../configs/MyAlert';
+import { useToast } from '../hooks/useToast';
 
 const SeatCountdown = ({ heldUntil }) => {
+    const toast = useToast();
     const [timeLeft, setTimeLeft] = useState({ minutes: 0, seconds: 0 });
 
     useEffect(() => {
@@ -10,6 +12,10 @@ const SeatCountdown = ({ heldUntil }) => {
         const updateCountdown = async () => {
             const now = Date.now();
             const diff = targetTime - now;
+
+            if (diff === 1000 * 60) {
+                toast.warning("Bạn còn lại 1 phút giữ ghế!");
+            };
 
             if (diff <= 0) {
                 setTimeLeft({ minutes: 0, seconds: 0 });
@@ -30,7 +36,7 @@ const SeatCountdown = ({ heldUntil }) => {
         const interval = setInterval(updateCountdown, 1000);
 
         return () => clearInterval(interval);
-    }, [heldUntil]);
+    }, [heldUntil]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <span className="countdown font-medium text-md">

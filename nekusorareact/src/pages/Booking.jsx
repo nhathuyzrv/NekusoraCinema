@@ -183,7 +183,7 @@ function StepShowtime({ selection, setSelection, onContinue }) {
                     Chọn suất chiếu
                     {showtime && (
                         <span className="text-sm text-info font-medium">
-                            {showtime.start_time?.slice(0, 5)} - {formatShortWeekday(showtime.show_date)},{formatDate(showtime.show_date)} - {showtime.branch.name}
+                            {showtime.start_time?.slice(0, 5)} - {formatShortWeekday(showtime.show_date)}, {formatDate(showtime.show_date)} - {showtime.branch.name}
                         </span>
                     )}
                 </div>

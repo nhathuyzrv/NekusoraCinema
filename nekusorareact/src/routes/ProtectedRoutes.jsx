@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
+import { callAuthModal } from "../utils/CallAuthModal";
 
 const ProtectedRoutes = ({ roles = [] }) => {
     const { isAuthenticated, appLoading, hasRole } = useAuth();
@@ -14,6 +15,7 @@ const ProtectedRoutes = ({ roles = [] }) => {
     }
 
     if (!isAuthenticated) {
+        callAuthModal();
         return <Navigate to="/" state={{ from: location }} replace />;
     }
 

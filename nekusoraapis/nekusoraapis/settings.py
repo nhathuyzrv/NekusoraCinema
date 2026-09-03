@@ -12,11 +12,6 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 
-import pymysql
-
-pymysql.version_info = (2, 2, 8, "final", 0)
-pymysql.install_as_MySQLdb()
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -31,7 +26,7 @@ SECRET_KEY = 'django-insecure-06&p_dkamfadl-ixy)axavba)x+wn6!13kvix!)i0^2a7m1nj8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', '0.0.0.0', 'baritone-caption-trowel.ngrok-free.dev', 'localhost']
+ALLOWED_HOSTS = ['127.0.0.1', '0.0.0.0', 'baritone-caption-trowel.ngrok-free.dev', 'localhost', '.onrender.com']
 
 OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore'}
 
@@ -77,8 +72,10 @@ PAYPAL_BASE_URL=config('PAYPAL_BASE_URL')
 PAYPAL_RETURN_URL=config('PAYPAL_RETURN_URL')
 PAYPAL_CANCEL_URL=config('PAYPAL_CANCEL_URL')
 
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+REDIS_URL = config('REDIS_URL', default='redis://127.0.0.1:6379')
+
+CELERY_BROKER_URL = f"{REDIS_URL}/0"
+CELERY_RESULT_BACKEND = f"{REDIS_URL}/0"
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -101,7 +98,7 @@ CELERY_BEAT_SCHEDULE = {
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/2",
+        "LOCATION": f"{REDIS_URL}/2",
     }
 }
 
@@ -119,7 +116,7 @@ CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels_redis.core.RedisChannelLayer",
         "CONFIG": {
-            "hosts": ["redis://127.0.0.1:6379/3"],
+            "hosts": [f"{REDIS_URL}/3"],
         },
     },
 }
@@ -182,19 +179,15 @@ WSGI_APPLICATION = 'nekusoraapis.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+import dj_database_url
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'nekusoradb',
-        'USER': 'postgres',
-        'PASSWORD': 'root',
-        'HOST': 'localhost',
-        'PORT': '5432',
-        'OPTIONS': {
-            'client_encoding': 'UTF8',
-        },
-    }
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL'),
+        conn_max_age=600,
+        conn_health_checks=True,
+        ssl_require=True
+    )
 }
 
 

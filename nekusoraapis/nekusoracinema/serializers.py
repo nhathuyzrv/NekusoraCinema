@@ -448,7 +448,7 @@ class ManageShowtimeCreateUpdateSerializer(serializers.ModelSerializer):
             if self.instance:
                 has_bookings = self.instance.showtime_bookings.filter(status__in=[BookingStatus.CONFIRMED, BookingStatus.HOLDING]).exists()
                 if has_bookings:
-                    raise ValidationError({'detail': 'Không thể chỉnh sửa chiếu đang có đơn đặt vé'})
+                    raise ValidationError({'detail': 'Không thể chỉnh sửa suất chiếu đang có đơn đặt vé'})
                 query = query.exclude(pk=self.instance.pk)
 
             if query.exists():
