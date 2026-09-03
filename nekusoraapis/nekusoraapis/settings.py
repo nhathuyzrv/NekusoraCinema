@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-06&p_dkamfadl-ixy)axavba)x+wn6!13kvix!)i0^2a7m1nj8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['127.0.0.1', '0.0.0.0', 'baritone-caption-trowel.ngrok-free.dev', 'localhost', '.onrender.com']
+ALLOWED_HOSTS = ['127.0.0.1', '0.0.0.0', '192.168.1.73', 'baritone-caption-trowel.ngrok-free.dev', 'localhost', '.onrender.com']
 
 OAUTH2_PROVIDER = {'OAUTH2_BACKEND_CLASS': 'oauth2_provider.oauth2_backends.JSONOAuthLibCore'}
 
@@ -179,15 +179,19 @@ WSGI_APPLICATION = 'nekusoraapis.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-import dj_database_url
 
 DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL'),
-        conn_max_age=600,
-        conn_health_checks=True,
-        ssl_require=True
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'nekusoradb',
+        'USER': 'postgres',
+        'PASSWORD': 'root',
+        'HOST': 'localhost',
+        'PORT': '5432',
+        'OPTIONS': {
+            'client_encoding': 'UTF8',
+        },
+    }
 }
 
 
