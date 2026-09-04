@@ -8,7 +8,6 @@ import { useToast } from "../../hooks/useToast";
 import { useNavigate } from "react-router-dom";
 import { formatMoney } from "../../utils/Money";
 
-// ─── MOCK DATA ────────────────────────────────────────────────────────────────
 const MOCK_LOCATION = { id: 1, name: "TP. Hồ Chí Minh" };
 
 const MOCK_MOVIE = {
@@ -1376,7 +1375,6 @@ const HelperBooking = () => {
 
             <BookingStepper currentStep={step} />
 
-            {/* Help badge */}
             <div className="mb-4 flex items-center gap-2 bg-info/10 border border-info/30 rounded-xl px-4 py-2">
                 <Info size={16} className="text-info shrink-0" />
                 <p className="text-sm text-info">

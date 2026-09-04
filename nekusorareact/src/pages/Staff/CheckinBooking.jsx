@@ -94,7 +94,6 @@ function BarcodeScanner({ onDetected, onClose }) {
                 </div>
             ) : (
                 <div className="p-4">
-                    {/* html5-qrcode tự render video vào div này */}
                     <div id={SCANNER_ID} className="w-full rounded-xl overflow-hidden" />
                     <p className="text-center text-base-content/50 text-xs mt-3">
                         Hướng camera vào mã vạch trên vé
