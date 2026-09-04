@@ -215,7 +215,7 @@ function LoginForm({ onLogin, onSwitch, onForgot, onClose, serverError }) {
             <div className="form-control">
                 <label className="label"><span className="label-text text-sm">Email</span></label>
                 <input placeholder="Nhập Email" className={`input w-full ${errors.email ? "input-error" : ""}`}
-                    value={form.email} onChange={e => setField("email", e.target.value)} disabled={submitting} />
+                    value={form.email} onChange={e => setField("email", e.target.value)} disabled={submitting} autoCapitalize="off" />
                 {errors.email && <span className="text-error text-xs mt-1">{errors.email}</span>}
             </div>
 
@@ -414,7 +414,7 @@ function StepEmail({ hook }) {
                 <input placeholder="Nhập Email"
                     className={`input w-full ${(error || hook.error) ? "input-error" : ""}`}
                     value={email} onChange={e => { setEmail(e.target.value); setError(""); hook.clearError(); }}
-                    disabled={hook.loading} />
+                    disabled={hook.loading} autoCapitalize="off" />
                 {error && <span className="text-error text-xs mt-1">{error}</span>}
             </div>
             <button className="btn btn-primary w-full" type="submit" disabled={hook.loading}>Tiếp tục</button>

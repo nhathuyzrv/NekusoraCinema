@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ScanLine, Search, CheckCircle, XCircle, Film, Calendar, Armchair, Popcorn, AlertCircle, Camera, CameraOff } from "lucide-react";
 import { useBookingDetails, useCheckinBooking } from "../../hooks/useBooking";
 import Configs from "../../configs/Configs";
 import { formatDate, formatShortWeekday } from "../../utils/DateTime";
-import { BrowserMultiFormatReader } from "@zxing/browser";
-import { NotFoundException } from "@zxing/library";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 
 const STATUS_CONFIG = {
     CONFIRMED: { label: "Đã xác nhận", icon: CheckCircle, cls: "text-success", badgeCls: "badge-success" },
@@ -22,62 +21,56 @@ function InfoRow({ label, value }) {
     );
 }
 
+const SCANNER_ID = "html5qr-barcode-scanner";
+
 function BarcodeScanner({ onDetected, onClose }) {
-    const videoRef = useRef(null);
-    const readerRef = useRef(null);
-    const controlsRef = useRef(null);
     const [error, setError] = useState(null);
+    const scannerRef = useRef(null);
     const detectedRef = useRef(false);
 
     useEffect(() => {
-        let cancelled = false;
+        if (!navigator.mediaDevices?.getUserMedia) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setError("Trình duyệt không hỗ trợ camera");
+            return;
+        }
 
-        const start = async () => {
-            try {
-                const reader = new BrowserMultiFormatReader();
-                readerRef.current = reader;
+        const scanner = new Html5Qrcode(SCANNER_ID);
+        scannerRef.current = scanner;
+        let started = false;
 
-                const devices = await BrowserMultiFormatReader.listVideoInputDevices();
-                if (!devices.length) {
-                    setError("Không tìm thấy camera trên thiết bị này.");
-                    return;
-                }
-
-                const preferred = devices.find(d =>
-                    d.label.toLowerCase().includes("back") ||
-                    d.label.toLowerCase().includes("rear") ||
-                    d.label.toLowerCase().includes("environment")
-                ) ?? devices[0];
-
-                const controls = await reader.decodeFromVideoDevice(
-                    preferred.deviceId,
-                    videoRef.current,
-                    (result, err) => {
-                        if (cancelled) return;
-                        if (result && !detectedRef.current) {
-                            detectedRef.current = true;
-                            onDetected(result.getText());
-                        }
-                        if (err && !(err instanceof NotFoundException)) {
-                            console.warn("ZXing error:", err);
-                        }
-                    }
-                );
-
-                controlsRef.current = controls;
-            } catch (e) {
-                if (!cancelled) {
-                    console.error(e);
-                    setError("Không thể truy cập camera. Hãy kiểm tra quyền truy cập trong trình duyệt.");
-                }
+        scanner.start(
+            { facingMode: "environment" },
+            {
+                fps: 15,
+                qrbox: { width: 280, height: 100 },
+                formatsToSupport: [Html5QrcodeSupportedFormats.CODE_128],
+                aspectRatio: 1.7,
+            },
+            (text) => {
+                if (detectedRef.current) return;
+                detectedRef.current = true;
+                scanner.stop().catch(() => { });
+                onDetected(text);
+            },
+            () => { }
+        ).then(() => {
+            started = true;
+        }).catch((e) => {
+            console.error("Camera Error:", e);
+            if (e.name === "NotAllowedError" || e.name === "PermissionDeniedError") {
+                setError("Bạn đã từ chối quyền camera. Vui lòng cấp quyền trong cài đặt trình duyệt.");
+            } else if (e.name === "NotFoundError") {
+                setError("Không tìm thấy camera trên thiết bị.");
+            } else if (e.name === "NotReadableError") {
+                setError("Camera đang được ứng dụng/tab khác sử dụng. Hãy đóng và thử lại.");
+            } else {
+                setError(`Không thể khởi động camera (${e.name ?? e.message}).`);
             }
-        };
-
-        start();
+        });
 
         return () => {
-            cancelled = true;
-            controlsRef.current?.stop();
+            if (started) scanner.stop().catch(() => { });
         };
     }, [onDetected]);
 
@@ -100,23 +93,10 @@ function BarcodeScanner({ onDetected, onClose }) {
                     <p>{error}</p>
                 </div>
             ) : (
-                <div className="relative bg-black">
-                    <video
-                        ref={videoRef}
-                        className="w-full max-h-64 object-cover"
-                        autoPlay
-                        muted
-                        playsInline
-                    />
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-56 h-24 border-2 border-primary rounded-lg opacity-80">
-                            <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-primary rounded-tl" />
-                            <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-primary rounded-tr" />
-                            <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-primary rounded-bl" />
-                            <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-primary rounded-br" />
-                        </div>
-                    </div>
-                    <p className="absolute bottom-2 w-full text-center text-white/70 text-xs">
+                <div className="p-4">
+                    {/* html5-qrcode tự render video vào div này */}
+                    <div id={SCANNER_ID} className="w-full rounded-xl overflow-hidden" />
+                    <p className="text-center text-base-content/50 text-xs mt-3">
                         Hướng camera vào mã vạch trên vé
                     </p>
                 </div>
@@ -292,11 +272,11 @@ const CheckinBooking = () => {
         if (e.key === "Enter") handleSubmit();
     };
 
-    const handleDetected = (text) => {
+    const handleDetected = useCallback((text) => {
         setShowCamera(false);
         setInputCode(text);
         setActiveCode(text);
-    };
+    }, []);
 
     const handleCheckin = () => {
         checkin({ is_checked_in: true });

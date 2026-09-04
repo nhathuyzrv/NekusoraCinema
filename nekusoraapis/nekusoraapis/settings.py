@@ -154,6 +154,7 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:5173',
+    'http://192.168.1.73:5173',
     'https://baritone-caption-trowel.ngrok-free.dev',
 ]
 
