@@ -59,7 +59,7 @@ Important technical features include:
 
 ## Architecture Overview
 
-![alt text](image-1.png)
+<img width="966" height="512" alt="Screenshot 2026-09-05 151621" src="https://github.com/user-attachments/assets/6e286172-5144-4764-b18c-8f43fa8cea8d" />
 
 Redis is used by the current backend configuration for several different purposes:
 - Database 0: Celery broker and result backend.
