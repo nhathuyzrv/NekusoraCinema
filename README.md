@@ -325,7 +325,7 @@ Important: do not use `db_init.sh` as the normal startup command. Running it rep
 
 The frontend login flow requests OAuth2 tokens using the password grant, and the backend injects `OAUTH_CLIENT_ID` and `OAUTH_CLIENT_SECRET` into token requests. The values in `.env` must therefore match an OAuth2 application stored in the Django database.
 
-After migrations have completed, create the OAuth2 application once on a fresh database. Firstly, run the backend server using command in the next section, then go to endpoint `/admin/` and login superuser. Secondly, go to endpoint `/o/application/` and register a new application. Client type `Confindentail` - Authorization grant type `Resource owner password-based`. Make sure you copy both Client id and Client secret keys and put them in `.env`.
+After migrations have completed, create the OAuth2 application once on a fresh database. Firstly, run the backend server using command in the next section, then go to endpoint `/admin/` and login superuser (using email and password). Secondly, go to endpoint `/o/application/` and register a new application. Client type `Confindentail` - Authorization grant type `Resource owner password-based`. Make sure you copy both Client id and Client secret keys and put them in `.env`.
 
 Do not create a second application every time the project starts. If an OAuth2 application already exists in your database, simply make sure its client ID and secret match the values in `.env`.
 
