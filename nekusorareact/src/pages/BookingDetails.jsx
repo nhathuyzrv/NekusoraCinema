@@ -101,7 +101,7 @@ const BookingDetails = () => {
                 </div>
             </div>
 
-            <Section title="Thông tin phim" icon={Film}>
+            <Section title="Phim" icon={Film}>
                 <div className="flex gap-4">
                     {movie?.poster && (
                         <img
@@ -131,7 +131,7 @@ const BookingDetails = () => {
                 </div>
             </Section>
 
-            <Section title="Thông tin suất chiếu" icon={Calendar}>
+            <Section title="Suất chiếu" icon={Calendar}>
                 <InfoRow
                     label="Ngày chiếu"
                     value={showtime
@@ -193,7 +193,7 @@ const BookingDetails = () => {
                 </Section>
             )}
 
-            <Section title="Thông tin hóa đơn" icon={CreditCard}>
+            <Section title="Hóa đơn" icon={CreditCard}>
                 <InfoRow label="Tiền vé" value={formatMoney(booking.seat_amount)} />
                 {booking.product_amount > 0 && (
                     <InfoRow label="Bắp nước" value={formatMoney(booking.product_amount)} />

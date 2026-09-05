@@ -104,7 +104,6 @@ function BarcodeScanner({ onDetected, onClose }) {
     );
 }
 
-// ─── Booking Preview ──────────────────────────────────────────────────────────
 function BookingPreview({ booking, onCheckin, isCheckinPending }) {
     const statusCfg = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.HOLDING;
     const StatusIcon = statusCfg.icon;
@@ -133,7 +132,7 @@ function BookingPreview({ booking, onCheckin, isCheckinPending }) {
             <div className="bg-base-100 border border-base-300 rounded-2xl overflow-hidden">
                 <div className="flex items-center gap-2 px-5 py-3.5 border-b border-base-200">
                     <Film size={16} className="text-primary" />
-                    <p className="font-semibold text-sm">Thông tin phim</p>
+                    <p className="font-semibold text-sm">Phim</p>
                 </div>
                 <div className="p-5">
                     <div className="flex gap-4">
@@ -239,7 +238,7 @@ function BookingPreview({ booking, onCheckin, isCheckinPending }) {
                         disabled={isCheckinPending}
                     >
                         {isCheckinPending && <span className="loading loading-spinner loading-sm" />}
-                        Xác nhận check-in
+                        Check-in
                     </button>
                 )}
             </div>

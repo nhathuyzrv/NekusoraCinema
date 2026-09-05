@@ -430,8 +430,6 @@ class ManageShowtimeCreateUpdateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({'room': 'Phòng chiếu này đã ngừng hoạt động'})
 
         today = utils.get_timezone_now().date()
-        if show_date <= today:
-            raise ValidationError({'show_date': 'Ngày chiếu phải sau ngày hôm nay'})
 
         if movie and start_time:
             start_dt = datetime.combine(today, start_time)
@@ -446,10 +444,25 @@ class ManageShowtimeCreateUpdateSerializer(serializers.ModelSerializer):
             query = Showtime.objects.filter(active=True, room=room, show_date=show_date, status__in=[ShowtimeStatus.SCHEDULED], start_time__lt=end_time, end_time__gt=start_time)
 
             if self.instance:
+                new_show_date = attrs.pop('show_date', None)
+                if new_show_date and new_show_date != self.instance.show_date:
+                    raise ValidationError({'show_date': 'Không thể sửa ngày của suất chiếu'})
+
+                new_start_time = attrs.pop('start_time', None)
+                if new_start_time and new_start_time != self.instance.start_time:
+                    raise ValidationError({'show_date': 'Không thể sửa thời gian của suất chiếu'})
+
+                new_status = attrs.get('status', None)
+                if new_status and self.instance.status in [ShowtimeStatus.COMPLETED]:
+                    raise ValidationError({'status': 'Không thể sửa suất chiếu đã kết thúc'})
+
                 has_bookings = self.instance.showtime_bookings.filter(status__in=[BookingStatus.CONFIRMED, BookingStatus.HOLDING]).exists()
                 if has_bookings:
                     raise ValidationError({'detail': 'Không thể chỉnh sửa suất chiếu đang có đơn đặt vé'})
                 query = query.exclude(pk=self.instance.pk)
+
+            if show_date <= today:
+                raise ValidationError({'show_date': 'Ngày chiếu phải sau ngày hôm nay'})
 
             if query.exists():
                 conflict = query.first()

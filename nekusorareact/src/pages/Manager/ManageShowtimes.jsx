@@ -313,13 +313,15 @@ const MovieShowtimesPanel = ({ movie }) => {
                                     {hasStaffPosition(Configs.STAFF_POSITIONS.SYSTEM_MANAGER) &&
                                         <td className="py-2 px-4">
                                             <div className="flex gap-1">
-                                                <button className="btn btn-ghost btn-xs" onClick={() => { setEditShowtime(st); setShowForm(true); }}>
-                                                    <Pencil size={12} />
-                                                </button>
-                                                {st.status === "SCHEDULED" && (
-                                                    <button className="btn btn-ghost btn-xs text-error" onClick={() => handleDelete(st)}>
-                                                        <Trash2 size={12} />
-                                                    </button>
+                                                {["SCHEDULED", "CANCELLED"].includes(st.status) && (
+                                                    <>
+                                                        <button className="btn btn-ghost btn-xs" onClick={() => { setEditShowtime(st); setShowForm(true); }}>
+                                                            <Pencil size={12} />
+                                                        </button>
+                                                        <button className="btn btn-ghost btn-xs text-error" onClick={() => handleDelete(st)}>
+                                                            <Trash2 size={12} />
+                                                        </button>
+                                                    </>
                                                 )}
                                             </div>
                                         </td>
