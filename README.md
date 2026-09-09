@@ -1,8 +1,8 @@
 # Disclaimer
 
-Nekusora Cinema is an academic software project developed solely for educational, learning, demonstration, and research purposes. It is not intended for commercial use, real cinema operations, production payment processing, or the storage of real customer data.
+Nekusora Cinema is an academic software project developed solely for educational, learning, demonstration and research purposes. It is not intended for commercial use, real cinema operations, production payment processing or the storage of real customer data.
 
-The project integrates third-party services such as Cloudinary, Gmail SMTP, PayOS, MoMo, PayPal and ngrok. Their names, trademarks, APIs, and services remain the property of their respective owners. Payment integrations in this repository are intended to be used with development or sandbox environments only unless the application is independently reviewed, secured, and configured for production use.
+The project integrates third-party services such as Cloudinary, Gmail SMTP, PayOS, MoMo, PayPal and ngrok. Their names, trademarks, APIs, and services remain the property of their respective owners. Payment integrations in this repository are intended to be used with development or sandbox environments only.
 
 # Nekusora Cinema
 
