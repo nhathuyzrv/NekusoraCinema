@@ -129,18 +129,40 @@ nekusoraapis/nekusoraapis/settings.py
 
 It is not necessary to change your PostgreSQL administrator password to `root`; changing the Django database configuration to match your local PostgreSQL installation is usually safer.
 
-## 3. Redis Configuration
+## 3. Redis Installation and Configuration
 
-The backend uses Redis at the following address by default:
+The backend requires a Redis server and uses the following address by default:
 
 ```text
 redis://127.0.0.1:6379
 ```
 
-Make sure Redis is already running before starting Django or Celery. If `redis-cli` is available, verify the server with:
+### Windows with Docker
+
+On Windows, the recommended setup for this project is to run Redis in Docker. Install and start Docker Desktop first, then open PowerShell or Command Prompt and run:
 
 ```bash
-redis-cli ping
+docker run -d --name redis -p 6379:6379 redis
+```
+
+This creates a Docker container named `redis` and exposes Redis on port `6379` of the development machine. The command only needs to be used when creating the container for the first time.
+
+For later development sessions, start the existing container with:
+
+```bash
+docker start redis
+```
+
+To check whether the container is running:
+
+```bash
+docker ps
+```
+
+You can also verify Redis directly from inside the container:
+
+```bash
+docker exec -it redis redis-cli ping
 ```
 
 A successful response is:
@@ -149,7 +171,9 @@ A successful response is:
 PONG
 ```
 
-`start_services.bat` does not start the Redis server. Redis must be running separately.
+Official Redis installation documentation: https://redis.io/docs/latest/operate/oss_and_stack/install/install-stack/
+
+Redis must be running before starting Django or Celery. `start_services.bat` does not start the Redis server, so Redis must be started separately.
 
 If Redis runs at a different address, set `REDIS_URL` in the backend `.env` file, for example:
 
@@ -665,10 +689,10 @@ Check that:
 
 ## Redis connection is refused
 
-Check Redis first:
+Check Redis first. If Redis is running in Docker, use:
 
 ```bash
-redis-cli ping
+docker exec -it redis redis-cli ping
 ```
 
 Expected:
@@ -744,7 +768,7 @@ Check `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, and `DEFAULT_FROM_EMAIL`. Also m
 
 Verify `CLOUD_NAME`, `CLOUD_API_KEY`, and `CLOUD_API_SECRET`.
 
-# Normal Startup Checklist
+# Startup Checklist
 
 After the project has been initialized once, the usual startup sequence is:
 
