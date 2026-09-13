@@ -801,7 +801,7 @@ http://localhost:5173/
 
 # Stopping the Development Environment
 
-To shut the project down cleanly:
+To shut the project down properly:
 
 1. Stop the frontend with `Ctrl+C`
 2. Stop the Django backend with `Ctrl+C`
