@@ -2,7 +2,7 @@ import hashlib
 import hmac
 import redis
 from decimal import Decimal
-from datetime import timedelta
+from datetime import timedelta, datetime as dt, date as date_type, time as time_type
 from nekusoraapis import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -567,6 +567,62 @@ class BookingService:
     @classmethod
     def handle_paypal_capture(cls, data):
         return PaymentGatewayService.handle_paypal_capture(data=data, callback=cls.confirm_booking)
+
+
+class ShowtimeService:
+    SLOT_GAP = 15 #min
+    ROUND_TO = 5 #min
+
+    @classmethod
+    def ceil_to_grid(cls, d):
+        remainder = d.minute % cls.ROUND_TO
+        if remainder == 0 and d.second == 0:
+            return d.replace(second=0, microsecond=0)
+        add = cls.ROUND_TO - remainder
+        return (d + timedelta(minutes=add)).replace(second=0, microsecond=0)
+
+    @classmethod
+    def get_available_slots(cls, room, movie, show_date):
+        duration = timedelta(minutes=movie.duration)
+        gap = timedelta(minutes=cls.SLOT_GAP)
+
+        branch = room.branch
+        opening = branch.opening_time
+        closing = branch.closing_time
+
+        base = date_type(2000, 1, 1)
+        opening_dt = dt.combine(base, opening)
+        closing_dt = dt.combine(base, closing)
+        if closing == time_type(0, 0):
+            closing_dt = dt.combine(base, time_type(23, 59)) + timedelta(minutes=1)
+
+        existing = list(Showtime.objects
+                        .filter(active=True, room=room, show_date=show_date, status=ShowtimeStatus.SCHEDULED)
+                        .order_by('start_time').values('start_time', 'end_time'))
+
+        slots = []
+        cursor = opening_dt
+
+        while True:
+            slot_end = cursor + duration
+            if slot_end > closing_dt:
+                break
+
+            conflict = next((ex for ex in existing if cursor < dt.combine(base, ex['end_time']) and slot_end > dt.combine(base, ex['start_time'])), None)
+
+            if conflict:
+                step = dt.combine(base, conflict['end_time']) + gap
+                cursor = cls.ceil_to_grid(step)
+                continue
+
+            slots.append({
+                'start_time': cursor.time().strftime('%H:%M'),
+                'end_time': slot_end.time().strftime('%H:%M'),
+            })
+
+            cursor = cls.ceil_to_grid(cursor + gap)
+
+        return slots
 
 
 def generate_row_label(row_idx):

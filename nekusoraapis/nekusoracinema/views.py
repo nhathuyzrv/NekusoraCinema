@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, date as date_type
 from django.core.cache import cache
 from django.db.models import Prefetch
 from django.db.models.aggregates import Avg, Sum, Count
@@ -12,7 +12,7 @@ from rest_framework.response import Response
 from nekusoracinema import serializers, paginators, perms, tasks
 from nekusoracinema.models import *
 from nekusoracinema.patterns import OTP_MODE, require_holding_booking_not_expired, require_holding_booking, PAYMENT_STRATEGY
-from nekusoracinema.services import BookingService, CinemaRoomService, PromotionService, ProductService
+from nekusoracinema.services import BookingService, CinemaRoomService, ShowtimeService, PromotionService, ProductService
 
 
 class UserViewSet(viewsets.ViewSet, generics.CreateAPIView):
@@ -224,13 +224,11 @@ class LocationViewSet(viewsets.ViewSet, generics.ListAPIView):
         movies = Movie.objects.filter(
             movie_showtimes__room__branch__location_id=location.pk,
             movie_showtimes__show_date__gte=today,
-            movie_showtimes__active=True
+            movie_showtimes__active=True,
+            status__in=[MovieStatus.NOW_SHOWING]
         ).distinct()
 
-        paginator = paginators.MovieItemPaginator()
-        page = paginator.paginate_queryset(movies, request, view=self)
-
-        return paginator.get_paginated_response(serializers.MovieLocationSerializer(page, many=True).data)
+        return Response(serializers.MovieLocationSerializer(movies, many=True).data, status=status.HTTP_200_OK)
 
 
 class BranchViewSet(viewsets.ViewSet, generics.ListAPIView):
@@ -541,6 +539,24 @@ class ManageCinemaRoomViewSet(viewsets.ViewSet, generics.RetrieveUpdateAPIView):
         updated_room = CinemaRoomService.update_room(room=instance, data=validated_data, force_update=force_update)
 
         return Response(serializers.CinemaRoomSerializer(updated_room).data, status=status.HTTP_200_OK)
+
+    @action(methods=['get'], url_path='slots', detail=True, permission_classes=[perms.IsManager])
+    def available_slots(self, request, pk=None):
+        room = self.get_object()
+        show_date = request.query_params.get('show_date')
+        movie_id = request.query_params.get('movie_id')
+
+        if not show_date or not movie_id:
+            return Response({'detail': 'Missing show_date and movie_id'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            show_date = date_type.fromisoformat(show_date)
+        except ValueError:
+            return Response({'detail': 'Invalid show_date'}, status=status.HTTP_400_BAD_REQUEST)
+
+        movie = get_object_or_404(Movie, pk=movie_id, active=True)
+        slots = ShowtimeService.get_available_slots(room=room, movie=movie, show_date=show_date)
+        return Response(slots, status=status.HTTP_200_OK)
 
 
 class ManageGenreViewSet(viewsets.ViewSet, generics.ListCreateAPIView, generics.UpdateAPIView):

@@ -85,7 +85,7 @@ function StepShowtime({ selection, setSelection, onContinue }) {
     const { data: movieData, isLoading: loadingMovies } = useLocationMovies(location?.id);
     const { data: showtimes, isLoading: loadingShowtimes } = useBookingMovieShowtimes(movie?.id, selectedDate, location?.id);
 
-    const movies = movieData?.results ?? [];
+    const movies = movieData?.results ?? movieData ?? [];
 
     const groupedShowtimes = useMemo(() => {
         if (!showtimes) return [];

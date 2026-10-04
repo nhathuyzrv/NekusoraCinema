@@ -392,6 +392,14 @@ export const useUpdateRoom = () => {
     });
 };
 
+export const useRoomAvailableSlots = (roomId, movieId, showDate) =>
+    useQuery({
+        queryKey: ["room_available_slots", roomId, movieId, showDate],
+        queryFn: () => managementService.getRoomAvailableSlots(roomId, movieId, showDate),
+        enabled: !!roomId && !!movieId && !!showDate,
+        staleTime: 0,
+    });
+
 export const useManageProducts = (params) =>
     useQuery({
         queryKey: ["manage_products", params],

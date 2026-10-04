@@ -101,6 +101,9 @@ const managementService = {
     updateRoom: (id, data) =>
         authApis.patch(endpoints.manageRoomDetail(id), data)
             .then(res => res.data),
+    getRoomAvailableSlots: (roomId, movieId, showDate) =>
+        authApis.get(endpoints.manageRoomAvailableSlots(roomId, movieId, showDate))
+            .then(res => res.data),
 
     getProducts: (params) =>
         authApis.get(endpoints.manageProductsParams(params))

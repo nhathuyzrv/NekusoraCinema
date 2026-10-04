@@ -461,8 +461,8 @@ class ManageShowtimeCreateUpdateSerializer(serializers.ModelSerializer):
                     raise ValidationError({'detail': 'Không thể chỉnh sửa suất chiếu đang có đơn đặt vé'})
                 query = query.exclude(pk=self.instance.pk)
 
-            if show_date <= today:
-                raise ValidationError({'show_date': 'Ngày chiếu phải sau ngày hôm nay'})
+            if show_date < today:
+                raise ValidationError({'show_date': 'Ngày chiếu đã qua'})
 
             if query.exists():
                 conflict = query.first()

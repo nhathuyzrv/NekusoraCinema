@@ -182,7 +182,7 @@ function BookingPreview({ booking, onCheckin, isCheckinPending }) {
             <div className="bg-base-100 border border-base-300 rounded-2xl overflow-hidden">
                 <div className="flex items-center gap-2 px-5 py-3.5 border-b border-base-200">
                     <Armchair size={16} className="text-primary" />
-                    <p className="font-semibold text-sm">Ghế đã đặt</p>
+                    <p className="font-semibold text-sm">Ghế</p>
                 </div>
                 <div className="p-5">
                     <div className="flex flex-wrap gap-1.5">

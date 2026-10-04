@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Plus, Pencil, Trash2, X, Loader2, Search, ChevronDown } from "lucide-react";
 import {
     useManageMovies,
@@ -9,6 +9,7 @@ import {
     useManageScreeningFormats,
     useBranches,
     useManageBranchRooms,
+    useRoomAvailableSlots,
 } from "../../hooks/useManagement";
 import { useToast } from "../../hooks/useToast";
 import { formatDate } from "../../utils/DateTime";
@@ -39,7 +40,9 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
     const isEdit = !!showtimeData;
     const { data: formats } = useManageScreeningFormats();
     const { data: branches } = useBranches();
-    const [selectedBranch, setSelectedBranch] = useState(showtimeData?.room?.branch || "");
+    const [selectedBranch, setSelectedBranch] = useState(
+        showtimeData?.room?.branch?.id || showtimeData?.room?.branch || ""
+    );
     const { data: rooms } = useManageBranchRooms(selectedBranch);
 
     const { mutate: createShowtime, isPending: createShowtimePending } = useCreateMovieShowtime(movieId);
@@ -58,7 +61,20 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
         status: showtimeData?.status || "SCHEDULED",
     });
 
-    const set = (k, v) => setForm((p) => ({ ...p, [k]: v }));
+    const [selectedSlots, setSelectedSlots] = useState([]);
+
+    const set = useCallback((k, v) => setForm((p) => ({ ...p, [k]: v })), []);
+
+    const { data: availableSlots, isFetching: slotsFetching } = useRoomAvailableSlots(
+        !isEdit ? form.room : null,
+        !isEdit ? movieId : null,
+        !isEdit ? form.show_date : null,
+    );
+
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setSelectedSlots([]);
+    }, [form.room, form.show_date]);
 
     useEffect(() => {
         if (priceMode === "auto") {
@@ -66,36 +82,84 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
             // eslint-disable-next-line react-hooks/set-state-in-effect
             if (auto) set("price", auto);
         }
-    }, [priceMode, form.show_date, selectedFormatCode]);
+    }, [priceMode, form.show_date, selectedFormatCode, set]);
 
-    const handleSubmit = () => {
-        if (!form.room || !form.screening_format || !form.show_date || !form.start_time || !form.price) {
+    const toggleSlot = (slot) => {
+        setSelectedSlots((prev) => {
+            const exists = prev.find((s) => s.start_time === slot.start_time);
+            if (exists) return prev.filter((s) => s.start_time !== slot.start_time);
+
+            const filtered = prev.filter(
+                (s) => !(s.start_time > slot.start_time && s.start_time < slot.end_time)
+            );
+            return [...filtered, slot];
+        });
+    };
+
+    const isSlotSelected = (slot) => selectedSlots.some((s) => s.start_time === slot.start_time);
+
+    const isSlotDisabled = (slot) =>
+        selectedSlots.some(
+            (s) => slot.start_time > s.start_time && slot.start_time < s.end_time
+        );
+
+    const handleSubmit = async () => {
+        if (!form.room || !form.screening_format || !form.show_date || !form.price) {
             toast.warning("Vui lòng nhập đầy đủ thông tin");
             return;
         }
 
         if (isEdit) {
+            if (!form.start_time) {
+                toast.warning("Vui lòng nhập giờ bắt đầu");
+                return;
+            }
             updateShowtime({ id: showtimeData.id, data: form }, {
-                onSuccess: () => {
-                    onClose();
-                },
+                onSuccess: () => onClose(),
             });
+            return;
+        }
+
+        if (selectedSlots.length === 0) {
+            toast.warning("Vui lòng chọn ít nhất một slot thời gian");
+            return;
+        }
+
+        const sorted = [...selectedSlots].sort((a, b) => a.start_time.localeCompare(b.start_time));
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const slot of sorted) {
+            await new Promise((resolve) => {
+                createShowtime(
+                    { ...form, start_time: slot.start_time },
+                    {
+                        onSuccess: () => { successCount++; resolve(); },
+                        onError: () => { failCount++; resolve(); },
+                    }
+                );
+            });
+        }
+
+        if (successCount > 0 && failCount === 0) {
+            toast.success(`Đã tạo ${successCount} suất chiếu`);
+            onClose();
+        } else if (successCount > 0) {
+            toast.warning(`Tạo ${successCount} thành công, ${failCount} thất bại (có thể bị trùng giờ)`);
+            onClose();
         } else {
-            createShowtime(form, {
-                onSuccess: () => {
-                    onClose();
-                },
-            });
+            toast.error("Tạo suất chiếu thất bại", "Vui lòng kiểm tra lại thông tin");
         }
     };
 
     const isPending = createShowtimePending || updateShowtimePending;
     const roomList = rooms?.results || rooms || [];
     const formatList = formats?.results || formats || [];
+    const slotList = availableSlots || [];
 
     return (
         <dialog className="modal modal-open">
-            <div className="modal-box max-w-lg w-full">
+            <div className="modal-box max-w-xl w-full">
                 <button className="btn btn-sm btn-circle btn-ghost absolute right-3 top-3" onClick={onClose}><X size={16} /></button>
                 <h3 className="font-bold text-lg mb-1">{isEdit ? "Sửa suất chiếu" : "Thêm suất chiếu"}</h3>
                 <p className="text-sm text-base-content/60 mb-4">Phim: <span className="font-semibold text-base-content">{movieTitle}</span></p>
@@ -115,7 +179,8 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
 
                     <div className="sm:col-span-2">
                         <label className="label label-text font-medium">Phòng chiếu <span className="text-error">*</span></label>
-                        <select className="select select-bordered w-full" value={form.room} onChange={(e) => set("room", e.target.value)} disabled={!selectedBranch}>
+                        <select className="select select-bordered w-full" value={form.room}
+                            onChange={(e) => set("room", e.target.value)} disabled={!selectedBranch}>
                             <option value="">Chọn phòng chiếu...</option>
                             {roomList.map((r) => (
                                 <option key={r.id} value={r.id}>{r.name} ({r.total_rows * r.seats_per_row} ghế)</option>
@@ -137,15 +202,81 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
                         </select>
                     </div>
 
-                    <div>
+                    <div className={isEdit ? "" : "sm:col-span-2"}>
                         <label className="label label-text font-medium">Ngày chiếu <span className="text-error">*</span></label>
-                        <input type="date" className="input input-bordered w-full" value={form.show_date} onChange={(e) => set("show_date", e.target.value)} />
+                        <input type="date" className="input input-bordered w-full"
+                            value={form.show_date} onChange={(e) => set("show_date", e.target.value)} />
                     </div>
 
-                    <div>
-                        <label className="label label-text font-medium">Giờ bắt đầu <span className="text-error">*</span></label>
-                        <input type="time" className="input input-bordered w-full" value={form.start_time} onChange={(e) => set("start_time", e.target.value)} />
-                    </div>
+                    {isEdit && (
+                        <div>
+                            <label className="label label-text font-medium">Giờ bắt đầu <span className="text-error">*</span></label>
+                            <input type="time" className="input input-bordered w-full"
+                                value={form.start_time} onChange={(e) => set("start_time", e.target.value)} />
+                        </div>
+                    )}
+
+                    {!isEdit && (
+                        <div className="sm:col-span-2">
+                            <label className="label label-text font-medium">
+                                Chọn khung giờ
+                                <span className="text-error ml-1">*</span>
+                                {selectedSlots.length > 0 && (
+                                    <span className="ml-2 text-xs text-primary font-normal">
+                                        Đã chọn {selectedSlots.length} slot
+                                    </span>
+                                )}
+                            </label>
+
+                            {!form.room || !form.show_date ? (
+                                <p className="text-xs text-base-content/40 py-3">
+                                    Chọn phòng chiếu và ngày để xem các khung giờ trống
+                                </p>
+                            ) : slotsFetching ? (
+                                <div className="flex items-center gap-2 py-3 text-xs text-base-content/50">
+                                    <Loader2 size={14} className="animate-spin" />
+                                    Đang tính khung giờ...
+                                </div>
+                            ) : slotList.length === 0 ? (
+                                <p className="text-xs text-base-content/40 py-3">
+                                    Không còn khung giờ trống trong ngày này
+                                </p>
+                            ) : (
+                                <>
+                                    <div className="flex gap-2 mb-2">
+                                        <button type="button" className="btn btn-xs btn-ghost border border-base-300"
+                                            onClick={() => setSelectedSlots([])}>
+                                            Bỏ chọn tất cả
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto pr-1">
+                                        {slotList.map((slot) => {
+                                            const selected = isSlotSelected(slot);
+                                            const disabled = isSlotDisabled(slot);
+                                            return (
+                                                <button
+                                                    key={slot.start_time}
+                                                    type="button"
+                                                    onClick={() => !disabled && toggleSlot(slot)}
+                                                    disabled={disabled}
+                                                    className={`btn btn-sm font-mono relative ${selected
+                                                        ? "btn-primary"
+                                                        : disabled
+                                                            ? "btn-disabled opacity-30 cursor-not-allowed"
+                                                            : "btn-ghost border border-base-300 hover:border-primary"
+                                                        }`}
+                                                >
+                                                    <span className="text-xs leading-tight">
+                                                        {slot.start_time} - {slot.end_time}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    )}
 
                     <div className="sm:col-span-2">
                         <label className="label label-text font-medium">Giá vé (đ) <span className="text-error">*</span></label>
@@ -170,7 +301,8 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
                                 {form.price ? formatMoney(Number(form.price)) : "Chọn ngày và loại hình chiếu"}
                             </div>
                         ) : (
-                            <input type="number" className="input input-bordered w-full" value={form.price} onChange={(e) => set("price", e.target.value)} min={0} placeholder="85000" />
+                            <input type="number" className="input input-bordered w-full" value={form.price}
+                                onChange={(e) => set("price", e.target.value)} min={0} placeholder="85000" />
                         )}
                     </div>
 
@@ -189,7 +321,14 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
                 <div className="modal-action mt-6">
                     <button className="btn btn-ghost" onClick={onClose}>Hủy</button>
                     <button className="btn btn-primary" onClick={handleSubmit} disabled={isPending}>
-                        {isPending ? <Loader2 size={16} className="animate-spin" /> : (isEdit ? "Lưu thay đổi" : "Thêm suất chiếu")}
+                        {isPending
+                            ? <Loader2 size={16} className="animate-spin" />
+                            : isEdit
+                                ? "Lưu thay đổi"
+                                : selectedSlots.length > 0
+                                    ? `Thêm ${selectedSlots.length} suất chiếu`
+                                    : "Thêm suất chiếu"
+                        }
                     </button>
                 </div>
             </div>
@@ -200,7 +339,7 @@ const ShowtimeFormModal = ({ movieId, movieTitle, showtimeData, onClose }) => {
 
 const MovieShowtimesPanel = ({ movie }) => {
     const { hasStaffPosition } = useAuth();
-    const [dateFilter, setDateFilter] = useState("");
+    const [dateFilter, setDateFilter] = useState(new Date().toISOString().split("T")[0]);
     const [statusFilter, setStatusFilter] = useState("");
     const [branchFilter, setBranchFilter] = useState("");
     const [availableBranches, setAvailableBranches] = useState([]);
@@ -318,9 +457,11 @@ const MovieShowtimesPanel = ({ movie }) => {
                                                         <button className="btn btn-ghost btn-xs" onClick={() => { setEditShowtime(st); setShowForm(true); }}>
                                                             <Pencil size={12} />
                                                         </button>
-                                                        <button className="btn btn-ghost btn-xs text-error" onClick={() => handleDelete(st)}>
-                                                            <Trash2 size={12} />
-                                                        </button>
+                                                        {st.status === "SCHEDULED" && (
+                                                            <button className="btn btn-ghost btn-xs text-error" onClick={() => handleDelete(st)}>
+                                                                <Trash2 size={12} />
+                                                            </button>
+                                                        )}
                                                     </>
                                                 )}
                                             </div>

@@ -41,7 +41,7 @@ export const endpoints = {
     },
 
     locations: "/locations/",
-    locationMovies: (locationId, page) => `/locations/${locationId}/movies/?page=${page}`,
+    locationMovies: (locationId) => `/locations/${locationId}/movies/`,
     branches: "/branches/",
 
     rooms: "/rooms/",
@@ -107,6 +107,8 @@ export const endpoints = {
 
     manageRooms: "/manage/rooms/",
     manageRoomDetail: (id) => `/manage/rooms/${id}/`,
+    manageRoomAvailableSlots: (roomId, movieId, showDate) =>
+        `/manage/rooms/${roomId}/slots/?movie_id=${movieId}&show_date=${showDate}`,
 
     manageProducts: "/manage/products/",
     manageProductDetail: (id) => `/manage/products/${id}/`,

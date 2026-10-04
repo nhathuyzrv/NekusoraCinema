@@ -72,17 +72,17 @@ NOW = timezone.now()
 TODAY = timezone.localdate()
 
 # 1. CONFIG
-NUM_EXTRA_CUSTOMERS = 400
-NUM_EXTRA_STAFF = 25
-NUM_EXTRA_MANAGERS = 4
+NUM_EXTRA_CUSTOMERS = 600
+NUM_EXTRA_STAFF = 30
+NUM_EXTRA_MANAGERS = 6
 
-ROOMS_PER_BRANCH = 4
-SHOWTIME_DAYS_BEFORE_TODAY = 7
-SHOWTIME_DAYS_AFTER_TODAY = 30
-ROOMS_SAMPLED_PER_SHOWDAY = 6
-SHOWTIMES_PER_ROOM_PER_DAY = 3
+ROOMS_PER_BRANCH = 5
+SHOWTIME_DAYS_BEFORE_TODAY = 120
+SHOWTIME_DAYS_AFTER_TODAY = 60
+ROOMS_SAMPLED_PER_SHOWDAY = 10
+SHOWTIMES_PER_ROOM_PER_DAY = 5
 
-TARGET_BOOKINGS = 5000
+TARGET_BOOKINGS = 20000
 
 random.seed()
 
@@ -603,13 +603,243 @@ MOVIES = [
          release_date=date(2026, 2, 27), genres=["Kinh dị"],
          cast=["Neve Campbell"], desc="Sidney Prescott trở lại đối đầu với một Ghostface mới, khi quá khứ đẫm "
                                     "máu của thị trấn Woodsboro một lần nữa bị khơi dậy."),
+
+    # =====================================================================
+    # PHIM THÁNG 6/2026
+    # =====================================================================
+    dict(title="The Super Mario Galaxy Movie", director="Aaron Horvath, Michael Jelenic",
+         country="Mỹ", duration=105, age_rating=MovieAgeRating.P,
+         release_date=date(2026, 6, 5), genres=["Hoạt hình", "Phiêu lưu", "Gia đình"],
+         cast=[], desc="Mario và Luigi phiêu lưu vào vũ trụ bí ẩn, khám phá các Thiên Hà kỳ diệu trong hành trình "
+                       "giải cứu Công chúa Peach khỏi tay Bowser trong bộ phim hoạt hình bom tấn của Universal và Illumination."),
+    dict(title="Hẹn Em Ngày Nhật Thực", director="Phan Gia Nhật Linh",
+         country="Việt Nam", duration=112, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 6, 5), genres=["Tình cảm", "Tâm lý"],
+         cast=[], desc="Câu chuyện tình yêu lãng mạn xoay quanh hai người trẻ gặp nhau trong một sự kiện nhật thực hiếm có, "
+                       "mở ra hành trình khám phá bản thân và tình yêu đích thực."),
+    dict(title="Michael", director="Antoine Fuqua",
+         country="Mỹ", duration=148, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 6, 12), genres=["Chính kịch", "Nhạc kịch"],
+         cast=[], desc="Bộ phim tiểu sử về cuộc đời và sự nghiệp huyền thoại của Michael Jackson – ông hoàng nhạc Pop thế giới, "
+                       "tái hiện những thăng trầm và di sản âm nhạc vĩ đại ông để lại cho thế giới."),
+    dict(title="Đại Tiệc Trăng Máu 8", director="Võ Thanh Hoà",
+         country="Việt Nam", duration=105, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 6, 19), genres=["Kinh dị", "Hài"],
+         cast=[], desc="Phần thứ 8 của thương hiệu kinh dị Việt ăn khách nhất. Lần này nhóm bạn lại rơi vào "
+                       "tình huống dở khóc dở cười khi tham gia một trò chơi thực tế bí ẩn trong rừng hoang."),
+    dict(title="Heo Năm Móng", director="Nguyễn Quang Dũng",
+         country="Việt Nam", duration=100, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 6, 19), genres=["Hài", "Gia đình", "Phiêu lưu"],
+         cast=[], desc="Hành trình phiêu lưu hài hước của một chú heo đặc biệt mang 5 móng – biểu tượng may mắn trong văn hóa "
+                       "dân gian Việt, và những người bạn đồng hành trong chuyến đi tìm về nguồn cội."),
+    dict(title="Zootopia 2", director="Jared Bush, Byron Howard",
+         country="Mỹ", duration=108, age_rating=MovieAgeRating.P,
+         release_date=date(2026, 6, 19), genres=["Hoạt hình", "Phiêu lưu", "Gia đình"],
+         cast=[], desc="Judy Hopps và Nick Wilde trở lại với một vụ án bí ẩn mới tại thành phố Zootopia, nơi ranh giới giữa "
+                       "động vật ăn thịt và ăn cỏ lại một lần nữa bị thách thức bởi một âm mưu nguy hiểm."),
+    dict(title="Trùm Sò", director="Lý Minh Thắng",
+         country="Việt Nam", duration=98, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 6, 26), genres=["Hài", "Hành động"],
+         cast=[], desc="Câu chuyện về tay trùm giang hồ lại cá vặt và hào phóng, bị cuốn vào hàng loạt tình huống dở khóc "
+                       "dở cười khi cố gắng hoàn lương và gây dựng lại cuộc đời."),
+    dict(title="Con Kẻ Bắt Nghề", director="Bảo Nhân",
+         country="Việt Nam", duration=102, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 6, 12), genres=["Hài", "Gia đình"],
+         cast=[], desc="Câu chuyện hài hước về người cha bắt con theo nghề truyền thống gia đình, trong khi đứa con "
+                       "lại muốn theo đuổi ước mơ riêng, dẫn đến hàng loạt tình huống bi hài."),
+
+    # =====================================================================
+    # PHIM THÁNG 7/2026
+    # =====================================================================
+    dict(title="Now You See Me 3", director="Ruben Fleischer",
+         country="Mỹ", duration=118, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 7, 3), genres=["Hành động", "Trinh thám", "Hài"],
+         cast=[], desc="Nhóm Tứ Kỵ Sĩ trở lại với màn ảo thuật đỉnh cao, lần này đối mặt với đối thủ nguy hiểm nhất từ trước "
+                       "đến nay – một tổ chức bí ẩn kiểm soát toàn bộ ngành giải trí toàn cầu."),
+    dict(title="Anh Hùng", director="Victor Vũ",
+         country="Việt Nam", duration=125, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 7, 3), genres=["Hành động", "Cổ trang", "Trinh thám"],
+         cast=[], desc="Bộ phim hành động cổ trang hoành tráng lấy cảm hứng từ lịch sử Việt Nam, xoay quanh những anh hùng "
+                       "dân tộc trong cuộc chiến bảo vệ bờ cõi và phẩm giá quốc gia."),
+    dict(title="Người Phán Xử 2", director="Trịnh Lê Phong",
+         country="Việt Nam", duration=130, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 7, 10), genres=["Hành động", "Tâm lý", "Trinh thám"],
+         cast=[], desc="Phan Quân trở lại – lần này từ bóng tối nhìn ra ánh sáng, nhưng cuộc chiến mới khốc liệt hơn, "
+                       "khi thế lực ngầm mới đang thâu tóm thành phố và đe dọa những gì ông yêu quý nhất."),
+    dict(title="Nhà Không Bán", director="Ngô Thanh Vân",
+         country="Việt Nam", duration=105, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 7, 17), genres=["Tâm lý", "Gia đình", "Tình cảm"],
+         cast=[], desc="Câu chuyện xúc động về một ngôi nhà cũ ba thế hệ – biểu tượng của ký ức, tình thân và những giá trị "
+                       "đang dần bị cuộc sống hiện đại cuốn trôi."),
+    dict(title="OK Madam 2", director="Jang Hyun-yoo",
+         country="Hàn Quốc", duration=115, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 7, 24), genres=["Hành động", "Hài", "Gia đình"],
+         cast=[], desc="Cặp đôi vợ chồng đặc vụ tiếp tục loạt phiêu lưu hài hước và đầy kịch tính, lần này trong một sứ "
+                       "mệnh bí mật tại Đông Nam Á."),
+    dict(title="Avatar: Lửa Và Bóng Tối", director="James Cameron",
+         country="Mỹ", duration=165, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 7, 10), genres=["Khoa học viễn tưởng", "Phiêu lưu", "Hành động"],
+         cast=[], desc="Phần tiếp theo của siêu phẩm Avatar – Jake Sully và gia đình phải đối mặt với thế lực mới nguy hiểm "
+                       "hơn bao giờ hết khi bóng tối bao trùm cả Pandora lẫn Trái Đất."),
+    dict(title="Panor 2", director="Kantemir Balagov",
+         country="Mỹ/Nga", duration=110, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 7, 17), genres=["Tâm lý", "Hành động", "Bí ẩn"],
+         cast=[], desc="Phần hai của bộ phim hành động tâm lý. Chàng trai trẻ tiếp tục hành trình nguy hiểm để khám phá "
+                       "bí mật về nguồn gốc siêu năng lực và mạng lưới tổ chức đen đằng sau."),
+    dict(title="Return to Silent Hill", director="Christophe Gans",
+         country="Mỹ/Pháp", duration=112, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 7, 3), genres=["Kinh dị", "Bí ẩn"],
+         cast=[], desc="Chuyển thể từ tựa game kinh dị huyền thoại. Một người đàn ông quay trở lại thị trấn Silent Hill "
+                       "đầy sương mù và quái vật để tìm người tình đã mất tích bí ẩn."),
+    dict(title="Bố Già Trở Lại: Không Khoan Nhượng", director="Trấn Thành",
+         country="Việt Nam", duration=118, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 7, 24), genres=["Hài", "Gia đình", "Tâm lý"],
+         cast=["Trấn Thành"], desc="Ba Sang đối mặt với thử thách lớn nhất khi cả gia đình bị cuốn vào âm mưu của "
+                                   "đối thủ kinh doanh. Lần này Ba Sang không thể nhường nhịn nữa."),
+
+    # =====================================================================
+    # PHIM THÁNG 8/2026
+    # =====================================================================
+    dict(title="Trường Hè", director="Bùi Tiến Dũng",
+         country="Việt Nam", duration=100, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 8, 7), genres=["Tâm lý", "Hài", "Gia đình"],
+         cast=[], desc="Mùa hè đáng nhớ của nhóm học sinh cấp 3 khi bị buộc tham gia trại hè đặc biệt dành cho học sinh "
+                       "cá biệt, nơi những tình huống dở khóc dở cười và bài học cuộc sống không ngờ chờ đón."),
+    dict(title="Mùi Phở", director="Đặng Thái Huyền",
+         country="Việt Nam", duration=108, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 8, 21), genres=["Tâm lý", "Gia đình", "Chính kịch"],
+         cast=[], desc="Bộ phim tâm lý về một người đàn ông Hà Nội xa quê hương, được triệu hồi về bởi mùi hương quen "
+                       "thuộc của phở – sợi dây vô hình gắn kết ông với ký ức, gia đình và bản sắc văn hóa."),
+    dict(title="Kamen Rider Điện Tử: Phim Điện Ảnh", director="Koichi Sakamoto",
+         country="Nhật Bản", duration=88, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 8, 14), genres=["Hành động", "Khoa học viễn tưởng"],
+         cast=[], desc="Siêu anh hùng Kamen Rider trở lại màn ảnh rộng với cuộc chiến khốc liệt chống lại tổ chức tội phạm "
+                       "công nghệ cao đang đe dọa hủy diệt internet toàn cầu."),
+
+    # =====================================================================
+    # PHIM THÁNG 9/2026
+    # =====================================================================
+    dict(title="Mesdames Thanh Sắc", director="Nguyễn Trọng Khoa",
+         country="Việt Nam", duration=112, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 9, 4), genres=["Tâm lý", "Tình cảm", "Hài"],
+         cast=[], desc="Ba người phụ nữ ở ba thế hệ khác nhau cùng vượt qua biến cố cuộc đời, tìm lại giá trị bản thân "
+                       "trong hành trình đầy cảm xúc và những khoảnh khắc hài hước không ngờ."),
+    dict(title="Predator: Vùng Đất Chết", director="Dan Trachtenberg",
+         country="Mỹ", duration=115, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 9, 11), genres=["Hành động", "Khoa học viễn tưởng", "Kinh dị"],
+         cast=[], desc="Thợ săn ngoài hành tinh Predator tái xuất với kẻ thù xứng tầm – một đơn vị đặc nhiệm tinh nhuệ "
+                       "trong cuộc chiến sinh tồn giữa khu rừng nguyên sinh khắc nghiệt."),
+    dict(title="Quỷ Bắt Hồn", director="Nguyễn Hữu Hoàng",
+         country="Việt Nam", duration=100, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 9, 18), genres=["Kinh dị"],
+         cast=[], desc="Bộ phim kinh dị dân gian về một con quỷ cổ đại lang thang bắt hồn người, và cuộc chiến tâm linh "
+                       "của người phụ nữ trẻ để giành lại linh hồn những người thân yêu."),
+    dict(title="The Savior", director="Antoine Fuqua",
+         country="Mỹ", duration=122, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 9, 25), genres=["Hành động", "Tâm lý", "Chính kịch"],
+         cast=[], desc="Cựu đặc vụ CIA bị kéo trở lại từ cuộc sống ẩn dật để thực hiện nhiệm vụ bất khả thi cuối cùng – "
+                       "ngăn chặn một cuộc tấn công hạt nhân do chính người bạn cũ của anh chủ mưu."),
+    dict(title="Mercy", director="James Wan",
+         country="Mỹ", duration=105, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 9, 4), genres=["Kinh dị", "Bí ẩn"],
+         cast=[], desc="Nhà thám tử tư nhận vụ án mà cả cảnh sát bó tay, dần khám phá ra sự thật kinh hoàng phía sau "
+                       "loạt vụ mất tích ở một thị trấn nhỏ yên bình nhưng đầy bí ẩn."),
+
+    # =====================================================================
+    # PHIM THÁNG 10/2026
+    # =====================================================================
+    dict(title="Bóng Ma Nhà Hát", director="Phạm Thiên Ân",
+         country="Việt Nam", duration=108, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 10, 1), genres=["Kinh dị", "Bí ẩn"],
+         cast=[], desc="Nhà hát cổ kính có lịch sử 100 năm bỗng xuất hiện loạt sự kiện bí ẩn. Diễn viên, đạo diễn "
+                       "và nhân viên sân khấu lần lượt biến mất, chỉ để lại những vết tích ghê rợn không ai giải thích được."),
+    dict(title="Người Mẹ Xấu", director="Lưu Huỳnh",
+         country="Việt Nam", duration=110, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 10, 8), genres=["Tâm lý", "Gia đình", "Tình cảm"],
+         cast=[], desc="Câu chuyện cảm động về một người mẹ đơn thân cố gắng vượt qua mọi định kiến xã hội để nuôi dạy "
+                       "con và tìm lại ý nghĩa cuộc sống trong hành trình đầy gian nan nhưng ấm áp tình người."),
+    dict(title="Wicked: For Good", director="Jon M. Chu",
+         country="Mỹ", duration=155, age_rating=MovieAgeRating.P,
+         release_date=date(2026, 10, 22), genres=["Nhạc kịch", "Phiêu lưu", "Gia đình"],
+         cast=["Cynthia Erivo", "Ariana Grande"],
+         desc="Phần kết hoành tráng của siêu phẩm nhạc kịch Wicked – Elphaba và Glinda đối mặt với thử thách cuối "
+              "cùng trong thế giới Oz, kết thúc câu chuyện về tình bạn, sự hy sinh và lòng dũng cảm."),
+    dict(title="Back to the Past", director="Robert Zemeckis",
+         country="Mỹ", duration=118, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 10, 15), genres=["Khoa học viễn tưởng", "Hài", "Phiêu lưu"],
+         cast=[], desc="Phần làm lại huyền thoại Back to the Future cho thế hệ mới – một chàng trai trẻ vô tình phát hiện "
+                       "cỗ máy thời gian và phải sửa những sai lầm lịch sử trước khi tương lai sụp đổ."),
+    dict(title="Primate", director="Nguyễn Phương Linh",
+         country="Việt Nam", duration=95, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 10, 15), genres=["Kinh dị", "Khoa học viễn tưởng"],
+         cast=[], desc="Thí nghiệm khoa học biến đột ngột thành ác mộng khi một loài linh trưởng đột biến gen vượt khỏi "
+                       "tầm kiểm soát và tấn công cơ sở nghiên cứu."),
+    dict(title="Send Help", director="Nguyễn Phúc An",
+         country="Việt Nam", duration=102, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 10, 8), genres=["Hài", "Hành động", "Phiêu lưu"],
+         cast=[], desc="Nhóm bạn bị mắc kẹt trên hòn đảo hoang sau chuyến du lịch thảm họa. Không điện thoại, không mạng, "
+                       "chỉ có tình bạn và những kỹ năng sinh tồn siêu thực tế."),
+    dict(title="Finnik 2", director="Robert Chandler",
+         country="Mỹ", duration=90, age_rating=MovieAgeRating.P,
+         release_date=date(2026, 10, 1), genres=["Hoạt hình", "Gia đình", "Hài"],
+         cast=[], desc="Chú quái vật lông xù Finnick trở lại với những người bạn mới và hành trình khám phá thành phố "
+                       "biển kỳ thú, nơi cậu học được ý nghĩa của tình bạn và lòng dũng cảm thật sự."),
+
+    # =====================================================================
+    # PHIM THÁNG 11/2026
+    # =====================================================================
+    dict(title="Chàng Mèo Mang Mũ", director="Tim Hill",
+         country="Mỹ", duration=95, age_rating=MovieAgeRating.P,
+         release_date=date(2026, 11, 6), genres=["Hoạt hình", "Gia đình", "Hài"],
+         cast=[], desc="Phiên bản hoạt hình mới dựa trên nhân vật kinh điển của Dr. Seuss – chú mèo đội mũ cao kỳ lạ "
+                       "mang đến những trò chơi và phiêu lưu vui nhộn bất ngờ cho hai anh em nhàm chán trong ngày mưa."),
+    dict(title="Bò Sữa Bay", director="Mike Thurmeier",
+         country="Mỹ", duration=92, age_rating=MovieAgeRating.P,
+         release_date=date(2026, 11, 6), genres=["Hoạt hình", "Hài", "Gia đình"],
+         cast=[], desc="Câu chuyện hài hước và cảm động về chú bò sữa ước mơ bay lên bầu trời, vượt qua mọi rào cản "
+                       "để thực hiện giấc mơ kỳ lạ và tìm thấy bạn bè đích thực trong hành trình."),
+    dict(title="Người Được Chọn", director="Lê Văn Kiệt",
+         country="Việt Nam", duration=110, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 11, 6), genres=["Hành động", "Khoa học viễn tưởng", "Tâm lý"],
+         cast=[], desc="Trong một thế giới bị kiểm soát bởi công nghệ AI, người được chọn phải vượt qua loạt thử thách "
+                       "nguy hiểm để giải phóng nhân loại khỏi ách thống trị của máy móc."),
+    dict(title="Trại Giam Hạnh Phúc", director="Nguyễn Hữu Tuấn",
+         country="Việt Nam", duration=108, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 11, 20), genres=["Hài", "Tâm lý", "Gia đình"],
+         cast=[], desc="Một nhóm người với hoàn cảnh trớ trêu tình cờ bị giam chung trong một tòa nhà phong tỏa. "
+                       "Điều kỳ lạ là đây lại trở thành trại giam hạnh phúc nhất họ từng trải qua."),
+    dict(title="Gặp Gỡ Thông Gia: Dâu Mới Trình Làng", director="Vũ Ngọc Phượng",
+         country="Việt Nam", duration=105, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 11, 27), genres=["Hài", "Gia đình", "Tình cảm"],
+         cast=[], desc="Hai gia đình thông gia gặp gỡ lần đầu trước đám cưới với đủ mọi tình huống dở khóc dở cười khi "
+                       "sự khác biệt về vùng miền, phong tục và tính cách đụng độ nhau."),
+    dict(title="Ngày Con Còn Mẹ", director="Đặng Thái Huyền",
+         country="Việt Nam", duration=110, age_rating=MovieAgeRating.T13,
+         release_date=date(2026, 11, 27), genres=["Tâm lý", "Gia đình", "Tình cảm"],
+         cast=[], desc="Bộ phim xúc động về tình mẫu tử thiêng liêng trong những ngày tháng cuối đời của người mẹ, "
+                       "và hành trình một người con học cách trân trọng những điều bình dị trước khi quá muộn."),
+    dict(title="Địa Đạo: Lửa Thiêng", director="Bùi Thạc Chuyên",
+         country="Việt Nam", duration=130, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 11, 20), genres=["Lịch sử", "Hành động", "Chiến tranh"],
+         cast=[], desc="Tác phẩm điện ảnh lịch sử hoành tráng tái hiện cuộc kháng chiến kiên cường của quân và dân ta "
+                       "trong lòng địa đạo Củ Chi – biểu tượng của ý chí và sức mạnh dân tộc Việt Nam."),
+    dict(title="Blood Paradise 2", director="Simon Kaijser",
+         country="Thụy Điển", duration=95, age_rating=MovieAgeRating.T18,
+         release_date=date(2026, 11, 13), genres=["Kinh dị", "Hồi hộp"],
+         cast=[], desc="Phần tiếp theo của phim kinh dị tâm lý gây sốt. Nhân vật nữ chính lại bị mắc kẹt trong một trang "
+                       "trại bí ẩn với những cư dân nguy hiểm hơn bao giờ hết."),
+    dict(title="Shelter", director="Paul Greengrass",
+         country="Mỹ", duration=108, age_rating=MovieAgeRating.T16,
+         release_date=date(2026, 11, 6), genres=["Tâm lý", "Hành động", "Chính kịch"],
+         cast=[], desc="Trong bão tuyết khốc liệt cô lập một thị trấn nhỏ, nhóm người xa lạ phải nương tựa nhau để sống sót, "
+                       "khám phá những bí mật đen tối về quá khứ của nhau trong không gian ngột ngạt."),
 ]
 
 
 def compute_status(release_date):
     if release_date > TODAY:
         return MovieStatus.COMING_SOON
-    if release_date >= TODAY - timedelta(days=60):
+    if release_date >= TODAY - timedelta(days=150):
         return MovieStatus.NOW_SHOWING
     return MovieStatus.ENDED
 
@@ -815,8 +1045,12 @@ creator_users = manager_users or staff_users or customers
 
 print(">>> [8/10] Tạo Showtime...")
 
-SHOW_TIME_SLOTS = [time(9, 0), time(11, 15), time(13, 30), time(16, 0),
-                    time(18, 30), time(20, 45), time(22, 30)]
+SHOW_TIME_SLOTS = [
+    time(8, 30), time(9, 0), time(10, 15), time(11, 0), time(11, 30),
+    time(13, 0), time(13, 30), time(14, 15), time(15, 0), time(16, 0),
+    time(17, 30), time(18, 0), time(18, 30), time(19, 15), time(20, 0),
+    time(20, 30), time(20, 45), time(21, 30), time(22, 0), time(22, 30),
+]
 
 
 def build_showtimes_for_movie(movie, day_range):
@@ -850,13 +1084,15 @@ def build_showtimes_for_movie(movie, day_range):
 
 all_showtimes = []
 for movie in now_showing_movies:
-    day_range = range(-SHOWTIME_DAYS_BEFORE_TODAY, SHOWTIME_DAYS_AFTER_TODAY + 1)
+    days_since_release = (TODAY - movie.release_date).days
+    start_day = -min(days_since_release, SHOWTIME_DAYS_BEFORE_TODAY)
+    day_range = range(start_day, SHOWTIME_DAYS_AFTER_TODAY + 1)
     all_showtimes.extend(build_showtimes_for_movie(movie, day_range))
 
 for movie in coming_soon_movies:
     days_until_release = (movie.release_date - TODAY).days
-    if 0 < days_until_release <= 10:
-        day_range = range(days_until_release, days_until_release + 3)
+    if 0 < days_until_release <= 30:
+        day_range = range(days_until_release, days_until_release + 7)
         all_showtimes.extend(build_showtimes_for_movie(movie, day_range))
 
 print(f"    -> {len(all_showtimes)} showtime mới được tạo (chưa tính showtime có sẵn).")
@@ -953,8 +1189,8 @@ for st in all_showtimes_qs:
             )[0]
         else:
             status = random.choices(
-                [BookingStatus.CONFIRMED, BookingStatus.HOLDING],
-                weights=[70, 30],
+                [BookingStatus.CONFIRMED, BookingStatus.CANCELLED, BookingStatus.EXPIRED],
+                weights=[80, 12, 8],
             )[0]
 
         created_at = timezone.make_aware(
@@ -962,7 +1198,9 @@ for st in all_showtimes_qs:
                              time(random.randint(8, 22), random.randint(0, 59)))
         ) if is_past else NOW - timedelta(hours=random.randint(0, 72))
         confirmed_at = created_at + timedelta(
-            minutes=random.randint(1, 6)) if status == BookingStatus.CONFIRMED else None
+            minutes=random.randint(1, 6)) if status == BookingStatus.CONFIRMED else (
+            created_at + timedelta(minutes=random.randint(8, 30)) if status == BookingStatus.EXPIRED else None
+        )
         is_checked_in = is_past and status == BookingStatus.CONFIRMED and random.random() < 0.8
         checked_in_at = (timezone.make_aware(datetime.combine(st.show_date, st.start_time)) + timedelta(
             minutes=random.randint(-15, 5))) if is_checked_in else None
@@ -982,8 +1220,8 @@ for st in all_showtimes_qs:
         )
         booking_count += 1
 
-        ticket_status = TicketStatus.CANCELLED if status == BookingStatus.CANCELLED else (
-            TicketStatus.BOOKED if status == BookingStatus.CONFIRMED else TicketStatus.HELD
+        ticket_status = TicketStatus.CANCELLED if status in (BookingStatus.CANCELLED, BookingStatus.EXPIRED) else (
+            TicketStatus.BOOKED if status == BookingStatus.CONFIRMED else TicketStatus.CANCELLED
         )
         for seat in chosen_seats:
             Ticket.objects.create(

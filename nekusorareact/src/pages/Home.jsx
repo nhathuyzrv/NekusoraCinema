@@ -382,7 +382,7 @@ const Home = () => {
                                 }}
                                 className="btn btn-secondary btn-lg shrink-0"
                             >
-                                ĐĂNG KÝ NGAY
+                                ĐĂNG KÝ MEMBERSHIP
                             </button>
                         </div>
                     </section>

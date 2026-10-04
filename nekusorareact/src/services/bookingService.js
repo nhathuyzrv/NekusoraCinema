@@ -4,8 +4,8 @@ const bookingService = {
     getLocations: () =>
         Apis.get(endpoints.locations)
             .then(r => r.data),
-    getLocationMovies: (locationId, page = 1) =>
-        Apis.get(endpoints.locationMovies(locationId, page))
+    getLocationMovies: (locationId) =>
+        Apis.get(endpoints.locationMovies(locationId))
             .then(r => r.data),
 
     getRoomSeats: (roomId) =>
