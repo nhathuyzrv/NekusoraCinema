@@ -1,8 +1,8 @@
 # Disclaimer
 
-Nekusora Cinema is an academic software project developed solely for educational, learning, demonstration, and research purposes. It is not intended for commercial use, real cinema operations, production payment processing, or the storage of real customer data.
+Nekusora Cinema is an academic software project developed solely for educational, learning, demonstration and research purposes. It is not intended for commercial use, real cinema operations, production payment processing or the storage of real customer data.
 
-The project integrates third-party services such as Cloudinary, Gmail SMTP, PayOS, MoMo, PayPal and ngrok. Their names, trademarks, APIs, and services remain the property of their respective owners. Payment integrations in this repository are intended to be used with development or sandbox environments only unless the application is independently reviewed, secured, and configured for production use.
+The project integrates third-party services such as Cloudinary, Gmail SMTP, PayOS, MoMo, PayPal and ngrok. Their names, trademarks, APIs, and services remain the property of their respective owners. Payment integrations in this repository are intended to be used with development or sandbox environments only.
 
 # Nekusora Cinema
 
@@ -801,18 +801,14 @@ http://localhost:5173/
 
 # Stopping the Development Environment
 
-To shut the project down cleanly:
+To shut the project down properly:
 
-1. Stop the frontend with `Ctrl+C`.
-2. Stop the Django backend with `Ctrl+C`.
-3. Return to the original `start_services.bat` window and press a key. The batch file terminates the Celery Worker, Celery Beat, and ngrok windows that it opened.
-4. Stop Redis and PostgreSQL if you started them manually and no other application needs them.
+1. Stop the frontend with `Ctrl+C`
+2. Stop the Django backend with `Ctrl+C`
+3. Return to the original `start_services.bat` window and press a key. The batch file terminates the Celery Worker, Celery Beat, and ngrok windows that it opened
+4. Stop Redis and PostgreSQL if you started them manually and no other application needs them
 
 # Development Notes
 
-- `db_init.sh` is intended for first-time initialization, not normal daily startup.
-- The Django development server is used by this repository for local development only.
-- `start_services.bat` is Windows-specific.
-- The project currently uses development settings such as `DEBUG=True` and a development Django secret key. These settings are not suitable for production deployment.
-- Payment callback URLs, local IP addresses, CORS origins, and ngrok hostnames may need to be changed for a different development computer.
-- Never commit the backend `.env` file or real service credentials.
+- The Django development server is used by this repository for local development only
+- Payment callback URLs, local IP addresses, CORS origins and ngrok hostnames may need to be changed for a different development computer
